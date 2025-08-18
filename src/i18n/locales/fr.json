@@ -1,0 +1,71 @@
+{
+  "common": {
+    "dashboard": "Tableau de bord",
+    "logout": "Déconnexion",
+    "login": "Connexion",
+    "register": "Inscription",
+    "getStarted": "Commencer",
+    "search": "Rechercher",
+    "profile": "Mon profil",
+    "settings": "Paramètres",
+    "help": "Aide",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "darkMode": "Mode sombre",
+    "lightMode": "Mode clair"
+  },
+  "header": {
+    "title": "TetiboPro",
+    "welcome": "Bienvenue",
+    "dashboard": "Tableau de bord",
+    "logout": "Déconnexion"
+  },
+  "hero": {
+    "trustBadge": "Approuvé par 10K+ utilisateurs",
+    "title": "Gérez votre ",
+    "titleHighlight": "Finances Personnelles",
+    "description": "Plateforme complète et facile à utiliser pour gérer vos finances, surveiller vos dépenses, atteindre vos objectifs d'épargne et améliorer votre santé financière.",
+    "getStarted": "Commencer gratuitement",
+    "watchDemo": "Voir la démo",
+    "stats": {
+      "users": "Utilisateurs actifs",
+      "transactions": "Transactions traitées",
+      "uptime": "Disponibilité"
+    }
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bonjour",
+    "welcomeBack": "bon retour !",
+    "searchPlaceholder": "Rechercher transactions, contacts...",
+    "searchMobile": "Rechercher...",
+    "notifications": {
+      "title": "Notifications",
+      "viewAll": "Voir toutes les notifications",
+      "newPayment": "Nouveau paiement reçu",
+      "budgetWarning": "Budget mensuel atteint",
+      "goalAchieved": "Objectif atteint"
+    }
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "S'inscrire",
+    "email": "Email",
+    "password": "Mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "fullName": "Nom complet",
+    "currency": "Devise",
+    "forgotPassword": "Mot de passe oublié ?",
+    "alreadyHaveAccount": "Déjà un compte ?",
+    "dontHaveAccount": "Pas encore de compte ?",
+    "loginWithGoogle": "Se connecter avec Google",
+    "loginWithFacebook": "Se connecter avec Facebook",
+    "registerWithGoogle": "S'inscrire avec Google",
+    "registerWithFacebook": "S'inscrire avec Facebook"
+  },
+  "languages": {
+    "fr": "Français",
+    "mg": "Malagasy",
+    "en": "English"
+  }
+}

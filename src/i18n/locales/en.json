@@ -1,0 +1,71 @@
+{
+  "common": {
+    "dashboard": "Dashboard",
+    "logout": "Logout",
+    "login": "Login",
+    "register": "Register",
+    "getStarted": "Get Started",
+    "search": "Search",
+    "profile": "My Profile",
+    "settings": "Settings",
+    "help": "Help",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
+  },
+  "header": {
+    "title": "TetiboPro",
+    "welcome": "Welcome",
+    "dashboard": "Dashboard",
+    "logout": "Logout"
+  },
+  "hero": {
+    "trustBadge": "Trusted by 10K+ users",
+    "title": "Manage your ",
+    "titleHighlight": "Personal Finance",
+    "description": "Complete and easy-to-use platform for managing your finances, monitoring your expenses, achieving your savings goals and improving your financial health.",
+    "getStarted": "Get started for free",
+    "watchDemo": "Watch demo",
+    "stats": {
+      "users": "Active users",
+      "transactions": "Transactions processed",
+      "uptime": "Uptime"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Hello",
+    "welcomeBack": "welcome back!",
+    "searchPlaceholder": "Search transactions, contacts...",
+    "searchMobile": "Search...",
+    "notifications": {
+      "title": "Notifications",
+      "viewAll": "View all notifications",
+      "newPayment": "New payment received",
+      "budgetWarning": "Monthly budget reached",
+      "goalAchieved": "Goal achieved"
+    }
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "fullName": "Full Name",
+    "currency": "Currency",
+    "forgotPassword": "Forgot password?",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "loginWithGoogle": "Login with Google",
+    "loginWithFacebook": "Login with Facebook",
+    "registerWithGoogle": "Register with Google",
+    "registerWithFacebook": "Register with Facebook"
+  },
+  "languages": {
+    "fr": "Français",
+    "mg": "Malagasy",
+    "en": "English"
+  }
+}
