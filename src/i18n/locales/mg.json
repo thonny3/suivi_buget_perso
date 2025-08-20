@@ -1,0 +1,71 @@
+{
+  "common": {
+    "dashboard": "Dashboard",
+    "logout": "Fialàna",
+    "login": "Fidirana",
+    "register": "Fisoratana",
+    "getStarted": "Hanomboka",
+    "search": "Fikarohana",
+    "profile": "Ny mombamomba",
+    "settings": "Safidy",
+    "help": "Fanampiana",
+    "notifications": "Fampahafantarana",
+    "messages": "Hafatra",
+    "darkMode": "Fomba maizina",
+    "lightMode": "Fomba mazava"
+  },
+  "header": {
+    "title": "TetiboPro",
+    "welcome": "Tongasoa",
+    "dashboard": "Dashboard",
+    "logout": "Fialàna"
+  },
+  "hero": {
+    "trustBadge": "Nekena amin'ny 10K+ mpampiasa",
+    "title": "Fehezoy ny ",
+    "titleHighlight": "Tetibola Manokana",
+    "description": "Sehatra feno sy mora ampiasaina ho an'ny fitantanana ny tetibolao, fanaraha-maso ny fandanianao, hahatratrarana ny tanjonanao fitahirizana ary hampatsarana ny fahasalamanao ara-bola.",
+    "getStarted": "Hanomboka maimaim-poana",
+    "watchDemo": "Hijery ny demo",
+    "stats": {
+      "users": "Mpampiasa mavitrika",
+      "transactions": "Fifanakalozana voatahiry",
+      "uptime": "Fahafahana"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Salama",
+    "welcomeBack": "tongasoa !",
+    "searchPlaceholder": "Mitady fifanakalozana, olona...",
+    "searchMobile": "Mitady...",
+    "notifications": {
+      "title": "Fampahafantarana",
+      "viewAll": "Hijery ny fampahafantarana rehetra",
+      "newPayment": "Voa raisina ny fandoavam-bola vaovao",
+      "budgetWarning": "Tafiditra ny volam-piainana isam-bolana",
+      "goalAchieved": "Tafiditra ny tanjona"
+    }
+  },
+  "auth": {
+    "login": "Hiditra",
+    "register": "Hisoratra anarana",
+    "email": "Mailaka",
+    "password": "Teny miafina",
+    "confirmPassword": "Hamarino ny teny miafina",
+    "fullName": "Anarana feno",
+    "currency": "Vola",
+    "forgotPassword": "Hadino ny teny miafina?",
+    "alreadyHaveAccount": "Efa manana kaonty?",
+    "dontHaveAccount": "Mbola tsy manana kaonty?",
+    "loginWithGoogle": "Hiditra amin'ny Google",
+    "loginWithFacebook": "Hiditra amin'ny Facebook",
+    "registerWithGoogle": "Hisoratra anarana amin'ny Google",
+    "registerWithFacebook": "Hisoratra anarana amin'ny Facebook"
+  },
+  "languages": {
+    "fr": "Français",
+    "mg": "Malagasy",
+    "en": "English"
+  }
+}
