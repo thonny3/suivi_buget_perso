@@ -20,69 +20,39 @@ import {
   BarChart3
 } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
+import { categorieDepense } from '../../../../services/categorieService'
+import { add, getAll } from '../../../../services/bugetService'
+import { toast } from 'react-toastify'
+import { useAuth } from '@/app/context/AuthContext'
 
 export default function BudgetPage() {
-  const [budgets, setBudgets] = useState([
-    {
-      id_budget: 1,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 2500.00,
-      montant_restant: 1200.00,
-      id_categories_depenses: 1,
-      categorie: 'Alimentation',
-      montant_depense: 1300.00,
-      pourcentage_utilise: 52
-    },
-    {
-      id_budget: 2,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 800.00,
-      montant_restant: 150.00,
-      id_categories_depenses: 2,
-      categorie: 'Transport',
-      montant_depense: 650.00,
-      pourcentage_utilise: 81.25
-    },
-    {
-      id_budget: 3,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 1200.00,
-      montant_restant: 0.00,
-      id_categories_depenses: 3,
-      categorie: 'Logement',
-      montant_depense: 1200.00,
-      pourcentage_utilise: 100
-    },
-    {
-      id_budget: 4,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 400.00,
-      montant_restant: 320.00,
-      id_categories_depenses: 4,
-      categorie: 'Loisirs',
-      montant_depense: 80.00,
-      pourcentage_utilise: 20
-    }
-  ])
+  const [budgets, setBudgets] = useState([])
+  const [categories, setCategories] = useState([])
+  const {user} = useAuth()
 
-  const [categories] = useState([
-    { id: 1, nom: 'Alimentation', couleur: '#10B981' },
-    { id: 2, nom: 'Transport', couleur: '#3B82F6' },
-    { id: 3, nom: 'Logement', couleur: '#F59E0B' },
-    { id: 4, nom: 'Loisirs', couleur: '#EF4444' },
-    { id: 5, nom: 'Santé', couleur: '#8B5CF6' },
-    { id: 6, nom: 'Shopping', couleur: '#EC4899' },
-    { id: 7, nom: 'Épargne', couleur: '#6B7280' }
-  ])
+  // État pour le filtre par mois/année
+  const [selectedMonth, setSelectedMonth] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const fetchCategorie = async () => {
+    categorieDepense().then((res) => {
+      setCategories(res)
+    }).catch((err) => {
+      console.error("Erreur lors de la récupération des catégories de dépenses :", err);
+    })
+  }
+
+  const fetchBuget = async () => {
+    getAll().then((res) => {
+      console.log(res);
+      setBudgets(res)
+    }).catch((err) => {
+      console.error("Erreur lors de la récupération des catégories de dépenses :", err);
+    })
+  }
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
-  const [selectedMonth, setSelectedMonth] = useState('Janvier 2024')
-  const [searchTerm, setSearchTerm] = useState('')
 
   const [formData, setFormData] = useState({
     mois: '',
@@ -90,41 +60,109 @@ export default function BudgetPage() {
     id_categories_depenses: ''
   })
 
-  // Calculs statistiques
-  const totalBudgetMax = budgets.reduce((sum, budget) => sum + budget.montant_max, 0)
-  const totalDepense = budgets.reduce((sum, budget) => sum + budget.montant_depense, 0)
-  const totalRestant = budgets.reduce((sum, budget) => sum + budget.montant_restant, 0)
-  const budgetsAlertes = budgets.filter(b => b.pourcentage_utilise >= 80).length
-  const moyenneUtilisation = budgets.reduce((sum, b) => sum + b.pourcentage_utilise, 0) / budgets.length
+  // Fonction pour formater les montants
+  const formatAmount = (amount) => {
+    // Convertir en nombre et gérer les cas NaN/null/undefined
+    const numAmount = Number(amount)
+    if (isNaN(numAmount) || amount === null || amount === undefined) {
+      return '0.00'
+    }
+    return numAmount.toLocaleString('fr-FR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    })
+  }
 
-  // Données pour les graphiques
-  const budgetData = budgets.map(budget => ({
-    categorie: budget.categorie,
-    budget: budget.montant_max,
-    depense: budget.montant_depense,
-    restant: budget.montant_restant,
-    pourcentage: budget.pourcentage_utilise
+  // Fonction pour convertir sécurisément en nombre
+  const safeNumber = (value) => {
+    const num = Number(value)
+    return isNaN(num) ? 0 : num
+  }
+
+  // Fonction pour obtenir le mois actuel au format YYYY-MM
+  const getCurrentMonth = () => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }
+
+  // Fonction pour formater le mois d'affichage
+  const formatMonthDisplay = (monthValue) => {
+    if (!monthValue) return 'Tous les mois'
+    const [year, month] = monthValue.split('-')
+    const monthNames = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ]
+    return `${monthNames[parseInt(month) - 1]} ${year}`
+  }
+
+  // Filtrage des budgets par mois sélectionné
+  const filteredBudgets = budgets.filter(budget => {
+    const matchesSearch = budget.categorie?.toLowerCase().includes(searchTerm.toLowerCase()) || false
+    const matchesMonth = !selectedMonth || budget.mois === selectedMonth
+    return matchesSearch && matchesMonth
+  })
+
+  // Calculs statistiques basés sur les budgets filtrés (par mois sélectionné)
+  const totalBudgetMax = filteredBudgets.reduce((sum, budget) => {
+    return sum + safeNumber(budget.montant_max)
+  }, 0)
+  
+  const totalDepense = filteredBudgets.reduce((sum, budget) => {
+    return sum + safeNumber(budget.montant_depense)
+  }, 0)
+  
+  const totalRestant = filteredBudgets.reduce((sum, budget) => {
+    return sum + safeNumber(budget.montant_restant)
+  }, 0)
+  
+  const budgetsAlertes = filteredBudgets.filter(b => safeNumber(b.pourcentage_utilise) >= 80).length
+  
+  const moyenneUtilisation = filteredBudgets.length > 0 
+    ? filteredBudgets.reduce((sum, b) => sum + safeNumber(b.pourcentage_utilise), 0) / filteredBudgets.length 
+    : 0
+
+  // Statistiques globales (tous les budgets confondus) pour comparaison
+  const statsGlobales = {
+    totalBudgets: budgets.length,
+    totalBudgetMax: budgets.reduce((sum, budget) => sum + safeNumber(budget.montant_max), 0),
+    totalDepense: budgets.reduce((sum, budget) => sum + safeNumber(budget.montant_depense), 0),
+    totalRestant: budgets.reduce((sum, budget) => sum + safeNumber(budget.montant_restant), 0),
+    moyenneUtilisation: budgets.length > 0 
+      ? budgets.reduce((sum, b) => sum + safeNumber(b.pourcentage_utilise), 0) / budgets.length 
+      : 0
+  }
+
+  // Calcul du pourcentage global d'utilisation
+  const pourcentageGlobal = totalBudgetMax > 0 ? Math.round((totalDepense / totalBudgetMax) * 100) : 0
+
+  // Données pour les graphiques basées sur les budgets filtrés
+  const budgetData = filteredBudgets.map(budget => ({
+    categorie: budget.categorie || 'Sans nom',
+    budget: safeNumber(budget.montant_max),
+    depense: safeNumber(budget.montant_depense),
+    restant: safeNumber(budget.montant_restant),
+    pourcentage: safeNumber(budget.pourcentage_utilise)
   }))
 
+  // Données d'évolution (à adapter selon vos besoins)
   const evolutionData = [
     { mois: 'Oct', budget: 4500, depense: 3800 },
     { mois: 'Nov', budget: 4200, depense: 4100 },
     { mois: 'Déc', budget: 4800, depense: 4200 },
-    { mois: 'Jan', budget: totalBudgetMax, depense: totalDepense }
+    { mois: formatMonthDisplay(selectedMonth).split(' ')[0].substring(0, 3), budget: totalBudgetMax, depense: totalDepense }
   ]
 
-  const repartitionData = budgets.map(budget => ({
-    name: budget.categorie,
-    value: budget.montant_depense,
-    color: categories.find(cat => cat.id === budget.id_categories_depenses)?.couleur || '#6B7280'
-  }))
+  const repartitionData = filteredBudgets
+    .filter(budget => safeNumber(budget.montant_depense) > 0)
+    .map(budget => ({
+      name: budget.categorie || 'Sans nom',
+      value: safeNumber(budget.montant_depense),
+      color: categories.find(cat => cat.id === budget.id_categories_depenses)?.couleur || '#6B7280'
+    }))
 
-  // Filtrage des budgets
-  const filteredBudgets = budgets.filter(budget => {
-    const matchesSearch = budget.categorie.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesMonth = !selectedMonth || budget.mois === selectedMonth
-    return matchesSearch && matchesMonth
-  })
+  // Obtenir la liste des mois disponibles dans les budgets
+  const availableMonths = [...new Set(budgets.map(budget => budget.mois).filter(Boolean))].sort()
 
   const handleSubmit = () => {
     if (!formData.montant_max || !formData.id_categories_depenses || !formData.mois) {
@@ -133,38 +171,41 @@ export default function BudgetPage() {
     }
 
     const categorie = categories.find(cat => cat.id.toString() === formData.id_categories_depenses)
-    
+
     if (editingBudget) {
       // Mise à jour
       setBudgets(budgets.map(budget =>
         budget.id_budget === editingBudget.id_budget
           ? {
-              ...budget,
-              ...formData,
-              montant_max: parseFloat(formData.montant_max),
-              montant_restant: parseFloat(formData.montant_max) - budget.montant_depense,
-              categorie: categorie?.nom || '',
-              pourcentage_utilise: Math.round((budget.montant_depense / parseFloat(formData.montant_max)) * 100)
-            }
+            ...budget,
+            ...formData,
+            montant_max: parseFloat(formData.montant_max),
+            montant_restant: parseFloat(formData.montant_max) - (budget.montant_depense || 0),
+            categorie: categorie?.nom || '',
+            pourcentage_utilise: Math.round(((budget.montant_depense || 0) / parseFloat(formData.montant_max)) * 100)
+          }
           : budget
       ))
     } else {
       // Création
       const newBudget = {
-        id_budget: Math.max(...budgets.map(b => b.id_budget)) + 1,
-        id_user: 1,
         ...formData,
         montant_max: parseFloat(formData.montant_max),
         montant_restant: parseFloat(formData.montant_max),
         montant_depense: 0,
-        categorie: categorie?.nom || '',
         pourcentage_utilise: 0,
-        id_categories_depenses: parseInt(formData.id_categories_depenses)
+        id_categorie_depense: formData.id_categories_depenses
       }
-      setBudgets([...budgets, newBudget])
-    }
     
-    resetForm()
+      add(newBudget).then((res) => {
+        console.log(res.data);
+        fetchBuget()
+        resetForm()
+        toast.success("Budget ajouté avec succès !")
+      }).catch((err) => {
+        console.error("Erreur lors de l'ajout du budget :", err);
+      })
+    }
   }
 
   const resetForm = () => {
@@ -180,9 +221,9 @@ export default function BudgetPage() {
   const handleEdit = (budget) => {
     setEditingBudget(budget)
     setFormData({
-      mois: budget.mois,
-      montant_max: budget.montant_max.toString(),
-      id_categories_depenses: budget.id_categories_depenses.toString()
+      mois: budget.mois || '',
+      montant_max: (budget.montant_max || 0).toString(),
+      id_categories_depenses: (budget.id_categories_depenses || '').toString()
     })
     setIsModalOpen(true)
   }
@@ -194,18 +235,28 @@ export default function BudgetPage() {
   }
 
   const getBudgetStatus = (pourcentage) => {
-    if (pourcentage >= 100) return { color: 'text-red-600', bg: 'bg-red-100', icon: AlertTriangle, label: 'Dépassé' }
-    if (pourcentage >= 80) return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle, label: 'Attention' }
-    if (pourcentage >= 60) return { color: 'text-yellow-600', bg: 'bg-yellow-100', icon: TrendingUp, label: 'Modéré' }
+    const pct = safeNumber(pourcentage)
+    if (pct >= 100) return { color: 'text-red-600', bg: 'bg-red-100', icon: AlertTriangle, label: 'Dépassé' }
+    if (pct >= 80) return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle, label: 'Attention' }
+    if (pct >= 60) return { color: 'text-yellow-600', bg: 'bg-yellow-100', icon: TrendingUp, label: 'Modéré' }
     return { color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle, label: 'Sain' }
   }
 
   const getProgressBarColor = (pourcentage) => {
-    if (pourcentage >= 100) return 'bg-red-500'
-    if (pourcentage >= 80) return 'bg-orange-500'
-    if (pourcentage >= 60) return 'bg-yellow-500'
+    const pct = safeNumber(pourcentage)
+    if (pct >= 100) return 'bg-red-500'
+    if (pct >= 80) return 'bg-orange-500'
+    if (pct >= 60) return 'bg-yellow-500'
     return 'bg-green-500'
   }
+
+  // Initialiser le mois actuel au chargement
+  useEffect(() => {
+    fetchCategorie()
+    fetchBuget()
+    // Définir le mois actuel par défaut
+    setSelectedMonth(getCurrentMonth())
+  }, [])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -214,7 +265,9 @@ export default function BudgetPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Gestion du Budget</h1>
-            <p className="text-gray-600 mt-2">Suivez et contrôlez vos dépenses par catégorie</p>
+            <p className="text-gray-600 mt-2">
+              Suivez et contrôlez vos dépenses par catégorie - {formatMonthDisplay(selectedMonth)}
+            </p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -226,12 +279,21 @@ export default function BudgetPage() {
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Budget Total</p>
-                <p className="text-2xl font-bold text-gray-900">{totalBudgetMax.toLocaleString()}€</p>
+                <p className="text-sm text-gray-600">
+                  Budget Total {selectedMonth ? `(${formatMonthDisplay(selectedMonth)})` : '(Global)'}
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatAmount(totalBudgetMax)} {user?.devise || 'MGA'}
+                </p>
+                {selectedMonth && statsGlobales.totalBudgets > filteredBudgets.length && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Global: {formatAmount(statsGlobales.totalBudgetMax)} {user?.devise || 'MGA'}
+                  </p>
+                )}
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
                 <Target className="w-6 h-6 text-blue-600" />
@@ -242,8 +304,17 @@ export default function BudgetPage() {
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Dépensé</p>
-                <p className="text-2xl font-bold text-gray-900">{totalDepense.toLocaleString()}€</p>
+                <p className="text-sm text-gray-600">
+                  Dépensé {selectedMonth ? `(${formatMonthDisplay(selectedMonth)})` : '(Global)'}
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatAmount(totalDepense)} {user?.devise || 'MGA'}
+                </p>
+                {selectedMonth && statsGlobales.totalBudgets > filteredBudgets.length && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Global: {formatAmount(statsGlobales.totalDepense)} {user?.devise || 'MGA'}
+                  </p>
+                )}
               </div>
               <div className="bg-red-100 p-3 rounded-lg">
                 <TrendingDown className="w-6 h-6 text-red-600" />
@@ -254,8 +325,17 @@ export default function BudgetPage() {
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Restant</p>
-                <p className="text-2xl font-bold text-green-600">{totalRestant.toLocaleString()}€</p>
+                <p className="text-sm text-gray-600">
+                  Restant {selectedMonth ? `(${formatMonthDisplay(selectedMonth)})` : '(Global)'}
+                </p>
+                <p className="text-2xl font-bold text-green-600">
+                  {formatAmount(totalRestant)} {user?.devise || 'MGA'}
+                </p>
+                {selectedMonth && statsGlobales.totalBudgets > filteredBudgets.length && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Global: {formatAmount(statsGlobales.totalRestant)} {user?.devise || 'MGA'}
+                  </p>
+                )}
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <PiggyBank className="w-6 h-6 text-green-600" />
@@ -266,8 +346,11 @@ export default function BudgetPage() {
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Alertes</p>
+                <p className="text-sm text-gray-600">Budgets en Alerte</p>
                 <p className="text-2xl font-bold text-orange-600">{budgetsAlertes}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {selectedMonth ? `sur ${filteredBudgets.length}` : `sur ${budgets.length} total`}
+                </p>
               </div>
               <div className="bg-orange-100 p-3 rounded-lg">
                 <AlertTriangle className="w-6 h-6 text-orange-600" />
@@ -275,76 +358,108 @@ export default function BudgetPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          {/*<div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Utilisation Moy.</p>
-                <p className="text-2xl font-bold text-gray-900">{moyenneUtilisation.toFixed(0)}%</p>
+                <p className="text-sm text-gray-600">Utilisation</p>
+                <div className="text-2xl font-bold text-gray-900">{pourcentageGlobal}%</div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Moy: {moyenneUtilisation.toFixed(0)}% par catégorie
+                </p>
               </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Percent className="w-6 h-6 text-purple-600" />
+              <div className={`p-3 rounded-lg ${
+                pourcentageGlobal >= 80 ? 'bg-red-100' : 
+                pourcentageGlobal >= 60 ? 'bg-orange-100' : 
+                'bg-green-100'
+              }`}>
+                <Percent className={`w-6 h-6 ${
+                  pourcentageGlobal >= 80 ? 'text-red-600' : 
+                  pourcentageGlobal >= 60 ? 'text-orange-600' : 
+                  'text-green-600'
+                }`} />
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 
       {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Budget vs Dépenses par Catégorie</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={budgetData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="categorie" />
-              <YAxis />
-              <Tooltip formatter={(value) => [`${value}€`, '']} />
-              <Legend />
-              <Bar dataKey="budget" fill="#3B82F6" name="Budget" />
-              <Bar dataKey="depense" fill="#EF4444" name="Dépensé" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+      {filteredBudgets.length > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Budget vs Dépenses par Catégorie</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={budgetData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="categorie" 
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tickFormatter={(value) => formatAmount(value)} />
+                <Tooltip 
+                  formatter={(value, name) => [
+                    `${formatAmount(value)} ${user?.devise || 'MGA'}`, 
+                    name === 'budget' ? 'Budget' : 'Dépensé'
+                  ]} 
+                />
+                <Legend />
+                <Bar dataKey="budget" fill="#3B82F6" name="Budget" />
+                <Bar dataKey="depense" fill="#EF4444" name="Dépensé" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
 
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Répartition des Dépenses</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={repartitionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {repartitionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => [`${value}€`, 'Dépensé']} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Répartition des Dépenses</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={repartitionData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {repartitionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  formatter={(value) => [`${formatAmount(value)} ${user?.devise || 'MGA'}`, 'Dépensé']} 
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Évolution Budget */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
-        <h3 className="text-lg font-semibold mb-4">Évolution Budget vs Dépenses</h3>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={evolutionData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="mois" />
-            <YAxis />
-            <Tooltip formatter={(value) => [`${value}€`, '']} />
-            <Legend />
-            <Line type="monotone" dataKey="budget" stroke="#3B82F6" strokeWidth={3} name="Budget" />
-            <Line type="monotone" dataKey="depense" stroke="#EF4444" strokeWidth={3} name="Dépenses" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      {filteredBudgets.length > 0 && (
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+          <h3 className="text-lg font-semibold mb-4">Évolution Budget vs Dépenses</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={evolutionData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mois" />
+              <YAxis tickFormatter={(value) => formatAmount(value)} />
+              <Tooltip 
+                formatter={(value, name) => [
+                  `${formatAmount(value)} ${user?.devise || 'MGA'}`, 
+                  name === 'budget' ? 'Budget' : 'Dépenses'
+                ]} 
+              />
+              <Legend />
+              <Line type="monotone" dataKey="budget" stroke="#3B82F6" strokeWidth={3} name="Budget" />
+              <Line type="monotone" dataKey="depense" stroke="#EF4444" strokeWidth={3} name="Dépenses" />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Filtres */}
       <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
@@ -362,16 +477,21 @@ export default function BudgetPage() {
             </div>
           </div>
 
-          <select
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            <option value="">Tous les mois</option>
-            <option value="Janvier 2024">Janvier 2024</option>
-            <option value="Février 2024">Février 2024</option>
-            <option value="Mars 2024">Mars 2024</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-gray-400" />
+            <select
+              className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              <option value="">Tous les mois</option>
+              {availableMonths.map(month => (
+                <option key={month} value={month}>
+                  {formatMonthDisplay(month)}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" />
@@ -385,11 +505,11 @@ export default function BudgetPage() {
         {filteredBudgets.map((budget) => {
           const status = getBudgetStatus(budget.pourcentage_utilise)
           const StatusIcon = status.icon
-          
+
           return (
             <div key={budget.id_budget} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg text-gray-900">{budget.categorie}</h3>
+                <h3 className="font-semibold text-lg text-gray-900">{budget.categorie || 'Sans nom'}</h3>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(budget)}
@@ -409,29 +529,35 @@ export default function BudgetPage() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Budget</span>
-                  <span className="font-medium">{budget.montant_max.toLocaleString()}€</span>
+                  <span className="font-medium">
+                    {formatAmount(budget.montant_max)} {user?.devise || 'MGA'}
+                  </span>
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Dépensé</span>
-                  <span className="font-medium text-red-600">{budget.montant_depense.toLocaleString()}€</span>
+                  <span className="font-medium text-red-600">
+                    {formatAmount(budget.montant_depense)} {user?.devise || 'MGA'}
+                  </span>
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Restant</span>
-                  <span className="font-medium text-green-600">{budget.montant_restant.toLocaleString()}€</span>
+                  <span className="font-medium text-green-600">
+                    {formatAmount(budget.montant_restant)} {user?.devise || 'MGA'}
+                  </span>
                 </div>
 
                 {/* Barre de progression */}
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm text-gray-600">Utilisation</span>
-                    <span className="text-sm font-medium">{budget.pourcentage_utilise}%</span>
+                    <span className="text-sm font-medium">{safeNumber(budget.pourcentage_utilise).toFixed(0)}%</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${getProgressBarColor(budget.pourcentage_utilise)}`}
-                      style={{ width: `${Math.min(budget.pourcentage_utilise, 100)}%` }}
+                      style={{ width: `${Math.min(safeNumber(budget.pourcentage_utilise), 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -443,7 +569,7 @@ export default function BudgetPage() {
                 </div>
 
                 <div className="text-xs text-gray-500 mt-2">
-                  Période: {budget.mois}
+                  Période: {formatMonthDisplay(budget.mois)}
                 </div>
               </div>
             </div>
@@ -454,7 +580,12 @@ export default function BudgetPage() {
       {filteredBudgets.length === 0 && (
         <div className="text-center py-12">
           <Calculator className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Aucun budget trouvé</p>
+          <p className="text-gray-500">
+            {selectedMonth 
+              ? `Aucun budget trouvé pour ${formatMonthDisplay(selectedMonth)}` 
+              : 'Aucun budget trouvé'
+            }
+          </p>
         </div>
       )}
 
@@ -472,18 +603,17 @@ export default function BudgetPage() {
                   Période/Mois
                 </label>
                 <input
-                  type="text"
+                  type="month"
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.mois}
-                  onChange={(e) => setFormData({...formData, mois: e.target.value})}
-                  placeholder="Ex: Février 2024"
+                  onChange={(e) => setFormData({ ...formData, mois: e.target.value })}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant Maximum (€)
+                  Montant Maximum ({user?.devise || 'MGA'})
                 </label>
                 <input
                   type="number"
@@ -491,7 +621,7 @@ export default function BudgetPage() {
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.montant_max}
-                  onChange={(e) => setFormData({...formData, montant_max: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, montant_max: e.target.value })}
                 />
               </div>
 
@@ -503,7 +633,7 @@ export default function BudgetPage() {
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.id_categories_depenses}
-                  onChange={(e) => setFormData({...formData, id_categories_depenses: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, id_categories_depenses: e.target.value })}
                 >
                   <option value="">Sélectionner une catégorie</option>
                   {categories.map(cat => (

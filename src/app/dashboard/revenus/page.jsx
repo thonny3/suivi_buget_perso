@@ -1,5 +1,5 @@
 "use client"
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, use } from 'react'
 import {
   Plus,
   Search,
@@ -17,6 +17,9 @@ import {
   BarChart3
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts'
+import { getAllCategoriesRevenues } from '../../../../services/revenusService'
+import { getComptes } from '../../../../services/compteService'
+import CustomSelect from '@/components/ui/CustomSelect'
 
 export default function RevenuePage() {
   const [revenues, setRevenues] = useState([
@@ -55,19 +58,30 @@ export default function RevenuePage() {
     }
   ])
 
-  const [categories] = useState([
-    { id: 1, nom: 'Salaire' },
-    { id: 2, nom: 'Freelance' },
-    { id: 3, nom: 'Investissements' },
-    { id: 4, nom: 'Location' },
-    { id: 5, nom: 'Autres' }
-  ])
+  const [categories, setCategories] = useState([])
 
-  const [comptes] = useState([
-    { id: 1, nom: 'Compte Principal' },
-    { id: 2, nom: 'Compte Épargne' },
-    { id: 3, nom: 'Compte Investissement' }
-  ])
+  const [comptes, setComptes] = useState([])
+
+  const fetchRevenues = async () => {
+    getAllCategoriesRevenues().then(res => {
+      setCategories(res)
+    }).catch(err => {
+      console.error("Erreur lors de la récupération des revenus :", err)
+    })
+  }
+
+  const fetchComptes = async () => {
+    getComptes().then(res => {
+      setComptes(res)
+    }).catch(err => {
+      console.error("Erreur lors de la récupération des revenus :", err)
+    })
+  }
+
+  useEffect(() => {
+    fetchRevenues()
+    fetchComptes()
+  }, [])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRevenue, setEditingRevenue] = useState(null)
@@ -103,34 +117,48 @@ export default function RevenuePage() {
   // Calculs statistiques
   const totalRevenues = revenues.reduce((sum, rev) => sum + rev.montant, 0)
   const averageRevenue = totalRevenues / revenues.length || 0
-  const thisMonthRevenues = revenues.filter(rev => 
+  const thisMonthRevenues = revenues.filter(rev =>
     new Date(rev.date_revenu).getMonth() === new Date().getMonth()
   ).reduce((sum, rev) => sum + rev.montant, 0)
 
   // Filtrage des revenus
   const filteredRevenues = revenues.filter(revenue => {
     const matchesSearch = revenue.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         revenue.categorie.toLowerCase().includes(searchTerm.toLowerCase())
+      revenue.categorie.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = !selectedCategory || revenue.id_categorie_revenu.toString() === selectedCategory
     const matchesMonth = !selectedMonth || new Date(revenue.date_revenu).getMonth().toString() === selectedMonth
-    
+
     return matchesSearch && matchesCategory && matchesMonth
   })
 
+  const categorieOptions = categories.map(cat => ({
+    value: cat.id,
+    label: cat.nom,
+    name: cat.nom
+  }));
+
+  const compteOptions = comptes.map(compte => ({
+    value: compte.id_compte,
+    label: compte.nom,
+    name: compte.nom
+  }));
+
+
+
   const handleSubmit = (e) => {
     e.preventDefault()
-    
+
     if (editingRevenue) {
       // Mise à jour
       setRevenues(revenues.map(rev =>
         rev.id_revenu === editingRevenue.id_revenu
           ? {
-              ...rev,
-              ...formData,
-              montant: parseFloat(formData.montant),
-              categorie: categories.find(cat => cat.id.toString() === formData.id_categorie_revenu)?.nom || '',
-              compte: comptes.find(compte => compte.id.toString() === formData.id_compte)?.nom || ''
-            }
+            ...rev,
+            ...formData,
+            montant: parseFloat(formData.montant),
+            categorie: categories.find(cat => cat.id.toString() === formData.id_categorie_revenu)?.nom || '',
+            compte: comptes.find(compte => compte.id.toString() === formData.id_compte)?.nom || ''
+          }
           : rev
       ))
     } else {
@@ -141,11 +169,13 @@ export default function RevenuePage() {
         ...formData,
         montant: parseFloat(formData.montant),
         categorie: categories.find(cat => cat.id.toString() === formData.id_categorie_revenu)?.nom || '',
-        compte: comptes.find(compte => compte.id.toString() === formData.id_compte)?.nom || ''
+        compte: comptes.find(compte => compte.id_compte.toString() === formData.id_compte)?.nom || ''
       }
+      console.log(newRevenue);
+      
       setRevenues([...revenues, newRevenue])
     }
-    
+
     resetForm()
   }
 
@@ -429,7 +459,7 @@ export default function RevenuePage() {
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   value={formData.montant}
-                  onChange={(e) => setFormData({...formData, montant: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, montant: e.target.value })}
                 />
               </div>
 
@@ -442,7 +472,7 @@ export default function RevenuePage() {
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   value={formData.date_revenu}
-                  onChange={(e) => setFormData({...formData, date_revenu: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, date_revenu: e.target.value })}
                 />
               </div>
 
@@ -455,7 +485,7 @@ export default function RevenuePage() {
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   value={formData.source}
-                  onChange={(e) => setFormData({...formData, source: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                   placeholder="Ex: Salaire janvier, Freelance projet X..."
                 />
               </div>
@@ -464,34 +494,28 @@ export default function RevenuePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Catégorie
                 </label>
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                <CustomSelect
                   value={formData.id_categorie_revenu}
-                  onChange={(e) => setFormData({...formData, id_categorie_revenu: e.target.value})}
-                >
-                  <option value="">Sélectionner une catégorie</option>
-                  {categories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{cat.nom}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, id_categorie_revenu: val })}
+                  options={categorieOptions}
+                  placeholder="Sélectionner une catégorie"
+                  error={!formData.id_categorie_revenu}
+                />
+
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Compte de destination
                 </label>
-                <select
-                  required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                <CustomSelect
                   value={formData.id_compte}
-                  onChange={(e) => setFormData({...formData, id_compte: e.target.value})}
-                >
-                  <option value="">Sélectionner un compte</option>
-                  {comptes.map(compte => (
-                    <option key={compte.id} value={compte.id}>{compte.nom}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, id_compte: val })}
+                  options={compteOptions}
+                  placeholder="Sélectionner un compte"
+                  error={!formData.id_compte}
+                />
+
               </div>
 
               <div className="flex gap-3 pt-4">

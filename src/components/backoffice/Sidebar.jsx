@@ -36,6 +36,13 @@ const Sidebar = () => {
       description: 'Mon portefeuille',
       href: '/dashboard/portefeuille'
     },
+     {
+      id: 'budget',
+      label: 'Budget',
+      icon: PiggyBank,
+      description: 'Gestion budget',
+      href: '/dashboard/budget'
+    },
     {
       id: 'depenses',
       label: 'Dépenses',
@@ -44,19 +51,13 @@ const Sidebar = () => {
       href: '/dashboard/depenses'
     },
     {
-      id: 'revenus',
-      label: 'Revenus',
+      id: 'Transaction',
+      label: 'Transaction',
       icon: TrendingUp,
-      description: 'Mes revenus',
-      href: '/dashboard/revenus'
+      description: 'Mes Transactions',
+      href: '/dashboard/Transaction'
     },
-    {
-      id: 'budget',
-      label: 'Budget',
-      icon: PiggyBank,
-      description: 'Gestion budget',
-      href: '/dashboard/budget'
-    },
+   
     {
       id: 'objectifs',
       label: 'Objectifs',
@@ -89,7 +90,7 @@ const Sidebar = () => {
   return (
     <div className="flex">
       {/* Sidebar */}
-      <div className={`bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${isOpen ? 'w-72' : 'w-20'} min-h-screen flex flex-col`}>
+      <div className={`bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${isOpen ? 'w-72' : 'w-20'} min-h-screen flex flex-col `}>
 
         {/* Header avec Logo */}
         <div className="p-6 border-b border-gray-100">

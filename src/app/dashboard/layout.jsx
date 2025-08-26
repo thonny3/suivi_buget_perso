@@ -8,12 +8,10 @@ import { useEffect, useState } from "react";
 export default function RootLayout({ children }) {
   const [isLoading, setIsLoading] = useState(true)
   
-  // Loading effet au montage du composant
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false)
-    }, 1000) // Réduit de 2s à 1s
-
+    }, 1000)
     return () => clearTimeout(timer)
   }, [])
 
@@ -23,12 +21,12 @@ export default function RootLayout({ children }) {
 
   return (
     <ProtectedRoute>
-      <div>
-        <div className="flex">
+      <div className="overflow-hidden h-auto"> {/* <-- Ajout h-screen */}
+        <div className="flex overflow-y-hidden"> {/* <-- Empêche scroll vertical */}
           <Sidebar />
-          <div className="w-full ">
+          <div className="w-full">
             <DashboardNavbar />
-            <div className="">
+            <div className="overflow-y-hidden"> {/* <-- Désactive scroll sur le contenu */}
               {children}
             </div>
           </div>
