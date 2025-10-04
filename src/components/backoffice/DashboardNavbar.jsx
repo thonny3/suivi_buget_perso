@@ -2,7 +2,9 @@
 import React, { useState } from 'react'
 import { useAuth } from '@/app/context/AuthContext'
 import { useLanguage } from '@/context/LanguageContext'
+import { useSidebar } from '@/context/SidebarContext'
 import LanguageSelector from '@/components/LanguageSelector'
+import Logo from '@/components/Logo'
 import {
   Bell,
   Search,
@@ -11,7 +13,6 @@ import {
   ChevronDown,
   Moon,
   Sun,
-  Menu,
   MessageSquare,
   HelpCircle,
   LogOut
@@ -22,6 +23,7 @@ import { colors } from '@/styles/colors'
 const DashboardNavbar = () => {
   const { user, logout } = useAuth()
   const router = useRouter()
+  const { toggleSidebar, isOpen } = useSidebar()
   
   const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
@@ -87,17 +89,28 @@ const DashboardNavbar = () => {
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
       <div className="flex items-center justify-between px-6 py-4">
 
-        {/* Section gauche - Titre et recherche */}
-        <div className="flex items-center space-x-6">
-          {/* Bouton menu mobile */}
-          <button className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <Menu className="w-5 h-5 text-gray-600" />
+        {/* Section gauche - Logo, nom app et toggle sidebar */}
+        <div className="flex items-center space-x-4">
+          {/* Toggle Sidebar - Hamburger */}
+          <button 
+            onClick={toggleSidebar}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+            title={isOpen ? 'Fermer la sidebar' : 'Ouvrir la sidebar'}
+          >
+            <div className="flex flex-col space-y-1">
+              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200 ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
+              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200 ${isOpen ? 'opacity-0' : ''}`}></div>
+              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200 ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
+            </div>
           </button>
 
-          {/* Titre de la page */}
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">{t('dashboard.title')}</h1>
-            <p className="text-sm text-gray-500">{t('dashboard.welcome')} {userName}, {t('dashboard.welcomeBack')}</p>
+          {/* Logo et nom de l'application */}
+          <div className="flex items-center space-x-3">
+            <Logo size="small" />
+            <div>
+              <h1 className="text-xl font-bold" style={{ color: colors.secondary }}>MyJalako</h1>
+              <p className="text-xs text-gray-500">Gestion de budget</p>
+            </div>
           </div>
         </div>
 

@@ -1,7 +1,9 @@
 "use client"
-import React, { useState } from 'react'
+import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useSidebar } from '@/context/SidebarContext'
+import Logo from '@/components/Logo'
 import {
   Home,
   Wallet,
@@ -19,7 +21,7 @@ import {
 import { colors } from '@/styles/colors'
 
 const Sidebar = () => {
-  const [isOpen, setIsOpen] = useState(true)
+  const { isOpen, toggleSidebar } = useSidebar()
   const pathname = usePathname()
 
   const menuItems = [
@@ -94,11 +96,9 @@ const Sidebar = () => {
 
         {/* Header avec Logo */}
         <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center">
             <Link href="/dashboard" className="flex items-center">
-              <div className="rounded-xl w-10 h-10 flex items-center justify-center shadow-lg" style={{ backgroundColor: colors.secondary }}>
-                <TrendingUp className="text-white w-6 h-6" />
-              </div>
+              <Logo size="small" />
               {isOpen && (
                 <div className="ml-3">
                   <h1 className="text-xl font-bold" style={{ color: colors.secondary }}>
@@ -108,13 +108,6 @@ const Sidebar = () => {
                 </div>
               )}
             </Link>
-
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
-            >
-              {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
           </div>
         </div>
 
@@ -123,39 +116,52 @@ const Sidebar = () => {
           <div className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon
+              // Amélioration de la logique des liens actifs
               const isActive = pathname === item.href ||
                 (pathname === '/dashboard' && item.id === 'dashboard') ||
-                (pathname.startsWith(item.href) && item.href !== '/dashboard')
+                (pathname.startsWith(item.href) && item.href !== '/dashboard') ||
+                (pathname.includes(item.href) && item.href !== '/dashboard')
 
               return (
                 <Link
                   key={item.id}
                   href={item.href}
-                  className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 group ${isActive
-                      ? 'text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
-                    }`}
-                  style={isActive ? { backgroundColor: colors.secondary } : {}}
+                  className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative ${
+                    isActive
+                      ? 'text-white shadow-lg transform scale-105'
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-md'
+                  }`}
+                  style={isActive ? { 
+                    backgroundColor: colors.secondary,
+                    borderLeft: `4px solid ${colors.primary}`
+                  } : {}}
                 >
-                  <Icon className={`w-5 h-5 transition-colors ${isActive
+                  <Icon className={`w-5 h-5 transition-colors ${
+                    isActive
                       ? 'text-white'
-                      : 'text-gray-500 group-hover:text-green-600'
-                    }`} />
+                      : 'text-gray-500 group-hover:text-gray-700'
+                  }`} />
                   {isOpen && (
                     <div className="ml-3 text-left">
-                      <div className={`font-medium transition-colors ${isActive
+                      <div className={`font-medium transition-colors ${
+                        isActive
                           ? 'text-white'
-                          : 'text-gray-700 group-hover:text-green-700'
-                        }`}>
+                          : 'text-gray-700 group-hover:text-gray-900'
+                      }`}>
                         {item.label}
                       </div>
-                      <div className={`text-xs transition-colors ${isActive
-                          ? 'text-green-100'
-                          : 'text-gray-500 group-hover:text-green-600'
-                        }`}>
+                      <div className={`text-xs transition-colors ${
+                        isActive
+                          ? 'text-gray-100'
+                          : 'text-gray-500 group-hover:text-gray-600'
+                      }`}>
                         {item.description}
                       </div>
                     </div>
+                  )}
+                  {/* Indicateur de page active */}
+                  {isActive && (
+                    <div className="absolute right-2 w-2 h-2 bg-white rounded-full"></div>
                   )}
                 </Link>
               )
