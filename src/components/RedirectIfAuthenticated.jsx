@@ -2,16 +2,26 @@
 import { useAuth } from '@/app/context/AuthContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import LoadingScreen from './LoadingScreen'
 
-export default function RedirectIfAuthenticated({ children }) {
-  const { isAuthenticated } = useAuth()
+export default function RedirectIfAuthenticated({ children, locale }) {
+  const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      router.push('/dashboard')
+    if (!isLoading && isAuthenticated()) {
+      // Rediriger vers le dashboard si déjà connecté
+      router.push(`/${locale}/dashboard`)
     }
-  }, [isAuthenticated, router])
+  }, [isAuthenticated, isLoading, router, locale])
+
+  if (isLoading) {
+    return <LoadingScreen />
+  }
+
+  if (isAuthenticated()) {
+    return null // Le useEffect va rediriger
+  }
 
   return children
 }

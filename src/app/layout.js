@@ -1,5 +1,6 @@
 import localFont from "next/font/local";
 import "./globals.css";
+import "../styles/toast.css";
 import { AuthProvider } from "./context/AuthContext";
 import { LanguageProvider } from "../context/LanguageContext";
 

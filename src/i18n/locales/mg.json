@@ -12,7 +12,53 @@
     "notifications": "Fampahafantarana",
     "messages": "Hafatra",
     "darkMode": "Fomba maizina",
-    "lightMode": "Fomba mazava"
+    "lightMode": "Fomba mazava",
+    "backToHome": "Miverina any amin'ny fandraisana",
+    "or": "na"
+  },
+  "form": {
+    "email": "Mailaka",
+    "password": "Teny miafina",
+    "prenom": "Anarana",
+    "nom": "Anarana raibe",
+    "currency": "Vola",
+    "confirmPassword": "Hamarino ny teny miafina",
+    "emailPlaceholder": "ny_mailakao@email.com",
+    "prenomPlaceholder": "Ny anaranao",
+    "nomPlaceholder": "Ny anarana raibenao",
+    "currencyPlaceholder": "Mifidiana vola",
+    "errors": {
+      "emailRequired": "Ny mailaka dia ilaina",
+      "emailInvalid": "Ny mailaka dia tsy marina",
+      "passwordRequired": "Ny teny miafina dia ilaina",
+      "passwordMinLength": "Ny teny miafina dia tokony ho 6 na mihoatra",
+      "prenomRequired": "Ny anarana dia ilaina",
+      "prenomMinLength": "Ny anarana dia tokony ho 2 na mihoatra",
+      "nomRequired": "Ny anarana raibe dia ilaina",
+      "nomMinLength": "Ny anarana raibe dia tokony ho 2 na mihoatra",
+      "currencyRequired": "Ny vola dia ilaina",
+      "confirmPasswordRequired": "Ny famarinoana ny teny miafina dia ilaina",
+      "passwordMismatch": "Ny teny miafina dia tsy mitovy"
+    }
+  },
+  "login": {
+    "subtitle": "Midira amin'ny kaontinao",
+    "googleLogin": "Hiditra amin'ny Google",
+    "facebookLogin": "Hiditra amin'ny Facebook",
+    "forgotPassword": "Hadino ny teny miafina?",
+    "loggingIn": "Miditra...",
+    "login": "Hiditra",
+    "noAccount": "Mbola tsy manana kaonty?",
+    "signUp": "Hisoratra anarana"
+  },
+  "register": {
+    "subtitle": "Mamorona ny kaontinao",
+    "googleSignUp": "Hisoratra anarana amin'ny Google",
+    "facebookSignUp": "Hisoratra anarana amin'ny Facebook",
+    "registering": "Miditra...",
+    "register": "Hisoratra anarana",
+    "haveAccount": "Efa manana kaonty?",
+    "login": "Hiditra"
   },
   "header": {
     "title": "TetiboPro",

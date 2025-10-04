@@ -16,11 +16,12 @@ import {
   HelpCircle,
   LogOut
 } from 'lucide-react'
-import { signOut, useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { colors } from '@/styles/colors'
 
 const DashboardNavbar = () => {
   const { user, logout } = useAuth()
+  const router = useRouter()
   
   const { t } = useLanguage()
   const [searchQuery, setSearchQuery] = useState('')
@@ -73,11 +74,8 @@ const DashboardNavbar = () => {
   }
 
   const handleLogout = () => {
-    if (session) {
-      signOut({ callbackUrl: '/connexion' })
-    } else {
-      logout()
-    }
+    logout()
+    router.push('/connexion')
     setShowUserMenu(false)
   }
 

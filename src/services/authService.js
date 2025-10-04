@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://localhost:3001/api';
 class AuthService {
   async register(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      const response = await fetch(`${API_BASE_URL}/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -26,7 +26,7 @@ class AuthService {
 
   async login(credentials) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/users/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,7 +49,7 @@ class AuthService {
 
   async verifyToken(token) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+      const response = await fetch(`${API_BASE_URL}/users/verify`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -12,7 +12,53 @@
     "notifications": "Notifications",
     "messages": "Messages",
     "darkMode": "Dark Mode",
-    "lightMode": "Light Mode"
+    "lightMode": "Light Mode",
+    "backToHome": "Back to home",
+    "or": "or"
+  },
+  "form": {
+    "email": "Email",
+    "password": "Password",
+    "prenom": "First Name",
+    "nom": "Last Name",
+    "currency": "Currency",
+    "confirmPassword": "Confirm Password",
+    "emailPlaceholder": "your@email.com",
+    "prenomPlaceholder": "Your first name",
+    "nomPlaceholder": "Your last name",
+    "currencyPlaceholder": "Choose a currency",
+    "errors": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Email is not valid",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 6 characters",
+      "prenomRequired": "First name is required",
+      "prenomMinLength": "First name must be at least 2 characters",
+      "nomRequired": "Last name is required",
+      "nomMinLength": "Last name must be at least 2 characters",
+      "currencyRequired": "Currency is required",
+      "confirmPasswordRequired": "Password confirmation is required",
+      "passwordMismatch": "Passwords do not match"
+    }
+  },
+  "login": {
+    "subtitle": "Sign in to your account",
+    "googleLogin": "Sign in with Google",
+    "facebookLogin": "Sign in with Facebook",
+    "forgotPassword": "Forgot password?",
+    "loggingIn": "Signing in...",
+    "login": "Sign in",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up"
+  },
+  "register": {
+    "subtitle": "Create your account",
+    "googleSignUp": "Sign up with Google",
+    "facebookSignUp": "Sign up with Facebook",
+    "registering": "Signing up...",
+    "register": "Sign up",
+    "haveAccount": "Already have an account?",
+    "login": "Sign in"
   },
   "header": {
     "title": "TetiboPro",

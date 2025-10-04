@@ -9,19 +9,20 @@ import { colors } from '@/styles/colors'
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth()
-  const { t } = useLanguage()
+  const { t, currentLanguage } = useLanguage()
   const router = useRouter()
+  const locale = currentLanguage
   
   const onLogin = () => {
-    router.push('/connexion')
+    router.push(`/${locale}/connexion`)
   }
 
   const onGetStarted = () => {
-    router.push('/register')
+    router.push(`/${locale}/register`)
   }
 
   const onDashboard = () => {
-    router.push('/dashboard')
+    router.push(`/${locale}/dashboard`)
   }
 
   const onLogout = () => {

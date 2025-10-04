@@ -1,6 +1,7 @@
 "use client"
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import apiService from '@/services/apiService'
 
 const AuthContext = createContext()
 
@@ -18,43 +19,65 @@ export const AuthProvider = ({ children }) => {
   const router = useRouter()
 
   useEffect(() => {
-    // Vérifier si l'utilisateur est connecté au chargement de la page
-    const checkAuth = () => {
-      const savedUser = localStorage.getItem('user')
-      if (savedUser) {
-        try {
-          setUser(JSON.parse(savedUser))
-        } catch (error) {
-          console.error('Erreur lors du parsing des données utilisateur:', error)
-          localStorage.removeItem('user')
+    // Vérifier l'authentification au chargement de la page
+    const checkAuth = async () => {
+      try {
+        if (apiService.isAuthenticated()) {
+          // Vérifier si le token est encore valide
+          const response = await apiService.verifyToken()
+          setUser(response.user)
         }
+      } catch (error) {
+        console.error('Token invalide:', error)
+        apiService.logout()
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
-      setIsLoading(false)
     }
 
     checkAuth()
   }, [])
 
-  const login = (userData) => {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
-    router.push('/dashboard')
+  const login = async (credentials) => {
+    try {
+      const response = await apiService.login(credentials)
+      apiService.setToken(response.token)
+      setUser(response.user)
+      localStorage.setItem('user', JSON.stringify(response.user))
+      return { success: true, user: response.user }
+    } catch (error) {
+      console.error('Erreur de connexion:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  const register = async (userData) => {
+    try {
+      const response = await apiService.register(userData)
+      return { success: true, message: response.message }
+    } catch (error) {
+      console.error('Erreur d\'inscription:', error)
+      return { success: false, error: error.message }
+    }
   }
 
   const logout = () => {
     setUser(null)
+    apiService.logout()
     localStorage.removeItem('user')
     router.push('/')
   }
 
   const isAuthenticated = () => {
-    return user !== null
+    return user !== null && apiService.isAuthenticated()
   }
 
   const value = {
     user,
     isLoading,
     login,
+    register,
     logout,
     isAuthenticated
   }

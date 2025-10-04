@@ -1,5 +1,6 @@
 "use client"
 import { createContext, useContext, useState, useEffect } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 
 const LanguageContext = createContext()
 
@@ -12,6 +13,8 @@ export const useLanguage = () => {
 }
 
 export const LanguageProvider = ({ children }) => {
+  const params = useParams()
+  const router = useRouter()
   const [currentLanguage, setCurrentLanguage] = useState('fr')
   const [translations, setTranslations] = useState({})
 
@@ -22,12 +25,18 @@ export const LanguageProvider = ({ children }) => {
   ]
 
   useEffect(() => {
-    // Charger la langue depuis le localStorage
-    const savedLanguage = localStorage.getItem('language')
-    if (savedLanguage && ['fr', 'mg', 'en'].includes(savedLanguage)) {
-      setCurrentLanguage(savedLanguage)
+    // Utiliser la locale de l'URL si disponible
+    const locale = params?.locale
+    if (locale && ['fr', 'mg', 'en'].includes(locale)) {
+      setCurrentLanguage(locale)
+    } else {
+      // Fallback vers la langue sauvegardée ou français
+      const savedLanguage = localStorage.getItem('language')
+      if (savedLanguage && ['fr', 'mg', 'en'].includes(savedLanguage)) {
+        setCurrentLanguage(savedLanguage)
+      }
     }
-  }, [])
+  }, [params?.locale])
 
   useEffect(() => {
     // Charger les traductions pour la langue actuelle
@@ -49,6 +58,10 @@ export const LanguageProvider = ({ children }) => {
   const changeLanguage = (languageCode) => {
     if (['fr', 'mg', 'en'].includes(languageCode)) {
       setCurrentLanguage(languageCode)
+      // Rediriger vers la nouvelle langue
+      const currentPath = window.location.pathname
+      const newPath = currentPath.replace(/^\/[a-z]{2}/, `/${languageCode}`)
+      router.push(newPath)
     }
   }
 

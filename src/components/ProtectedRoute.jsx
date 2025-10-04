@@ -4,26 +4,23 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import LoadingScreen from './LoadingScreen'
 
-
-export default function ProtectedRoute({ children }) {
-  const { user, isLoading } = useAuth()
- 
+export default function ProtectedRoute({ children, locale }) {
+  const { isAuthenticated, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && status !== 'loading') {
-      if (!user) {
-        router.push('/connexion')
-      }
+    if (!isLoading && !isAuthenticated()) {
+      // Rediriger vers la connexion si non connecté
+      router.push(`/${locale}/connexion`)
     }
-  }, [user, isLoading, status, router])
+  }, [isAuthenticated, isLoading, router, locale])
 
-  if (isLoading || status === 'loading') {
+  if (isLoading) {
     return <LoadingScreen />
   }
 
-  if (!user) {
-    return null // Ne rien afficher pendant la redirection
+  if (!isAuthenticated()) {
+    return null // Le useEffect va rediriger
   }
 
   return children

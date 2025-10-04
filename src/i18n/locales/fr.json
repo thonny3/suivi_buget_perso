@@ -12,7 +12,53 @@
     "notifications": "Notifications",
     "messages": "Messages",
     "darkMode": "Mode sombre",
-    "lightMode": "Mode clair"
+    "lightMode": "Mode clair",
+    "backToHome": "Retour à l'accueil",
+    "or": "ou"
+  },
+  "form": {
+    "email": "Email",
+    "password": "Mot de passe",
+    "prenom": "Prénom",
+    "nom": "Nom",
+    "currency": "Devise",
+    "confirmPassword": "Confirmer le mot de passe",
+    "emailPlaceholder": "votre@email.com",
+    "prenomPlaceholder": "Votre prénom",
+    "nomPlaceholder": "Votre nom",
+    "currencyPlaceholder": "Choisir une devise",
+    "errors": {
+      "emailRequired": "L'email est requis",
+      "emailInvalid": "L'email n'est pas valide",
+      "passwordRequired": "Le mot de passe est requis",
+      "passwordMinLength": "Le mot de passe doit contenir au moins 6 caractères",
+      "prenomRequired": "Le prénom est requis",
+      "prenomMinLength": "Le prénom doit contenir au moins 2 caractères",
+      "nomRequired": "Le nom est requis",
+      "nomMinLength": "Le nom doit contenir au moins 2 caractères",
+      "currencyRequired": "La devise est requise",
+      "confirmPasswordRequired": "La confirmation du mot de passe est requise",
+      "passwordMismatch": "Les mots de passe ne correspondent pas"
+    }
+  },
+  "login": {
+    "subtitle": "Connectez-vous à votre compte",
+    "googleLogin": "Se connecter avec Google",
+    "facebookLogin": "Se connecter avec Facebook",
+    "forgotPassword": "Mot de passe oublié ?",
+    "loggingIn": "Connexion...",
+    "login": "Se connecter",
+    "noAccount": "Pas encore de compte ?",
+    "signUp": "S'inscrire"
+  },
+  "register": {
+    "subtitle": "Créez votre compte",
+    "googleSignUp": "S'inscrire avec Google",
+    "facebookSignUp": "S'inscrire avec Facebook",
+    "registering": "Inscription...",
+    "register": "S'inscrire",
+    "haveAccount": "Déjà un compte ?",
+    "login": "Se connecter"
   },
   "header": {
     "title": "TetiboPro",

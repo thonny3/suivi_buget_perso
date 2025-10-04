@@ -1,9 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  i18n: {
-    defaultLocale: 'fr',
-    locales: ['fr', 'mg', 'en'],
-    localeDetection: true,
+  // Configuration pour le routage i18n avec App Router
+  experimental: {
+    appDir: true,
   },
 };
 
