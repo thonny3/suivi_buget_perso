@@ -17,6 +17,7 @@ import {
   LogOut
 } from 'lucide-react'
 import { signOut, useSession } from 'next-auth/react'
+import { colors } from '@/styles/colors'
 
 const DashboardNavbar = () => {
   const { user, logout } = useAuth()
@@ -192,7 +193,7 @@ const DashboardNavbar = () => {
               onClick={toggleUserMenu}
               className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors group"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-green-600 to-emerald-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.secondary }}>
                 <span className="text-white font-medium text-sm">{userInitial}</span>
               </div>
               <div className="hidden md:block text-left">

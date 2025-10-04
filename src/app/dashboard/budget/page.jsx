@@ -19,6 +19,7 @@ import {
   Percent,
   BarChart3
 } from 'lucide-react'
+import { colors } from '@/styles/colors'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
 
 export default function BudgetPage() {
@@ -218,7 +219,10 @@ export default function BudgetPage() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            className="text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            style={{ backgroundColor: colors.secondary }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+            onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             <Plus className="w-5 h-5" />
             Nouveau Budget
@@ -523,7 +527,10 @@ export default function BudgetPage() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  className="flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   {editingBudget ? 'Modifier' : 'Créer'}
                 </button>

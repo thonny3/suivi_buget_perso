@@ -5,6 +5,7 @@ import { useLanguage } from '@/context/LanguageContext'
 import LanguageSelector from '@/components/LanguageSelector'
 import { useRouter } from 'next/navigation'
 import React from 'react'
+import { colors } from '@/styles/colors'
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -32,10 +33,10 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-2 shadow-lg">
+            <div className="rounded-xl p-2 shadow-lg" style={{ backgroundColor: colors.secondary }}>
               <PieChart className="w-8 h-8 text-white" />
             </div>
-            <h1 className="ml-3 text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            <h1 className="ml-3 text-2xl font-bold" style={{ color: colors.secondary }}>
               {t('header.title')}
             </h1>
           </div>
@@ -55,7 +56,10 @@ export default function Header() {
                 </button>
                 <button
                   onClick={onLogout}
-                  className="bg-gradient-to-r from-red-600 to-red-700 text-white px-4 py-2 rounded-lg hover:from-red-700 hover:to-red-800 transition-all transform hover:scale-105 shadow-lg"
+                  className="text-white px-4 py-2 rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  style={{ backgroundColor: colors.error }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#DC2626'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.error}
                 >
                   {t('common.logout')}
                 </button>
@@ -70,7 +74,10 @@ export default function Header() {
                 </button>
                 <button
                   onClick={onGetStarted}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-2 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg"
+                  className="text-white px-6 py-2 rounded-lg transition-all transform hover:scale-105 shadow-lg"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   {t('common.getStarted')}
                 </button>

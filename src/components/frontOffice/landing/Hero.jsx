@@ -2,12 +2,13 @@
 import { useLanguage } from '@/context/LanguageContext'
 import { ArrowRight, Play, Star } from 'lucide-react'
 import React from 'react'
+import { colors } from '@/styles/colors'
 
 export default function Hero() {
   const { t } = useLanguage()
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-emerald-50 py-20 lg:py-32">
+    <section className="relative overflow-hidden py-20 lg:py-32" style={{ backgroundColor: colors.light }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           {/* Badge de confiance */}
@@ -25,7 +26,7 @@ export default function Hero() {
           {/* Titre principal */}
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             {t('hero.title')}
-            <span className="bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+            <span style={{ color: colors.secondary }}>
               {t('hero.titleHighlight')}
             </span>
           </h1>
@@ -37,14 +38,19 @@ export default function Hero() {
 
           {/* Boutons d'action */}
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
-            <button className="group bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-xl font-semibold text-lg hover:from-green-700 hover:to-emerald-700 transition-all transform hover:scale-105 shadow-lg flex items-center space-x-2">
+            <button 
+              className="group text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg flex items-center space-x-2"
+              style={{ backgroundColor: colors.secondary }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+              onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
+            >
               <span>{t('hero.getStarted')}</span>
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             
             <button className="flex items-center space-x-3 text-gray-700 hover:text-gray-900 font-medium text-lg group">
               <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow">
-                <Play className="w-5 h-5 text-green-600 ml-1" />
+                <Play className="w-5 h-5 ml-1" style={{ color: colors.secondary }} />
               </div>
               <span>{t('hero.watchDemo')}</span>
             </button>
@@ -53,15 +59,15 @@ export default function Hero() {
           {/* Statistiques */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">10K+</div>
+              <div className="text-3xl font-bold mb-2" style={{ color: colors.secondary }}>10K+</div>
               <div className="text-gray-600">{t('hero.stats.users')}</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">50M+</div>
+              <div className="text-3xl font-bold mb-2" style={{ color: colors.secondary }}>50M+</div>
               <div className="text-gray-600">{t('hero.stats.transactions')}</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">99.9%</div>
+              <div className="text-3xl font-bold mb-2" style={{ color: colors.secondary }}>99.9%</div>
               <div className="text-gray-600">{t('hero.stats.uptime')}</div>
             </div>
           </div>

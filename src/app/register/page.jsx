@@ -1,9 +1,13 @@
 "use client"
 import LoadingScreen from '@/components/LoadingScreen'
 import { useAuth } from '@/app/context/AuthContext'
-import { ArrowLeft, DollarSign, Lock, Mail, User, UserPlus, ChevronDown, Check, AlertCircle } from 'lucide-react'
+import { ArrowLeft, DollarSign, Lock, Mail, User, UserPlus, ChevronDown, Check, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useEffect, useState } from 'react'
+import authService from '@/services/authService'
+import toast, { Toaster } from 'react-hot-toast'
+import Logo from '@/components/Logo'
+import { colors, customClasses } from '@/styles/colors'
 
 // Composants d'icônes SVG pour Google et Facebook
 const GoogleIcon = () => (
@@ -80,7 +84,8 @@ export default function PageRegister() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [formData, setFormData] = useState({
-    fullName: '',
+    nom: '',
+    prenom: '',
     email: '',
     currency: 'EUR',
     password: '',
@@ -88,6 +93,8 @@ export default function PageRegister() {
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const currencyOptions = [
     {
@@ -120,6 +127,7 @@ export default function PageRegister() {
     }
   }, [isAuthenticated, router])
 
+
   const returnHome = () => {
     router.push('/')
   }
@@ -141,11 +149,18 @@ export default function PageRegister() {
   const validateForm = () => {
     const newErrors = {}
     
-    // Validation nom complet
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Ny anarana feno dia ilaina'
-    } else if (formData.fullName.trim().length < 2) {
-      newErrors.fullName = 'Ny anarana dia tokony ho 2 na mihoatra'
+    // Validation prénom
+    if (!formData.prenom.trim()) {
+      newErrors.prenom = 'Ny anarana dia ilaina'
+    } else if (formData.prenom.trim().length < 2) {
+      newErrors.prenom = 'Ny anarana dia tokony ho 2 na mihoatra'
+    }
+    
+    // Validation nom
+    if (!formData.nom.trim()) {
+      newErrors.nom = 'Ny anarana raibe dia ilaina'
+    } else if (formData.nom.trim().length < 2) {
+      newErrors.nom = 'Ny anarana raibe dia tokony ho 2 na mihoatra'
     }
     
     // Validation email
@@ -184,34 +199,41 @@ export default function PageRegister() {
     setIsSubmitting(true)
     
     try {
-      // Simulation d'une requête API
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Créer un objet utilisateur avec les données du formulaire
+      // Préparer les données pour l'API
       const userData = {
-        fullName: formData.fullName,
+        nom: formData.nom,
+        prenom: formData.prenom,
         email: formData.email,
-        currency: formData.currency,
-        id: Date.now().toString(),
-        registrationTime: new Date().toISOString()
+        password: formData.password,
+        currency: formData.currency
       }
       
-      // Connecter l'utilisateur via le contexte
-      login(userData)
+      // Appeler l'API d'inscription
+      const response = await authService.register(userData)
+      
+      // Afficher le message de succès
+      toast.success('Inscription réussie ! Redirection vers la page de connexion...')
+      
+      // Attendre un peu pour que l'utilisateur voie le message
+      setTimeout(() => {
+        // Rediriger vers la page de connexion
+        router.push('/connexion')
+      }, 2000)
       
     } catch (error) {
       console.error('Erreur d\'inscription:', error)
+      toast.error(error.message || 'Erreur lors de l\'inscription')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleGoogleSignup = () => {
-    console.log('Google signup')
+    toast.error('Connexion Google non disponible pour le moment')
   }
 
   const handleFacebookSignup = () => {
-    console.log('Facebook signup')
+    toast.error('Connexion Facebook non disponible pour le moment')
   }
 
   // Loading effet au montage du composant
@@ -233,8 +255,49 @@ export default function PageRegister() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+    <>
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#ffffff',
+            color: '#374151',
+            border: '1px solid #e5e7eb',
+            borderRadius: '12px',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+            padding: '16px 20px',
+            fontSize: '14px',
+            fontWeight: '500',
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: '#ffffff',
+              color: '#059669',
+              border: '1px solid #10b981',
+            },
+            iconTheme: {
+              primary: '#10B981',
+              secondary: '#ffffff',
+            },
+          },
+          error: {
+            duration: 4000,
+            style: {
+              background: '#ffffff',
+              color: '#dc2626',
+              border: '1px solid #ef4444',
+            },
+            iconTheme: {
+              primary: '#EF4444',
+              secondary: '#ffffff',
+            },
+          },
+        }}
+      />
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
         <button
           onClick={returnHome}
           className="flex items-center text-emerald-600 hover:text-emerald-700 mb-3 transition-colors"
@@ -244,10 +307,10 @@ export default function PageRegister() {
         </button>
 
         <div className="text-center mb-6">
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <UserPlus className="text-white w-7 h-7" />
+          <div className="flex justify-center mb-3">
+            <Logo size="large" />
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">TetibolaPro</h1>
+          <h1 className="text-2xl font-bold" style={{ color: colors.secondary }}>MyJalako</h1>
           <p className="text-gray-600 mt-1 text-sm">Mamorona ny kaontinao</p>
         </div>
 
@@ -255,18 +318,18 @@ export default function PageRegister() {
         <div className="space-y-2 mb-4">
           <button
             onClick={handleGoogleSignup}
-            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors duration-200 group"
+            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-[#DCEDE7] hover:border-[#93A664] transition-colors duration-200 group"
           >
             <GoogleIcon />
-            <span className="ml-3 text-gray-700 font-medium text-sm group-hover:text-green-700">S'inscrire avec Google</span>
+            <span className="ml-3 text-gray-700 font-medium text-sm group-hover:text-[#426128]">S'inscrire avec Google</span>
           </button>
 
           <button
             onClick={handleFacebookSignup}
-            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors duration-200 group"
+            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-[#DCEDE7] hover:border-[#93A664] transition-colors duration-200 group"
           >
             <FacebookIcon />
-            <span className="ml-3 text-gray-700 font-medium text-sm group-hover:text-green-700">S'inscrire avec Facebook</span>
+            <span className="ml-3 text-gray-700 font-medium text-sm group-hover:text-[#426128]">S'inscrire avec Facebook</span>
           </button>
         </div>
 
@@ -280,29 +343,56 @@ export default function PageRegister() {
           </div>
         </div>
 
+
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Anarana feno
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => handleInputChange('fullName', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none hover:border-green-400 text-sm ${
-                  errors.fullName ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Anarana (Prénom)
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.prenom}
+                  onChange={(e) => handleInputChange('prenom', e.target.value)}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none hover:border-[#93A664] text-sm ${
+                  errors.prenom ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
-                placeholder="Rakoto Andry"
-              />
-            </div>
-            {errors.fullName && (
-              <div className="flex items-center mt-1 text-red-500 text-xs">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                {errors.fullName}
+                  placeholder="Rakoto"
+                />
               </div>
-            )}
+              {errors.prenom && (
+                <div className="flex items-center mt-1 text-red-500 text-xs">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  {errors.prenom}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Anarana raibe (Nom)
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={formData.nom}
+                  onChange={(e) => handleInputChange('nom', e.target.value)}
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none hover:border-[#93A664] text-sm ${
+                  errors.nom ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                }`}
+                  placeholder="Andry"
+                />
+              </div>
+              {errors.nom && (
+                <div className="flex items-center mt-1 text-red-500 text-xs">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  {errors.nom}
+                </div>
+              )}
+            </div>
           </div>
 
           <div>
@@ -315,7 +405,7 @@ export default function PageRegister() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none hover:border-green-400 text-sm ${
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none hover:border-[#93A664] text-sm ${
                   errors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="ny_mailakao@email.com"
@@ -356,14 +446,21 @@ export default function PageRegister() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none hover:border-green-400 text-sm ${
+                className={`w-full pl-10 pr-12 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none hover:border-[#93A664] text-sm ${
                   errors.password ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.password && (
               <div className="flex items-center mt-1 text-red-500 text-xs">
@@ -380,14 +477,21 @@ export default function PageRegister() {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                type="password"
+                type={showConfirmPassword ? "text" : "password"}
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none hover:border-green-400 text-sm ${
+                className={`w-full pl-10 pr-12 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none hover:border-[#93A664] text-sm ${
                   errors.confirmPassword ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.confirmPassword && (
               <div className="flex items-center mt-1 text-red-500 text-xs">
@@ -400,7 +504,12 @@ export default function PageRegister() {
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full text-white py-2.5 px-4 rounded-lg transition-all font-medium transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            style={{ 
+              backgroundColor: colors.secondary
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+            onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             {isSubmitting ? 'Miditra...' : 'Hisoratra anarana'}
           </button>
@@ -411,7 +520,8 @@ export default function PageRegister() {
             Efa manana kaonty?{' '}
             <button 
               onClick={() => router.push('/connexion')}
-              className="text-green-600 hover:underline font-medium hover:text-green-700"
+              className="font-medium hover:underline"
+              style={{ color: colors.secondary }}
             >
               Hiditra
             </button>
@@ -419,5 +529,6 @@ export default function PageRegister() {
         </div>
       </div>
     </div>
+    </>
   )
 }

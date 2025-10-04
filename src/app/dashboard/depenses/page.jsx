@@ -27,6 +27,7 @@ import {
   TrendingDown,
   PieChart
 } from 'lucide-react'
+import { colors } from '@/styles/colors'
 
 // Composant Modal de base
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
@@ -539,7 +540,7 @@ export default function GestionDepenses() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: colors.light }}>
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* En-tête */}
@@ -564,19 +565,19 @@ export default function GestionDepenses() {
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
-            <h3 className="text-emerald-100 text-sm font-medium">Total des dépenses</h3>
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondary }}>
+            <h3 className="text-sm font-medium opacity-80">Total des dépenses</h3>
             <p className="text-2xl font-bold mt-2">{totalExpenses.toFixed(2)}€</p>
           </div>
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
-            <h3 className="text-blue-100 text-sm font-medium">Ce mois</h3>
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primary }}>
+            <h3 className="text-sm font-medium opacity-80">Ce mois</h3>
             <p className="text-2xl font-bold mt-2">{monthlyExpenses.toFixed(2)}€</p>
           </div>
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
-            <h3 className="text-purple-100 text-sm font-medium">Nombre de dépenses</h3>
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondaryDark }}>
+            <h3 className="text-sm font-medium opacity-80">Nombre de dépenses</h3>
             <p className="text-2xl font-bold mt-2">{expenses.length}</p>
           </div>
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primaryDark }}>
             <h3 className="text-orange-100 text-sm font-medium">Moyenne journalière</h3>
             <p className="text-2xl font-bold mt-2">
               {expenses.length > 0 ? (totalExpenses / 30).toFixed(2) : 0}€

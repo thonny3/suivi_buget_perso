@@ -16,6 +16,7 @@ import {
   RefreshCw,
   Bell
 } from 'lucide-react'
+import { colors } from '@/styles/colors'
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(true)
@@ -95,13 +96,13 @@ const Sidebar = () => {
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center">
-              <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl w-10 h-10 flex items-center justify-center shadow-lg">
+              <div className="rounded-xl w-10 h-10 flex items-center justify-center shadow-lg" style={{ backgroundColor: colors.secondary }}>
                 <TrendingUp className="text-white w-6 h-6" />
               </div>
               {isOpen && (
                 <div className="ml-3">
-                  <h1 className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                    TetibolaPro
+                  <h1 className="text-xl font-bold" style={{ color: colors.secondary }}>
+                    MyJalako
                   </h1>
                   <p className="text-xs text-gray-500">Dashboard</p>
                 </div>
@@ -131,9 +132,10 @@ const Sidebar = () => {
                   key={item.id}
                   href={item.href}
                   className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 group ${isActive
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg shadow-green-500/25'
+                      ? 'text-white shadow-lg'
                       : 'text-gray-700 hover:bg-green-50 hover:text-green-700'
                     }`}
+                  style={isActive ? { backgroundColor: colors.secondary } : {}}
                 >
                   <Icon className={`w-5 h-5 transition-colors ${isActive
                       ? 'text-white'

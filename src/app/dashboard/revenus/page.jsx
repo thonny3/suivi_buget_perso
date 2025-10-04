@@ -190,7 +190,10 @@ export default function RevenuePage() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            className="text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            style={{ backgroundColor: colors.secondary }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+            onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             <Plus className="w-5 h-5" />
             Nouveau Revenu
@@ -504,7 +507,10 @@ export default function RevenuePage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  className="flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   {editingRevenue ? 'Modifier' : 'Créer'}
                 </button>

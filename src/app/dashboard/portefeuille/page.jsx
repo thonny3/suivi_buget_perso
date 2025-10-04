@@ -15,6 +15,7 @@ import {
   UserPlus,
   Users
 } from 'lucide-react'
+import { colors } from '@/styles/colors'
 
 // Composant Modal de base
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
@@ -427,7 +428,7 @@ export default function GestionnaireComptes() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+    <div className="min-h-screen p-6" style={{ backgroundColor: colors.light }}>
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* En-tête */}
@@ -452,19 +453,19 @@ export default function GestionnaireComptes() {
 
         {/* Statistiques des comptes */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-2xl p-6 text-white shadow-lg">
-            <h3 className="text-emerald-100 text-sm font-medium">Total des comptes</h3>
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondary }}>
+            <h3 className="text-sm font-medium opacity-80">Total des comptes</h3>
             <p className="text-2xl font-bold mt-2">{accounts.length}</p>
           </div>
-          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl p-6 text-white shadow-lg">
-            <h3 className="text-blue-100 text-sm font-medium">Solde total</h3>
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primary }}>
+            <h3 className="text-sm font-medium opacity-80">Solde total</h3>
             <p className="text-2xl font-bold mt-2">{totalAccountBalance.toFixed(2)}€</p>
           </div>
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg">
-            <h3 className="text-purple-100 text-sm font-medium">Comptes partagés</h3>
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondaryDark }}>
+            <h3 className="text-sm font-medium opacity-80">Comptes partagés</h3>
             <p className="text-2xl font-bold mt-2">2</p>
           </div>
-          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primaryDark }}>
             <h3 className="text-indigo-100 text-sm font-medium">Solde moyen</h3>
             <p className="text-2xl font-bold mt-2">
               {accounts.length > 0 ? (totalAccountBalance / accounts.length).toFixed(2) : 0}€
@@ -488,7 +489,8 @@ export default function GestionnaireComptes() {
                 {accounts.map((account) => (
                   <div 
                     key={account.id_compte} 
-                    className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 p-6 hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    className="rounded-xl border p-6 hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    style={{ backgroundColor: colors.white, borderColor: colors.light }}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3">

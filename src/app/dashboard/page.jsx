@@ -14,6 +14,7 @@ import {
   MoreHorizontal
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
+import { colors } from '@/styles/colors'
 
 export default function Dashboard() {
   // Données simulées pour les graphiques
@@ -138,7 +139,7 @@ export default function Dashboard() {
                       <span className="text-gray-500 text-sm ml-2">vs mois dernier</span>
                     </div>
                   </div>
-                  <div className={`bg-gradient-to-r ${card.color} rounded-xl p-3`}>
+                  <div className="rounded-xl p-3" style={{ backgroundColor: colors.secondary }}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                 </div>
@@ -325,7 +326,7 @@ export default function Dashboard() {
         </div>
 
         {/* Objectifs financiers */}
-        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+        <div className="rounded-2xl p-6 text-white" style={{ backgroundColor: colors.secondary }}>
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-semibold">Objectif d'épargne 2024</h3>

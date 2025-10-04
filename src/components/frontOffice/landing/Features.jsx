@@ -1,5 +1,6 @@
 import { Award, BarChart3, Calendar, Globe, PieChart, Shield, Smartphone, Target, TrendingUp } from 'lucide-react';
 import React from 'react'
+import { colors } from '@/styles/colors'
 
 export default function Features() {
   const features = [
@@ -67,9 +68,10 @@ export default function Features() {
             return (
               <div
                 key={index}
-                className="bg-gradient-to-br from-white to-green-50 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2 border border-green-100 group"
+                className="p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-2 border group"
+                style={{ backgroundColor: colors.white, borderColor: colors.light }}
               >
-                <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl p-3 w-fit mb-6 group-hover:scale-110 transition-transform">
+                <div className="rounded-xl p-3 w-fit mb-6 group-hover:scale-110 transition-transform" style={{ backgroundColor: colors.secondary }}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">

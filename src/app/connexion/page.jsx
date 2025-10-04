@@ -5,6 +5,8 @@ import { ArrowLeft, Lock, LogIn, User, AlertCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useState, useEffect } from 'react'
 import {signIn} from 'next-auth/react'
+import Logo from '@/components/Logo'
+import { colors, customClasses } from '@/styles/colors'
 
 
 // Composants d'icônes SVG pour Google et Facebook
@@ -154,28 +156,28 @@ export default function ConnexionPage() {
         </button>
 
         <div className="text-center mb-6">
-          <div className="bg-gradient-to-r from-green-600 to-emerald-600 rounded-full w-14 h-14 flex items-center justify-center mx-auto mb-3 shadow-lg">
-            <LogIn className="text-white w-7 h-7" />
+          <div className="flex justify-center mb-3">
+            <Logo size="large" />
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">TetiboPro</h1>
+          <h1 className="text-2xl font-bold" style={{ color: colors.secondary }}>MyJalako</h1>
           <p className="text-gray-600 mt-1 text-sm">Midira amin'ny kaontinao</p>
         </div>
 
         <div className="space-y-2 mb-4">
           <button
             onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
+            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-[#DCEDE7] hover:border-[#93A664] transition-colors duration-200 group"
           >
             <GoogleIcon />
-            <span className="ml-3 text-gray-700 font-medium text-sm">Se connecter avec Google</span>
+            <span className="ml-3 text-gray-700 font-medium text-sm group-hover:text-[#426128]">Se connecter avec Google</span>
           </button>
 
           <button
             onClick={handleFacebookLogin}
-            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
+            className="w-full flex items-center justify-center px-3 py-2.5 border border-gray-300 rounded-lg hover:bg-[#DCEDE7] hover:border-[#93A664] transition-colors duration-200 group"
           >
             <FacebookIcon />
-            <span className="ml-3 text-gray-700 font-medium text-sm">Se connecter avec Facebook</span>
+            <span className="ml-3 text-gray-700 font-medium text-sm group-hover:text-[#426128]">Se connecter avec Facebook</span>
           </button>
         </div>
 
@@ -199,7 +201,7 @@ export default function ConnexionPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none text-sm ${
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none text-sm ${
                   errors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="ny_mailakao@email.com"
@@ -223,7 +225,7 @@ export default function ConnexionPage() {
                 type="password"
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all outline-none text-sm ${
+                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none text-sm ${
                   errors.password ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="••••••••"
@@ -238,7 +240,7 @@ export default function ConnexionPage() {
           </div>
 
           <div className="flex justify-end">
-            <button className="text-green-600 hover:underline text-xs font-medium">
+            <button className="hover:underline text-xs font-medium" style={{ color: colors.secondary }}>
               Hadino ny teny miafina?
             </button>
           </div>
@@ -246,7 +248,12 @@ export default function ConnexionPage() {
           <button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2.5 px-4 rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            className="w-full text-white py-2.5 px-4 rounded-lg transition-all font-medium transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            style={{ 
+              backgroundColor: colors.secondary
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+            onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             {isSubmitting ? 'Miditra...' : 'Hiditra'}
           </button>
@@ -257,7 +264,8 @@ export default function ConnexionPage() {
             Mbola tsy manana kaonty?{' '}
             <button
               onClick={handleSignupRedirect}
-              className="text-green-600 hover:underline font-medium"
+              className="hover:underline font-medium"
+              style={{ color: colors.secondary }}
             >
               Hisoratra anarana
             </button>

@@ -23,6 +23,7 @@ import {
   Heart,
   Smartphone
 } from 'lucide-react'
+import { colors } from '@/styles/colors'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
 
 export default function ObjectifsPage() {
@@ -293,7 +294,10 @@ export default function ObjectifsPage() {
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            className="text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            style={{ backgroundColor: colors.secondary }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+            onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             <Plus className="w-5 h-5" />
             Nouvel Objectif
@@ -526,7 +530,10 @@ export default function ObjectifsPage() {
                     setSelectedObjectifForMoney(objectif)
                     setIsAddingMoney(true)
                   }}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                  className="w-full text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   <Plus className="w-4 h-4" />
                   Ajouter de l'argent
@@ -652,7 +659,10 @@ export default function ObjectifsPage() {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  className="flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   {editingObjectif ? 'Modifier' : 'Créer'}
                 </button>
@@ -722,7 +732,10 @@ export default function ObjectifsPage() {
                 <button
                   type="button"
                   onClick={handleAddMoney}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  className="flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   Ajouter
                 </button>
