@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   Plus,
   Edit2,
@@ -13,9 +13,12 @@ import {
   PiggyBank,
   TrendingUp,
   UserPlus,
-  Users
+  Users,
+  Loader2
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
+import accountsService from '@/services/accountsService'
+import { useToast } from '@/hooks/useToast'
 
 // Composant Modal de base
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
@@ -344,44 +347,81 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, item }) => {
 // Composant Principal
 export default function GestionnaireComptes() {
   // États pour les comptes
-  const [accounts, setAccounts] = useState([
-    {
-      id_compte: 1,
-      nom: "Compte Principal",
-      type: "courant",
-      solde: 15420.50
-    },
-    {
-      id_compte: 2,
-      nom: "Épargne Investissement",
-      type: "epargne",
-      solde: 28750.00
-    },
-    {
-      id_compte: 3,
-      nom: "Compte Trading",
-      type: "trading",
-      solde: 12300.75
-    }
-  ]);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [isAccountFormOpen, setIsAccountFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
-  // Statistiques des comptes
-  const totalAccountBalance = accounts.reduce((sum, account) => sum + account.solde, 0);
+  const { showToast } = useToast();
 
-  const handleAccountSave = (accountData) => {
-    if (selectedItem) {
-      setAccounts(prev => prev.map(account =>
-        account.id_compte === selectedItem.id_compte ? accountData : account
-      ));
-    } else {
-      setAccounts(prev => [...prev, accountData]);
+  // Charger les comptes depuis l'API
+  useEffect(() => {
+    loadAccounts();
+  }, []);
+
+  const loadAccounts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const result = await accountsService.getMyAccounts();
+      
+      if (result.success) {
+        // Formater les comptes pour l'affichage
+        const formattedAccounts = result.data.map(account => accountsService.formatAccount(account));
+        setAccounts(formattedAccounts);
+      } else {
+        setError(result.error);
+        showToast(result.error, 'error');
+      }
+    } catch (err) {
+      console.error('Erreur lors du chargement des comptes:', err);
+      setError(err.message);
+      showToast('Erreur lors du chargement des comptes', 'error');
+    } finally {
+      setLoading(false);
     }
-    setSelectedItem(null);
+  };
+
+  // Statistiques des comptes
+  const stats = accountsService.calculateStats(accounts);
+  const totalAccountBalance = stats.totalBalance;
+
+  const handleAccountSave = async (accountData) => {
+    try {
+      let result;
+      
+      if (selectedItem) {
+        // Mise à jour d'un compte existant
+        result = await accountsService.updateAccount(selectedItem.id_compte, accountData);
+        if (result.success) {
+          showToast('Compte mis à jour avec succès', 'success');
+        } else {
+          showToast(result.error, 'error');
+          return;
+        }
+      } else {
+        // Création d'un nouveau compte
+        result = await accountsService.createAccount(accountData);
+        if (result.success) {
+          showToast('Compte créé avec succès', 'success');
+        } else {
+          showToast(result.error, 'error');
+          return;
+        }
+      }
+      
+      // Recharger les comptes
+      await loadAccounts();
+      setSelectedItem(null);
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde:', err);
+      showToast('Erreur lors de la sauvegarde du compte', 'error');
+    }
   };
 
   const handleAccountEdit = (account) => {
@@ -394,10 +434,24 @@ export default function GestionnaireComptes() {
     setIsDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
-    setAccounts(prev => prev.filter(account => account.id_compte !== selectedItem.id_compte));
-    setIsDeleteOpen(false);
-    setSelectedItem(null);
+  const confirmDelete = async () => {
+    try {
+      const result = await accountsService.deleteAccount(selectedItem.id_compte);
+      
+      if (result.success) {
+        showToast('Compte supprimé avec succès', 'success');
+        
+        // Recharger les comptes
+        await loadAccounts();
+        setIsDeleteOpen(false);
+        setSelectedItem(null);
+      } else {
+        showToast(result.error, 'error');
+      }
+    } catch (err) {
+      console.error('Erreur lors de la suppression:', err);
+      showToast('Erreur lors de la suppression du compte', 'error');
+    }
   };
 
   const handleShare = (account) => {
@@ -455,7 +509,7 @@ export default function GestionnaireComptes() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondary }}>
             <h3 className="text-sm font-medium opacity-80">Total des comptes</h3>
-            <p className="text-2xl font-bold mt-2">{accounts.length}</p>
+            <p className="text-2xl font-bold mt-2">{stats.total}</p>
           </div>
           <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primary }}>
             <h3 className="text-sm font-medium opacity-80">Solde total</h3>
@@ -468,7 +522,7 @@ export default function GestionnaireComptes() {
           <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primaryDark }}>
             <h3 className="text-indigo-100 text-sm font-medium">Solde moyen</h3>
             <p className="text-2xl font-bold mt-2">
-              {accounts.length > 0 ? (totalAccountBalance / accounts.length).toFixed(2) : 0}€
+              {stats.averageBalance.toFixed(2)}€
             </p>
           </div>
         </div>
@@ -478,7 +532,23 @@ export default function GestionnaireComptes() {
           <div className="p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">Vos comptes</h2>
             
-            {accounts.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-12 h-12 text-gray-300 mx-auto mb-4 animate-spin" />
+                <p className="text-gray-500 text-lg">Chargement des comptes...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <AlertTriangle className="w-12 h-12 text-red-300 mx-auto mb-4" />
+                <p className="text-red-500 text-lg">{error}</p>
+                <button 
+                  onClick={loadAccounts}
+                  className="mt-4 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                >
+                  Réessayer
+                </button>
+              </div>
+            ) : accounts.length === 0 ? (
               <div className="text-center py-12">
                 <Wallet className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500 text-lg">Aucun compte trouvé</p>
@@ -499,7 +569,7 @@ export default function GestionnaireComptes() {
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900 text-lg">{account.nom}</h3>
-                          <p className="text-sm text-gray-500 capitalize">{account.type}</p>
+                          <p className="text-sm text-gray-500 capitalize">{account.typeFormatted}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-1">
@@ -509,6 +579,7 @@ export default function GestionnaireComptes() {
                           title="Partager"
                         >
                           <Share2 className="w-4 h-4" />
+                          <p>bojouhfb</p>
                         </button>
                         <button
                           onClick={() => handleAccountEdit(account)}
@@ -528,7 +599,9 @@ export default function GestionnaireComptes() {
                     </div>
 
                     <div className="mb-4">
-                      <p className="text-3xl font-bold text-gray-900">{account.solde.toFixed(2)}€</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        {account.soldeFormatted || '0.00 €'}
+                      </p>
                       <p className="text-sm text-gray-500 mt-1">Solde actuel</p>
                     </div>
 

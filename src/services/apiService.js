@@ -78,6 +78,82 @@ class ApiService {
   logout() {
     this.removeToken()
   }
+
+  // Services des comptes
+  async getAccounts() {
+    return this.request('/comptes', {
+      method: 'GET',
+    })
+  }
+
+  async getMyAccounts() {
+    return this.request('/comptes/mycompte/user', {
+      method: 'GET',
+    })
+  }
+
+  async getAccountById(id) {
+    return this.request(`/comptes/${id}`, {
+      method: 'GET',
+    })
+  }
+
+  async createAccount(accountData) {
+    return this.request('/comptes', {
+      method: 'POST',
+      body: JSON.stringify(accountData),
+    })
+  }
+
+  async updateAccount(id, accountData) {
+    return this.request(`/comptes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(accountData),
+    })
+  }
+
+  async deleteAccount(id) {
+    return this.request(`/comptes/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
+  // Services des comptes partagés
+  async shareAccount(accountId, shareData) {
+    return this.request('/comptes-partages', {
+      method: 'POST',
+      body: JSON.stringify({
+        id_compte: accountId,
+        email: shareData.email,
+        role: shareData.role
+      }),
+    })
+  }
+
+  async getSharedAccountsByUser(userId) {
+    return this.request(`/comptes-partages/user/${userId}`, {
+      method: 'GET',
+    })
+  }
+
+  async getSharedUsersByAccount(accountId) {
+    return this.request(`/comptes-partages/compte/${accountId}`, {
+      method: 'GET',
+    })
+  }
+
+  async updateSharedAccountRole(shareId, role) {
+    return this.request(`/comptes-partages/${shareId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    })
+  }
+
+  async deleteSharedAccount(shareId) {
+    return this.request(`/comptes-partages/${shareId}`, {
+      method: 'DELETE',
+    })
+  }
 }
 
 export default new ApiService()

@@ -129,12 +129,24 @@ const Sidebar = () => {
                   className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 group relative ${
                     isActive
                       ? 'text-white shadow-lg transform scale-105'
-                      : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900 hover:shadow-md'
+                      : 'text-gray-700 hover:text-gray-900 hover:shadow-md'
                   }`}
                   style={isActive ? { 
                     backgroundColor: colors.secondary,
                     borderLeft: `4px solid ${colors.primary}`
-                  } : {}}
+                  } : {
+                    backgroundColor: 'transparent'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.target.style.backgroundColor = `${colors.secondaryLight}20` // 20% d'opacité
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.target.style.backgroundColor = 'transparent'
+                    }
+                  }}
                 >
                   <Icon className={`w-5 h-5 transition-colors ${
                     isActive
