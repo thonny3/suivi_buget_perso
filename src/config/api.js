@@ -20,6 +20,12 @@ export const API_CONFIG = {
       GET_BY_ACCOUNT: (accountId) => `/comptes-partages/compte/${accountId}`,
       UPDATE_ROLE: (shareId) => `/comptes-partages/${shareId}`,
       DELETE: (shareId) => `/comptes-partages/${shareId}`
+    },
+    DEPENSES: {
+      LIST: '/depenses',
+      CREATE: '/depenses',
+      UPDATE: (id) => `/depenses/${id}`,
+      DELETE: (id) => `/depenses/${id}`
     }
   }
 }

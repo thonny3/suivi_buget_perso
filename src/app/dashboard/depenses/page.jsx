@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Plus,
   Search,
@@ -28,6 +28,8 @@ import {
   PieChart
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
+import depensesService from '@/services/depensesService'
+import logo from '@/image/logo.png'
 
 // Composant Modal de base
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
@@ -61,33 +63,28 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
 };
 
 // Composant Formulaire Dépense
-const ExpenseForm = ({ isOpen, onClose, onSave, item = null }) => {
+const ExpenseForm = ({ isOpen, onClose, onSave, item = null, categories = [], comptes = [] }) => {
   const [formData, setFormData] = useState({
     description: item?.description || '',
     montant: item?.montant || '',
-    date_depense: item?.date_depense || new Date().toISOString().split('T')[0],
+    date_depense: (item?.date_depense ? (new Date(item.date_depense).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0]),
     id_categorie_depense: item?.id_categorie_depense || '',
     id_compte: item?.id_compte || ''
   });
 
+  useEffect(() => {
+    setFormData({
+      description: item?.description || '',
+      montant: item?.montant || '',
+      date_depense: (item?.date_depense ? (new Date(item.date_depense).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0]),
+      id_categorie_depense: item?.id_categorie_depense || '',
+      id_compte: item?.id_compte || ''
+    })
+  }, [item])
+
   const [errors, setErrors] = useState({});
 
-  const categories = [
-    { id: 1, nom: 'Alimentation', couleur: 'bg-green-500', icon: Coffee },
-    { id: 2, nom: 'Transport', couleur: 'bg-blue-500', icon: Car },
-    { id: 3, nom: 'Logement', couleur: 'bg-orange-500', icon: Home },
-    { id: 4, nom: 'Loisirs', couleur: 'bg-purple-500', icon: Heart },
-    { id: 5, nom: 'Santé', couleur: 'bg-red-500', icon: Heart },
-    { id: 6, nom: 'Shopping', couleur: 'bg-pink-500', icon: ShoppingCart },
-    { id: 7, nom: 'Technologie', couleur: 'bg-indigo-500', icon: Smartphone },
-    { id: 8, nom: 'Professionnel', couleur: 'bg-gray-500', icon: Briefcase }
-  ];
-
-  const comptes = [
-    { id: 1, nom: 'Compte Principal', type: 'courant' },
-    { id: 2, nom: 'Épargne', type: 'epargne' },
-    { id: 3, nom: 'Carte de Crédit', type: 'credit' }
-  ];
+  
 
   const validateForm = () => {
     const newErrors = {};
@@ -103,10 +100,9 @@ const ExpenseForm = ({ isOpen, onClose, onSave, item = null }) => {
   const handleSubmit = () => {
     if (validateForm()) {
       onSave({
-        ...formData,
-        id_depense: item?.id_depense || Date.now(),
-        id_user: 1, // Utilisateur actuel simulé
+        description: formData.description,
         montant: parseFloat(formData.montant),
+        date_depense: formData.date_depense,
         id_categorie_depense: parseInt(formData.id_categorie_depense),
         id_compte: parseInt(formData.id_compte)
       });
@@ -156,7 +152,10 @@ const ExpenseForm = ({ isOpen, onClose, onSave, item = null }) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Montant (€)
+              Montant ({(() => {
+                const selected = comptes.find(c => (c.id_compte ?? c.id) === parseInt(formData.id_compte))
+                return selected?.currencySymbol || selected?.devise || selected?.currency || '€'
+              })()})
             </label>
             <input
               type="number"
@@ -218,12 +217,22 @@ const ExpenseForm = ({ isOpen, onClose, onSave, item = null }) => {
           >
             <option value="">Sélectionner un compte</option>
             {comptes.map((compte) => (
-              <option key={compte.id} value={compte.id}>
+              <option key={(compte.id_compte ?? compte.id)} value={(compte.id_compte ?? compte.id)}>
                 {compte.nom} ({compte.type})
               </option>
             ))}
           </select>
           {errors.id_compte && <p className="text-red-500 text-sm mt-1">{errors.id_compte}</p>}
+          {formData.id_compte && (() => {
+            const selected = comptes.find(c => (c.id_compte ?? c.id) === parseInt(formData.id_compte))
+            const solde = Number(selected?.solde || 0)
+            const symbol = selected?.currencySymbol || selected?.devise || selected?.currency || '€'
+            return selected ? (
+              <p className="text-sm text-gray-500 mt-2">
+                Solde du compte: {solde.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {symbol}
+              </p>
+            ) : null
+          })()}
         </div>
 
         <div className="flex justify-end space-x-3 pt-4">
@@ -299,7 +308,7 @@ const ExpenseDetailsModal = ({ isOpen, onClose, expense }) => {
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-gray-600 text-sm">Montant</p>
-            <p className="text-2xl font-bold text-gray-900">{expense.montant.toFixed(2)}€</p>
+            <p className="text-2xl font-bold text-gray-900">{expense.montant}€</p>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-gray-600 text-sm">Date</p>
@@ -369,44 +378,45 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, expense }) => {
 
 // Composant Principal
 export default function GestionDepenses() {
-  const [expenses, setExpenses] = useState([
-    {
-      id_depense: 1,
-      id_user: 1,
-      description: "Courses Carrefour",
-      montant: 85.50,
-      date_depense: "2024-08-15",
-      id_categorie_depense: 1,
-      id_compte: 1
-    },
-    {
-      id_depense: 2,
-      id_user: 1,
-      description: "Essence Station Shell",
-      montant: 45.20,
-      date_depense: "2024-08-14",
-      id_categorie_depense: 2,
-      id_compte: 1
-    },
-    {
-      id_depense: 3,
-      id_user: 1,
-      description: "Netflix Abonnement",
-      montant: 15.99,
-      date_depense: "2024-08-13",
-      id_categorie_depense: 4,
-      id_compte: 2
-    },
-    {
-      id_depense: 4,
-      id_user: 1,
-      description: "Pharmacie",
-      montant: 23.75,
-      date_depense: "2024-08-12",
-      id_categorie_depense: 5,
-      id_compte: 1
+  const normalizeDate = (value) => {
+    if (!value) return new Date().toISOString().slice(0, 10)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
+    try {
+      const d = new Date(value)
+      if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 10)
+      return d.toISOString().slice(0, 10)
+    } catch {
+      return new Date().toISOString().slice(0, 10)
     }
-  ]);
+  }
+  const [expenses, setExpenses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [categories, setCategories] = useState([])
+  const [comptes, setComptes] = useState([])
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setIsLoading(true)
+        setError('')
+        const [deps, cats, accs] = await Promise.all([
+          depensesService.getDepenses(),
+          depensesService.getDepenseCategories(),
+          depensesService.getMyComptes(),
+        ])
+        console.log(cats)
+        setExpenses(Array.isArray(deps) ? deps : [])
+        setCategories(Array.isArray(cats) ? cats : [])
+        setComptes(Array.isArray(accs) ? accs : [])
+      } catch (e) {
+        setError(e.message || 'Erreur lors du chargement des dépenses')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    load()
+  }, [])
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -417,24 +427,9 @@ export default function GestionDepenses() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedExpense, setSelectedExpense] = useState(null);
 
-  const categories = [
-    { id: 1, nom: 'Alimentation', couleur: 'bg-green-500', icon: Coffee },
-    { id: 2, nom: 'Transport', couleur: 'bg-blue-500', icon: Car },
-    { id: 3, nom: 'Logement', couleur: 'bg-orange-500', icon: Home },
-    { id: 4, nom: 'Loisirs', couleur: 'bg-purple-500', icon: Heart },
-    { id: 5, nom: 'Santé', couleur: 'bg-red-500', icon: Heart },
-    { id: 6, nom: 'Shopping', couleur: 'bg-pink-500', icon: ShoppingCart },
-    { id: 7, nom: 'Technologie', couleur: 'bg-indigo-500', icon: Smartphone },
-    { id: 8, nom: 'Professionnel', couleur: 'bg-gray-500', icon: Briefcase }
-  ];
+  
 
-  const comptes = [
-    { id: 1, nom: 'Compte Principal', type: 'courant' },
-    { id: 2, nom: 'Épargne', type: 'epargne' },
-    { id: 3, nom: 'Carte de Crédit', type: 'credit' }
-  ];
-
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filtrage et recherche
   const filteredExpenses = expenses.filter(expense => {
@@ -470,16 +465,16 @@ export default function GestionDepenses() {
   const paginatedExpenses = filteredExpenses.slice(startIndex, startIndex + itemsPerPage);
 
   // Statistiques
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.montant, 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.montant || 0), 0);
   const monthlyExpenses = expenses.filter(expense => {
     const expenseDate = new Date(expense.date_depense);
     const today = new Date();
     return expenseDate.getMonth() === today.getMonth() && expenseDate.getFullYear() === today.getFullYear();
-  }).reduce((sum, expense) => sum + expense.montant, 0);
+  }).reduce((sum, expense) => sum + Number(expense.montant || 0), 0);
 
   const categoryStats = categories.map(category => {
     const categoryExpenses = expenses.filter(expense => expense.id_categorie_depense === category.id);
-    const total = categoryExpenses.reduce((sum, expense) => sum + expense.montant, 0);
+    const total = categoryExpenses.reduce((sum, expense) => sum + Number(expense.montant || 0), 0);
     return {
       ...category,
       total,
@@ -487,15 +482,28 @@ export default function GestionDepenses() {
     };
   }).filter(stat => stat.total > 0).sort((a, b) => b.total - a.total);
 
-  const handleSave = (expenseData) => {
-    if (selectedExpense) {
-      setExpenses(prev => prev.map(expense =>
-        expense.id_depense === selectedExpense.id_depense ? expenseData : expense
-      ));
-    } else {
-      setExpenses(prev => [...prev, expenseData]);
+  const handleSave = async (expenseData) => {
+    try {
+      setError('')
+      const payload = {
+        description: expenseData.description,
+        montant: Number(expenseData.montant),
+        date_depense: normalizeDate(expenseData.date_depense),
+        id_categorie_depense: Number(expenseData.id_categorie_depense),
+        id_compte: Number(expenseData.id_compte),
+      }
+      if (selectedExpense) {
+        await depensesService.updateDepense(selectedExpense.id_depense, payload)
+      } else {
+        await depensesService.createDepense(payload)
+      }
+      const fresh = await depensesService.getDepenses()
+      setExpenses(Array.isArray(fresh) ? fresh : [])
+    } catch (e) {
+      setError(e.message || 'Erreur lors de l\'enregistrement')
+    } finally {
+      setSelectedExpense(null)
     }
-    setSelectedExpense(null);
   };
 
   const handleEdit = (expense) => {
@@ -508,10 +516,18 @@ export default function GestionDepenses() {
     setIsDeleteOpen(true);
   };
 
-  const confirmDelete = () => {
-    setExpenses(prev => prev.filter(expense => expense.id_depense !== selectedExpense.id_depense));
-    setIsDeleteOpen(false);
-    setSelectedExpense(null);
+  const confirmDelete = async () => {
+    try {
+      if (!selectedExpense) return
+      await depensesService.deleteDepense(selectedExpense.id_depense)
+      const fresh = await depensesService.getDepenses()
+      setExpenses(Array.isArray(fresh) ? fresh : [])
+    } catch (e) {
+      setError(e.message || 'Erreur lors de la suppression')
+    } finally {
+      setIsDeleteOpen(false)
+      setSelectedExpense(null)
+    }
   };
 
   const handleDetails = (expense) => {
@@ -526,7 +542,7 @@ export default function GestionDepenses() {
 
   const getCategoryIcon = (categoryId) => {
     const category = categories.find(c => c.id === categoryId);
-    return category ? category.icon : Coffee;
+    return (category && category.icon) ? category.icon : Coffee;
   };
 
   const getCategoryColor = (categoryId) => {
@@ -535,13 +551,134 @@ export default function GestionDepenses() {
   };
 
   const getAccountName = (accountId) => {
-    const account = comptes.find(c => c.id === accountId);
+    const account = comptes.find(c => (c.id_compte ?? c.id) === accountId);
     return account ? account.nom : 'Compte inconnu';
   };
 
+  const getAccountCurrencySymbol = (accountId) => {
+    const account = comptes.find(c => (c.id_compte ?? c.id) === accountId)
+    return account?.currencySymbol || account?.devise || account?.currency || '€'
+  }
+
+  const isAccountMGA = (accountId) => {
+    const account = comptes.find(c => (c.id_compte ?? c.id) === accountId)
+    const code = (account?.devise || account?.currency || '').toString().toUpperCase()
+    return code === 'MGA'
+  }
+
+  const formatAmountForAccount = (amount, accountId) => {
+    const num = Number(amount || 0)
+    if (isAccountMGA(accountId)) {
+      // Ariary: space thousands, no decimals, suffix 'Ar'
+      const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+      return `${intStr}Ar`
+    }
+    const symbol = getAccountCurrencySymbol(accountId)
+    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
+  }
+
+  const getDefaultCurrencySymbol = () => {
+    const first = comptes && comptes.length > 0 ? comptes[0] : null
+    const code = (first?.devise || first?.currency || '').toString().toUpperCase()
+    if (code === 'MGA') return 'Ar'
+    return first?.currencySymbol || first?.devise || first?.currency || '€'
+  }
+
+  const formatAmountDefault = (amount) => {
+    const first = comptes && comptes.length > 0 ? comptes[0] : null
+    const code = (first?.devise || first?.currency || '').toString().toUpperCase()
+    const num = Number(amount || 0)
+    if (code === 'MGA') {
+      const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+      return `${intStr}Ar`
+    }
+    const symbol = getDefaultCurrencySymbol()
+    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
+  }
+
+  const formatDateFr = (dateStr) => {
+    if (!dateStr) return ''
+    try { return new Date(dateStr).toLocaleDateString('fr-FR') } catch { return '' }
+  }
+
+  const getLogoDataUrl = async () => {
+    try {
+      const logoUrl = (typeof logo === 'string') ? logo : (logo?.src || '')
+      if (!logoUrl) return ''
+      const res = await fetch(logoUrl)
+      const blob = await res.blob()
+      return await new Promise((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result)
+        reader.readAsDataURL(blob)
+      })
+    } catch {
+      return ''
+    }
+  }
+
+  const exportToPDF = async () => {
+    const win = window.open('', '_blank')
+    if (!win) return
+    const appName = 'Jalako'
+    const exportedAt = new Date().toLocaleString('fr-FR')
+    const logoDataUrl = await getLogoDataUrl()
+    const styles = `
+      <style>
+        body { font-family: Arial, sans-serif; padding: 28px; color: #111827; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; }
+        .brand { display: flex; align-items: center; gap: 12px; }
+        .brand h1 { font-size: 20px; margin: 0; font-weight: 700; }
+        .meta { font-size: 12px; color: #6b7280; text-align: right; }
+        .logo { width: 40px; height: 40px; object-fit: contain; border-radius: 8px; }
+        .cards { display: flex; gap: 12px; margin: 16px 0 20px; }
+        .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px 14px; }
+        .card .label { font-size: 11px; color: #6b7280; }
+        .card .value { font-size: 16px; font-weight: 700; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; border-radius: 10px; overflow: hidden; }
+        th, td { border: 1px solid #e5e7eb; padding: 10px; font-size: 12px; }
+        thead th { background: #f3f4f6; text-align: left; font-weight: 700; }
+        tbody tr:nth-child(odd) { background: #fcfdff; }
+        .footer { margin-top: 14px; font-size: 11px; color: #6b7280; display:flex; justify-content: space-between; }
+      </style>
+    `
+    const header = `
+      <div class=\"header\">\n        <div class=\"brand\">\n          ${logoDataUrl ? `<img class=\\"logo\\" src=\\"${logoDataUrl}\\" alt=\\"Logo\\" />` : ''}\n          <h1>${appName} — Liste des dépenses</h1>\n        </div>\n        <div class=\"meta\">\n          Exporté le ${exportedAt}\n        </div>\n      </div>\n    `
+    const totalLabel = 'Total des dépenses'
+    const totalValue = `${formatAmountDefault(totalExpenses)}`
+    const countLabel = 'Nombre de lignes'
+    const countValue = `${filteredExpenses.length}`
+    const cards = `
+      <div class=\"cards\">\n        <div class=\"card\">\n          <div class=\"label\">${totalLabel}</div>\n          <div class=\"value\">${totalValue}</div>\n        </div>\n        <div class=\"card\">\n          <div class=\"label\">${countLabel}</div>\n          <div class=\"value\">${countValue}</div>\n        </div>\n      </div>
+    `
+    const thead = '<tr><th>ID</th><th>Description</th><th>Catégorie</th><th>Compte</th><th>Montant</th><th>Date</th></tr>'
+    const rows = filteredExpenses.map(e => `
+      <tr>
+        <td>${e.id_depense ?? ''}</td>
+        <td>${(e.description ?? '').toString().replace(/</g,'&lt;')}</td>
+        <td>${getCategoryName(e.id_categorie_depense)}</td>
+        <td>${getAccountName(e.id_compte)}</td>
+        <td>${formatAmountForAccount(e.montant, e.id_compte)}</td>
+        <td>${formatDateFr(e.date_depense)}</td>
+      </tr>
+    `).join('')
+    const footer = `<div class=\"footer\"><span>${appName}</span><span>${exportedAt}</span></div>`
+    win.document.write(`<!doctype html><html><head><meta charset=\"utf-8\"/>${styles}</head><body>${header}${cards}<table><thead>${thead}</thead><tbody>${rows}</tbody></table>${footer}</body></html>`) 
+    win.document.close()
+    win.focus()
+    setTimeout(() => { try { win.print() } catch(_) {} }, 300)
+  }
+
+  // removed duplicate getDefaultCurrencySymbol
+
   return (
-    <div className="min-h-screen p-6" style={{ backgroundColor: colors.light }}>
+    <div className="min-h-screen p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
 
         {/* En-tête */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -565,50 +702,104 @@ export default function GestionDepenses() {
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondary }}>
-            <h3 className="text-sm font-medium opacity-80">Total des dépenses</h3>
-            <p className="text-2xl font-bold mt-2">{totalExpenses.toFixed(2)}€</p>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">Total des dépenses</h3>
+            <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(totalExpenses)}</p>
           </div>
-          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primary }}>
-            <h3 className="text-sm font-medium opacity-80">Ce mois</h3>
-            <p className="text-2xl font-bold mt-2">{monthlyExpenses.toFixed(2)}€</p>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">Ce mois</h3>
+            <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(monthlyExpenses)}</p>
           </div>
-          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondaryDark }}>
-            <h3 className="text-sm font-medium opacity-80">Nombre de dépenses</h3>
-            <p className="text-2xl font-bold mt-2">{expenses.length}</p>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">Nombre de dépenses</h3>
+            <p className="text-2xl font-bold mt-2 text-gray-900">{expenses.length}</p>
           </div>
-          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primaryDark }}>
-            <h3 className="text-orange-100 text-sm font-medium">Moyenne journalière</h3>
-            <p className="text-2xl font-bold mt-2">
-              {expenses.length > 0 ? (totalExpenses / 30).toFixed(2) : 0}€
-            </p>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">Moyenne journalière</h3>
+            <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(expenses.length > 0 ? (totalExpenses / 30) : 0)}</p>
           </div>
         </div>
 
-        {/* Statistiques par catégorie */}
-        {categoryStats.length > 0 && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Dépenses par catégorie</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {categoryStats.slice(0, 4).map((stat) => {
-                const IconComponent = stat.icon;
-                return (
-                  <div key={stat.id} className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className={`p-2 rounded-lg ${stat.couleur} text-white`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="font-medium text-gray-900">{stat.nom}</span>
+     
+
+      {/* Analyse rapide */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Top catégories */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+            <PieChart className="w-5 h-5" />
+            <span>Top Catégories</span>
+          </h3>
+          <div className="space-y-3">
+            {categoryStats.slice(0, 5).map((stat, index) => {
+              const percentage = totalExpenses > 0 ? ((stat.total / totalExpenses) * 100).toFixed(1) : 0;
+              const IconComponent = stat.icon || Coffee;
+              return (
+                <div key={stat.id} className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 flex-1">
+                    <span className="text-sm font-medium text-gray-500 w-4">#{index + 1}</span>
+                    <div className={`p-2 rounded-lg ${stat.couleur || 'bg-gray-500'} text-white`}>
+                      <IconComponent className="w-4 h-4" />
                     </div>
-                    <p className="text-xl font-bold text-gray-900">{stat.total.toFixed(2)}€</p>
-                    <p className="text-sm text-gray-500">{stat.count} dépense{stat.count > 1 ? 's' : ''}</p>
+                    <span className="font-medium text-gray-900">{stat.nom}</span>
                   </div>
-                );
-              })}
+                  <div className="text-right">
+                    <p className="font-bold text-gray-900">{formatAmountDefault(stat.total)}</p>
+                    <p className="text-sm text-gray-500">{percentage}%</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tendances */}
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+            <BarChart3 className="w-5 h-5" />
+            <span>Analyse</span>
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <TrendingUp className="w-5 h-5 text-blue-600" />
+                <span className="text-blue-900 font-medium">Dépense la plus élevée</span>
+              </div>
+              <span className="font-bold text-blue-900">{formatAmountDefault(Math.max(...expenses.map(e => Number(e.montant || 0))))}</span>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <TrendingDown className="w-5 h-5 text-green-600" />
+                <span className="text-green-900 font-medium">Dépense la plus faible</span>
+              </div>
+              <span className="font-bold text-green-900">{formatAmountDefault(Math.min(...expenses.map(e => Number(e.montant || 0))))}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <BarChart3 className="w-5 h-5 text-purple-600" />
+                <span className="text-purple-900 font-medium">Moyenne par dépense</span>
+              </div>
+              <span className="font-bold text-purple-900">{formatAmountDefault(expenses.length > 0 ? (totalExpenses / expenses.length) : 0)}</span>
+            </div>
+
+            <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-5 h-5 text-orange-600" />
+                <span className="text-orange-900 font-medium">Dernière dépense</span>
+              </div>
+              <span className="font-bold text-orange-900">
+                {expenses.length > 0 
+                  ? new Date(Math.max(...expenses.map(e => new Date(e.date_depense)))).toLocaleDateString('fr-FR')
+                  : 'N/A'
+                }
+              </span>
             </div>
           </div>
-        )}
-
+        </div>
+      </div>
+   {/* Section "Dépenses par catégorie" supprimée */}
         {/* Filtres et recherche */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
@@ -636,7 +827,7 @@ export default function GestionDepenses() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-gray-400" />
                 <select
                   value={filterDateRange}
@@ -649,10 +840,25 @@ export default function GestionDepenses() {
                   <option value="month">Ce mois</option>
                 </select>
               </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-gray-500 text-sm">Par page</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => { setCurrentPage(1); setItemsPerPage(parseInt(e.target.value)) }}
+                className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+              <div className="flex items-center space-x-2">
+                <button onClick={exportToPDF} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">Exporter PDF</button>
+              </div>
             </div>
           </div>
         </div>
-
         {/* Tableau des dépenses */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
@@ -668,7 +874,11 @@ export default function GestionDepenses() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedExpenses.map((expense) => {
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-10 text-center text-gray-500">Chargement...</td>
+                  </tr>
+                ) : paginatedExpenses.map((expense) => {
                   const IconComponent = getCategoryIcon(expense.id_categorie_depense);
                   return (
                     <tr key={expense.id_depense} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
@@ -695,7 +905,7 @@ export default function GestionDepenses() {
                       </td>
                       <td className="py-4 px-6 text-right">
                         <span className="text-lg font-bold text-gray-900">
-                          {expense.montant.toFixed(2)}€
+                          {Number(expense.montant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{getAccountCurrencySymbol(expense.id_compte)}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-gray-900">
@@ -703,13 +913,7 @@ export default function GestionDepenses() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-center space-x-2">
-                          <button
-                            onClick={() => handleDetails(expense)}
-                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                            title="Voir détails"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
+                          
                           <button
                             onClick={() => handleEdit(expense)}
                             className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -732,7 +936,7 @@ export default function GestionDepenses() {
               </tbody>
             </table>
 
-            {paginatedExpenses.length === 0 && (
+            {!isLoading && paginatedExpenses.length === 0 && (
               <div className="text-center py-12">
                 <Euro className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">Aucune dépense trouvée</p>
@@ -752,122 +956,28 @@ export default function GestionDepenses() {
               <p className="text-gray-600 text-sm">
                 Affichage de {startIndex + 1} à {Math.min(startIndex + itemsPerPage, filteredExpenses.length)} sur {filteredExpenses.length} résultats
               </p>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  Précédent
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`px-3 py-1 rounded ${
-                      currentPage === page
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
+                <span className="text-sm text-gray-500">Page {currentPage} / {totalPages}</span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  Suivant
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Analyse rapide */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Top catégories */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-              <PieChart className="w-5 h-5" />
-              <span>Top Catégories</span>
-            </h3>
-            <div className="space-y-3">
-              {categoryStats.slice(0, 5).map((stat, index) => {
-                const percentage = totalExpenses > 0 ? ((stat.total / totalExpenses) * 100).toFixed(1) : 0;
-                const IconComponent = stat.icon;
-                return (
-                  <div key={stat.id} className="flex items-center space-x-3">
-                    <div className="flex items-center space-x-2 flex-1">
-                      <span className="text-sm font-medium text-gray-500 w-4">#{index + 1}</span>
-                      <div className={`p-2 rounded-lg ${stat.couleur} text-white`}>
-                        <IconComponent className="w-4 h-4" />
-                      </div>
-                      <span className="font-medium text-gray-900">{stat.nom}</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-gray-900">{stat.total.toFixed(2)}€</p>
-                      <p className="text-sm text-gray-500">{percentage}%</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Tendances */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-              <BarChart3 className="w-5 h-5" />
-              <span>Analyse</span>
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  <span className="text-blue-900 font-medium">Dépense la plus élevée</span>
-                </div>
-                <span className="font-bold text-blue-900">
-                  {Math.max(...expenses.map(e => e.montant)).toFixed(2)}€
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <TrendingDown className="w-5 h-5 text-green-600" />
-                  <span className="text-green-900 font-medium">Dépense la plus faible</span>
-                </div>
-                <span className="font-bold text-green-900">
-                  {Math.min(...expenses.map(e => e.montant)).toFixed(2)}€
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <BarChart3 className="w-5 h-5 text-purple-600" />
-                  <span className="text-purple-900 font-medium">Moyenne par dépense</span>
-                </div>
-                <span className="font-bold text-purple-900">
-                  {expenses.length > 0 ? (totalExpenses / expenses.length).toFixed(2) : 0}€
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="w-5 h-5 text-orange-600" />
-                  <span className="text-orange-900 font-medium">Dernière dépense</span>
-                </div>
-                <span className="font-bold text-orange-900">
-                  {expenses.length > 0 
-                    ? new Date(Math.max(...expenses.map(e => new Date(e.date_depense)))).toLocaleDateString('fr-FR')
-                    : 'N/A'
-                  }
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+       
       </div>
 
       {/* Modals */}
@@ -879,6 +989,8 @@ export default function GestionDepenses() {
         }}
         onSave={handleSave}
         item={selectedExpense}
+        categories={categories}
+        comptes={comptes}
       />
 
       <ExpenseDetailsModal

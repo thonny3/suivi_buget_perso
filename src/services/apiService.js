@@ -22,15 +22,35 @@ class ApiService {
 
     try {
       const response = await fetch(url, config)
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.message || data.error || 'Erreur de requête')
+      let data
+      let rawText
+      try {
+        data = await response.json()
+      } catch (_e) {
+        try {
+          rawText = await response.text()
+        } catch (_e2) {
+          rawText = ''
+        }
       }
 
-      return data
+      if (!response.ok) {
+        const details = (
+          typeof data === 'string' ? data :
+          data?.message || data?.error?.message || data?.error ||
+          rawText || response.statusText || 'Erreur de requête'
+        )
+        const message = typeof details === 'string' ? details : JSON.stringify(details)
+        const error = new Error(message)
+        // attach extra context for debugging
+        error.status = response.status
+        error.payload = data ?? rawText
+        throw error
+      }
+
+      return data ?? rawText
     } catch (error) {
-      console.error('Erreur API:', error)
+      console.error('Erreur API:', error, error?.payload)
       throw error
     }
   }
@@ -154,6 +174,8 @@ class ApiService {
       method: 'DELETE',
     })
   }
+
+  // (Dépenses déplacées vers depensesService)
 }
 
 export default new ApiService()
