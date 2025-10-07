@@ -16,7 +16,8 @@ import {
   LogOut,
   User,
   RefreshCw,
-  Bell
+  Bell,
+  ArrowLeftRight
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 
@@ -52,6 +53,13 @@ const Sidebar = () => {
       icon: TrendingUp,
       description: 'Mes revenus',
       href: '/dashboard/revenus'
+    },
+    {
+      id: 'transactions',
+      label: 'Transactions',
+      icon: ArrowLeftRight,
+      description: 'Toutes les transactions',
+      href: '/dashboard/trasactios'
     },
     {
       id: 'budget',

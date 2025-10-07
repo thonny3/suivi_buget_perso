@@ -14,63 +14,23 @@ import {
   Building,
   User,
   ArrowUpRight,
-  BarChart3
+  BarChart3,
+  AlertTriangle,
+  X
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts'
+import { colors } from '@/styles/colors'
+import revenuesService from '@/services/revenuesService'
 
 export default function RevenuePage() {
-  const [revenues, setRevenues] = useState([
-    {
-      id_revenu: 1,
-      id_user: 1,
-      montant: 3500.00,
-      date_revenu: '2024-01-15',
-      source: 'Salaire - Entreprise ABC',
-      id_categorie_revenu: 1,
-      id_compte: 1,
-      categorie: 'Salaire',
-      compte: 'Compte Principal'
-    },
-    {
-      id_revenu: 2,
-      id_user: 1,
-      montant: 850.00,
-      date_revenu: '2024-01-20',
-      source: 'Freelance - Projet Web',
-      id_categorie_revenu: 2,
-      id_compte: 2,
-      categorie: 'Freelance',
-      compte: 'Compte Épargne'
-    },
-    {
-      id_revenu: 3,
-      id_user: 1,
-      montant: 120.00,
-      date_revenu: '2024-01-25',
-      source: 'Dividendes - Actions Tech',
-      id_categorie_revenu: 3,
-      id_compte: 3,
-      categorie: 'Investissements',
-      compte: 'Compte Investissement'
-    }
-  ])
-
-  const [categories] = useState([
-    { id: 1, nom: 'Salaire' },
-    { id: 2, nom: 'Freelance' },
-    { id: 3, nom: 'Investissements' },
-    { id: 4, nom: 'Location' },
-    { id: 5, nom: 'Autres' }
-  ])
-
-  const [comptes] = useState([
-    { id: 1, nom: 'Compte Principal' },
-    { id: 2, nom: 'Compte Épargne' },
-    { id: 3, nom: 'Compte Investissement' }
-  ])
+  const [revenues, setRevenues] = useState([])
+  const [categories, setCategories] = useState([])
+  const [comptes, setComptes] = useState([])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRevenue, setEditingRevenue] = useState(null)
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false)
+  const [revenueToDelete, setRevenueToDelete] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
   const [selectedMonth, setSelectedMonth] = useState('')
@@ -83,22 +43,192 @@ export default function RevenuePage() {
     id_compte: ''
   })
 
-  // Données pour les graphiques
-  const monthlyData = [
-    { month: 'Jan', montant: 4200 },
-    { month: 'Fév', montant: 3800 },
-    { month: 'Mar', montant: 4500 },
-    { month: 'Avr', montant: 3900 },
-    { month: 'Mai', montant: 5100 },
-    { month: 'Juin', montant: 4700 }
-  ]
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        await Promise.all([fetchCategories(), fetchComptes(), fetchRevenues()])
+      } catch (e) {
+        console.error('Erreur lors du chargement initial des données revenus:', e)
+      }
+    }
+    loadInitialData()
+  }, [])
 
-  const categoryData = [
-    { name: 'Salaire', value: 3500, color: '#10B981' },
-    { name: 'Freelance', value: 850, color: '#3B82F6' },
-    { name: 'Investissements', value: 120, color: '#F59E0B' },
-    { name: 'Location', value: 600, color: '#EF4444' }
-  ]
+  const fetchRevenues = async () => {
+    const data = await revenuesService.getRevenues()
+    // Mapper les champs backend vers ceux utilisés par l'UI
+    const mapped = (Array.isArray(data) ? data : []).map((r) => ({
+      id_revenu: r.id_revenu,
+      id_user: r.id_user,
+      montant: Number(r.montant),
+      date_revenu: r.date_revenu,
+      source: r.source,
+      id_categorie_revenu: r.id_categorie_revenu,
+      id_compte: r.id_compte,
+      categorie: r.categorie_nom || r.categorie || '',
+      compte: r.compte_nom || r.compte || ''
+    }))
+    setRevenues(mapped)
+  }
+
+  const fetchCategories = async () => {
+    const data = await revenuesService.getRevenueCategories()
+    const mapped = (Array.isArray(data) ? data : []).map((c) => ({ id: c.id, nom: c.nom }))
+    setCategories(mapped)
+  }
+
+  const fetchComptes = async () => {
+    const data = await revenuesService.getMyComptes()
+    const mapped = (Array.isArray(data) ? data : []).map((a) => ({
+      id: a.id_compte ?? a.id,
+      nom: a.nom,
+      type: a.type,
+      solde: a.solde,
+      devise: a.devise || a.currency,
+      currency: a.currency,
+      currencySymbol: a.currencySymbol
+    }))
+    setComptes(mapped)
+  }
+
+  const formatDateForInput = (value) => {
+    if (!value) return ''
+    try {
+      const date = new Date(value)
+      if (Number.isNaN(date.getTime())) return ''
+      return date.toISOString().slice(0, 10)
+    } catch {
+      return ''
+    }
+  }
+
+  // Modal de base (aligné avec Dépenses)
+  const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+    if (!isOpen) return null
+    const sizeClasses = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' }
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className={`bg-white rounded-2xl shadow-2xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-y-auto`}>
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+          <div className="p-6">{children}</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Modal de confirmation suppression (même style que Dépenses)
+  const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, item }) => {
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la suppression" size="sm">
+        <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="bg-red-100 rounded-full p-3">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Supprimer ce revenu ?</h3>
+          <p className="text-gray-600 mb-6">
+            Êtes-vous sûr de vouloir supprimer
+            {item?.source ? ` "${item.source}"` : ''} ?<br />
+            Cette action est irréversible.
+          </p>
+          <div className="flex justify-center space-x-3">
+            <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Annuler</button>
+            <button onClick={onConfirm} className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center space-x-2">
+              <Trash2 className="w-4 h-4" />
+              <span>Supprimer</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
+
+  // Données pour les graphiques (dynamiques)
+  const monthLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+  const monthlyTotals = Array.from({ length: 12 }, () => 0)
+  revenues.forEach((rev) => {
+    const date = new Date(rev.date_revenu)
+    if (!Number.isNaN(date.getTime())) {
+      const monthIndex = date.getMonth()
+      monthlyTotals[monthIndex] += Number(rev.montant) || 0
+    }
+  })
+  const monthlyData = monthLabels.map((label, idx) => ({ month: label, montant: monthlyTotals[idx] }))
+
+  const categoryColorPalette = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#6366F1', '#F97316', '#22C55E']
+  const categorySums = new Map()
+  revenues.forEach((rev) => {
+    const name = (rev.categorie || 'Autres').toString()
+    const current = categorySums.get(name) || 0
+    categorySums.set(name, current + (Number(rev.montant) || 0))
+  })
+  const categoryData = Array.from(categorySums.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([name, value], index) => ({ name, value, color: categoryColorPalette[index % categoryColorPalette.length] }))
+
+  // --- Devise & formatage (aligné sur Dépenses) ---
+  const getLocalStorageDevise = () => {
+    try {
+      const val = (typeof window !== 'undefined') ? (localStorage.getItem('devise') || localStorage.getItem('currency') || localStorage.getItem('currencyCode')) : ''
+      return (val || '').toString().toUpperCase()
+    } catch {
+      return ''
+    }
+  }
+
+  const getAccountById = (accountId) => {
+    return comptes.find(c => (c.id) === (typeof accountId === 'string' ? parseInt(accountId) : accountId))
+  }
+
+  const getAccountCurrencySymbol = (accountId) => {
+    const account = getAccountById(accountId)
+    return account?.currencySymbol || account?.devise || account?.currency || '€'
+  }
+
+  const isAccountMGA = (accountId) => {
+    const account = getAccountById(accountId)
+    const code = (account?.devise || account?.currency || '').toString().toUpperCase()
+    return code === 'MGA'
+  }
+
+  const formatAmountForAccount = (amount, accountId) => {
+    const num = Number(amount || 0)
+    if (isAccountMGA(accountId)) {
+      const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+      return `${intStr}Ar`
+    }
+    const symbol = getAccountCurrencySymbol(accountId)
+    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
+  }
+
+  const getDefaultCurrencySymbol = () => {
+    const lsCode = getLocalStorageDevise()
+    if (lsCode === 'MGA') return 'Ar'
+    if (lsCode) return lsCode
+    const first = comptes && comptes.length > 0 ? comptes[0] : null
+    const code = (first?.devise || first?.currency || '').toString().toUpperCase()
+    if (code === 'MGA') return 'Ar'
+    return first?.currencySymbol || first?.devise || first?.currency || '€'
+  }
+
+  const formatAmountDefault = (amount) => {
+    const lsCode = getLocalStorageDevise()
+    const first = comptes && comptes.length > 0 ? comptes[0] : null
+    const code = (lsCode || first?.devise || first?.currency || '').toString().toUpperCase()
+    const num = Number(amount || 0)
+    if (code === 'MGA') {
+      const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+      return `${intStr}Ar`
+    }
+    const symbol = getDefaultCurrencySymbol()
+    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
+  }
 
   // Calculs statistiques
   const totalRevenues = revenues.reduce((sum, rev) => sum + rev.montant, 0)
@@ -117,36 +247,27 @@ export default function RevenuePage() {
     return matchesSearch && matchesCategory && matchesMonth
   })
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    
-    if (editingRevenue) {
-      // Mise à jour
-      setRevenues(revenues.map(rev =>
-        rev.id_revenu === editingRevenue.id_revenu
-          ? {
-              ...rev,
-              ...formData,
-              montant: parseFloat(formData.montant),
-              categorie: categories.find(cat => cat.id.toString() === formData.id_categorie_revenu)?.nom || '',
-              compte: comptes.find(compte => compte.id.toString() === formData.id_compte)?.nom || ''
-            }
-          : rev
-      ))
-    } else {
-      // Création
-      const newRevenue = {
-        id_revenu: Math.max(...revenues.map(r => r.id_revenu)) + 1,
-        id_user: 1,
-        ...formData,
-        montant: parseFloat(formData.montant),
-        categorie: categories.find(cat => cat.id.toString() === formData.id_categorie_revenu)?.nom || '',
-        compte: comptes.find(compte => compte.id.toString() === formData.id_compte)?.nom || ''
-      }
-      setRevenues([...revenues, newRevenue])
+    const payload = {
+      montant: parseFloat(formData.montant),
+      date_revenu: formData.date_revenu,
+      source: formData.source,
+      id_categorie_revenu: Number(formData.id_categorie_revenu),
+      id_compte: Number(formData.id_compte)
     }
-    
-    resetForm()
+
+    try {
+      if (editingRevenue) {
+        await revenuesService.updateRevenue(editingRevenue.id_revenu, payload)
+      } else {
+        await revenuesService.createRevenue(payload)
+      }
+      await fetchRevenues()
+      resetForm()
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde du revenu:', err)
+    }
   }
 
   const resetForm = () => {
@@ -165,7 +286,7 @@ export default function RevenuePage() {
     setEditingRevenue(revenue)
     setFormData({
       montant: revenue.montant.toString(),
-      date_revenu: revenue.date_revenu,
+      date_revenu: formatDateForInput(revenue.date_revenu),
       source: revenue.source,
       id_categorie_revenu: revenue.id_categorie_revenu.toString(),
       id_compte: revenue.id_compte.toString()
@@ -173,10 +294,29 @@ export default function RevenuePage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce revenu ?')) {
-      setRevenues(revenues.filter(rev => rev.id_revenu !== id))
+  const handleDelete = async (id) => {
+    try {
+      await revenuesService.deleteRevenue(id)
+      await fetchRevenues()
+    } catch (err) {
+      console.error('Erreur lors de la suppression du revenu:', err)
     }
+  }
+
+  const openDeleteConfirm = (revenue) => {
+    setRevenueToDelete(revenue)
+    setIsConfirmOpen(true)
+  }
+
+  const closeDeleteConfirm = () => {
+    setIsConfirmOpen(false)
+    setRevenueToDelete(null)
+  }
+
+  const confirmDelete = async () => {
+    if (!revenueToDelete) return
+    await handleDelete(revenueToDelete.id_revenu)
+    closeDeleteConfirm()
   }
 
   return (
@@ -206,7 +346,7 @@ export default function RevenuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total des Revenus</p>
-                <p className="text-2xl font-bold text-gray-900">{totalRevenues.toLocaleString()}€</p>
+                <p className="text-2xl font-bold text-gray-900">{formatAmountDefault(totalRevenues)}</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">
                 <DollarSign className="w-6 h-6 text-green-600" />
@@ -218,7 +358,7 @@ export default function RevenuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Revenu Moyen</p>
-                <p className="text-2xl font-bold text-gray-900">{averageRevenue.toFixed(0)}€</p>
+                <p className="text-2xl font-bold text-gray-900">{formatAmountDefault(averageRevenue)}</p>
               </div>
               <div className="bg-blue-100 p-3 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-blue-600" />
@@ -230,7 +370,7 @@ export default function RevenuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Ce Mois</p>
-                <p className="text-2xl font-bold text-gray-900">{thisMonthRevenues.toLocaleString()}€</p>
+                <p className="text-2xl font-bold text-gray-900">{formatAmountDefault(thisMonthRevenues)}</p>
               </div>
               <div className="bg-emerald-100 p-3 rounded-lg">
                 <TrendingUp className="w-6 h-6 text-emerald-600" />
@@ -261,7 +401,7 @@ export default function RevenuePage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
-              <Tooltip formatter={(value) => [`${value}€`, 'Montant']} />
+              <Tooltip formatter={(value) => [formatAmountDefault(value), 'Montant']} />
               <Line type="monotone" dataKey="montant" stroke="#10B981" strokeWidth={3} />
             </LineChart>
           </ResponsiveContainer>
@@ -285,7 +425,7 @@ export default function RevenuePage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value}€`, 'Montant']} />
+              <Tooltip formatter={(value) => [formatAmountDefault(value), 'Montant']} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -379,7 +519,7 @@ export default function RevenuePage() {
                   <td className="p-4 text-gray-600">{revenue.compte}</td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span className="font-semibold text-green-600">{revenue.montant.toLocaleString()}€</span>
+                      <span className="font-semibold text-green-600">{formatAmountForAccount(revenue.montant, revenue.id_compte)}</span>
                       <ArrowUpRight className="w-4 h-4 text-green-500" />
                     </div>
                   </td>
@@ -392,7 +532,7 @@ export default function RevenuePage() {
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(revenue.id_revenu)}
+                        onClick={() => openDeleteConfirm(revenue)}
                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -424,7 +564,13 @@ export default function RevenuePage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant (€)
+                  Montant ({(() => {
+                    const selected = getAccountById(parseInt(formData.id_compte))
+                    const lsCode = getLocalStorageDevise()
+                    const code = (lsCode || selected?.devise || selected?.currency || '').toString().toUpperCase()
+                    if (code === 'MGA') return 'Ar'
+                    return selected?.currencySymbol || selected?.devise || selected?.currency || lsCode || '€'
+                  })()})
                 </label>
                 <input
                   type="number"
@@ -519,6 +665,13 @@ export default function RevenuePage() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmModal
+        isOpen={isConfirmOpen}
+        onClose={closeDeleteConfirm}
+        onConfirm={confirmDelete}
+        item={revenueToDelete}
+      />
     </div>
   )
 }

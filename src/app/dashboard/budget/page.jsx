@@ -21,68 +21,21 @@ import {
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
+import budgetsService from '@/services/budgetsService'
+import depensesService from '@/services/depensesService'
 
 export default function BudgetPage() {
-  const [budgets, setBudgets] = useState([
-    {
-      id_budget: 1,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 2500.00,
-      montant_restant: 1200.00,
-      id_categories_depenses: 1,
-      categorie: 'Alimentation',
-      montant_depense: 1300.00,
-      pourcentage_utilise: 52
-    },
-    {
-      id_budget: 2,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 800.00,
-      montant_restant: 150.00,
-      id_categories_depenses: 2,
-      categorie: 'Transport',
-      montant_depense: 650.00,
-      pourcentage_utilise: 81.25
-    },
-    {
-      id_budget: 3,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 1200.00,
-      montant_restant: 0.00,
-      id_categories_depenses: 3,
-      categorie: 'Logement',
-      montant_depense: 1200.00,
-      pourcentage_utilise: 100
-    },
-    {
-      id_budget: 4,
-      id_user: 1,
-      mois: 'Janvier 2024',
-      montant_max: 400.00,
-      montant_restant: 320.00,
-      id_categories_depenses: 4,
-      categorie: 'Loisirs',
-      montant_depense: 80.00,
-      pourcentage_utilise: 20
-    }
-  ])
+  const [budgets, setBudgets] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const [categories] = useState([
-    { id: 1, nom: 'Alimentation', couleur: '#10B981' },
-    { id: 2, nom: 'Transport', couleur: '#3B82F6' },
-    { id: 3, nom: 'Logement', couleur: '#F59E0B' },
-    { id: 4, nom: 'Loisirs', couleur: '#EF4444' },
-    { id: 5, nom: 'Santé', couleur: '#8B5CF6' },
-    { id: 6, nom: 'Shopping', couleur: '#EC4899' },
-    { id: 7, nom: 'Épargne', couleur: '#6B7280' }
-  ])
+  const [categories, setCategories] = useState([])
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingBudget, setEditingBudget] = useState(null)
-  const [selectedMonth, setSelectedMonth] = useState('Janvier 2024')
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [selectedBudget, setSelectedBudget] = useState(null)
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().toISOString().slice(0, 7))
   const [searchTerm, setSearchTerm] = useState('')
 
   const [formData, setFormData] = useState({
@@ -91,43 +44,101 @@ export default function BudgetPage() {
     id_categories_depenses: ''
   })
 
-  // Calculs statistiques
-  const totalBudgetMax = budgets.reduce((sum, budget) => sum + budget.montant_max, 0)
-  const totalDepense = budgets.reduce((sum, budget) => sum + budget.montant_depense, 0)
-  const totalRestant = budgets.reduce((sum, budget) => sum + budget.montant_restant, 0)
-  const budgetsAlertes = budgets.filter(b => b.pourcentage_utilise >= 80).length
-  const moyenneUtilisation = budgets.reduce((sum, b) => sum + b.pourcentage_utilise, 0) / budgets.length
+  // Charger depuis l'API
+  const loadBudgets = async () => {
+    try {
+      setError('')
+      setLoading(true)
+      const res = await budgetsService.getBudgets()
+      setBudgets(Array.isArray(res) ? res : [])
+    } catch (e) {
+      setError(e?.message || 'Erreur lors du chargement des budgets')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-  // Données pour les graphiques
-  const budgetData = budgets.map(budget => ({
+  const loadCategories = async () => {
+    try {
+      const res = await depensesService.getDepenseCategories()
+      const normalized = Array.isArray(res) ? res.map((c) => ({
+        id: c.id || c.id_categorie_depense || c.id_categorie || c.idCategorie || c.code || `${c.nom || c.name}`,
+        nom: c.nom || c.name || c.libelle || c.label || 'Catégorie'
+      })) : []
+      setCategories(normalized)
+    } catch (_e) {
+      setCategories([])
+    }
+  }
+
+  useEffect(() => {
+    loadBudgets()
+    loadCategories()
+  }, [])
+
+  // Calculs statistiques
+  const totalBudgetMax = budgets.reduce((sum, budget) => sum + (Number(budget.montant_max) || 0), 0)
+  const totalDepense = budgets.reduce((sum, budget) => sum + (Number(budget.montant_depense) || 0), 0)
+  const totalRestant = budgets.reduce((sum, budget) => sum + (Number(budget.montant_restant) || 0), 0)
+  const budgetsAlertes = budgets.filter(b => (Number(b.pourcentage_utilise) || 0) >= 80).length
+  const moyenneUtilisation = budgets.length > 0 ? (budgets.reduce((sum, b) => sum + (Number(b.pourcentage_utilise) || 0), 0) / budgets.length) : 0
+
+  
+
+  // Helper pour YYYY-MM
+  const toYearMonth = (val) => {
+    if (!val) return ''
+    try {
+      // si déjà YYYY-MM
+      if (/^\d{4}-\d{2}$/.test(val.toString())) return val.toString()
+      const d = new Date(val)
+      if (!isNaN(d.getTime())) {
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        return `${y}-${m}`
+      }
+      return val.toString()
+    } catch {
+      return val.toString()
+    }
+  }
+
+  // Filtrage des budgets
+  const filteredBudgets = budgets.filter(budget => {
+    const categorieName = ((budget.categorie ?? budget.category) || '').toString().toLowerCase()
+    const matchesSearch = categorieName.includes((searchTerm || '').toString().toLowerCase())
+    const moisValue = toYearMonth((budget.mois ?? budget.month) || '')
+    const matchesMonth = !selectedMonth || moisValue === selectedMonth
+    return matchesSearch && matchesMonth
+  })
+
+  // Données pour les graphiques (filtrées par mois sélectionné)
+  const budgetData = filteredBudgets.map(budget => ({
     categorie: budget.categorie,
-    budget: budget.montant_max,
-    depense: budget.montant_depense,
-    restant: budget.montant_restant,
-    pourcentage: budget.pourcentage_utilise
+    budget: Number(budget.montant_max) || 0,
+    depense: Number(budget.montant_depense) || 0,
+    restant: Number(budget.montant_restant) || 0,
+    pourcentage: Number(budget.pourcentage_utilise) || 0
   }))
 
+  // Palette de couleurs pour différencier les catégories dans le camembert
+  const PIE_COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4', '#F43F5E', '#84CC16', '#A855F7', '#14B8A6']
+
+  // Courbe d'évolution: revenir à l'ancien graphe (multi-mois + point courant)
   const evolutionData = [
     { mois: 'Oct', budget: 4500, depense: 3800 },
     { mois: 'Nov', budget: 4200, depense: 4100 },
     { mois: 'Déc', budget: 4800, depense: 4200 },
-    { mois: 'Jan', budget: totalBudgetMax, depense: totalDepense }
+    { mois: 'Mois actuel', budget: totalBudgetMax, depense: totalDepense }
   ]
 
-  const repartitionData = budgets.map(budget => ({
+  const repartitionData = filteredBudgets.map((budget, idx) => ({
     name: budget.categorie,
-    value: budget.montant_depense,
-    color: categories.find(cat => cat.id === budget.id_categories_depenses)?.couleur || '#6B7280'
+    value: Number(budget.montant_depense) || 0,
+    color: PIE_COLORS[idx % PIE_COLORS.length]
   }))
 
-  // Filtrage des budgets
-  const filteredBudgets = budgets.filter(budget => {
-    const matchesSearch = budget.categorie.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesMonth = !selectedMonth || budget.mois === selectedMonth
-    return matchesSearch && matchesMonth
-  })
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.montant_max || !formData.id_categories_depenses || !formData.mois) {
       alert('Veuillez remplir tous les champs')
       return
@@ -135,37 +146,25 @@ export default function BudgetPage() {
 
     const categorie = categories.find(cat => cat.id.toString() === formData.id_categories_depenses)
     
-    if (editingBudget) {
-      // Mise à jour
-      setBudgets(budgets.map(budget =>
-        budget.id_budget === editingBudget.id_budget
-          ? {
-              ...budget,
-              ...formData,
-              montant_max: parseFloat(formData.montant_max),
-              montant_restant: parseFloat(formData.montant_max) - budget.montant_depense,
-              categorie: categorie?.nom || '',
-              pourcentage_utilise: Math.round((budget.montant_depense / parseFloat(formData.montant_max)) * 100)
-            }
-          : budget
-      ))
-    } else {
-      // Création
-      const newBudget = {
-        id_budget: Math.max(...budgets.map(b => b.id_budget)) + 1,
-        id_user: 1,
-        ...formData,
+    try {
+      const payload = {
+        mois: formData.mois, // attendu au format YYYY-MM
         montant_max: parseFloat(formData.montant_max),
-        montant_restant: parseFloat(formData.montant_max),
-        montant_depense: 0,
-        categorie: categorie?.nom || '',
-        pourcentage_utilise: 0,
-        id_categories_depenses: parseInt(formData.id_categories_depenses)
+        id_categorie_depense: parseInt(formData.id_categories_depenses),
+        categorie: categorie?.nom || undefined,
       }
-      setBudgets([...budgets, newBudget])
+
+      if (editingBudget) {
+        await budgetsService.updateBudget(editingBudget.id_budget, payload)
+      } else {
+        await budgetsService.createBudget(payload)
+      }
+
+      await loadBudgets()
+      resetForm()
+    } catch (e) {
+      alert(e?.message || 'Erreur lors de l’enregistrement du budget')
     }
-    
-    resetForm()
   }
 
   const resetForm = () => {
@@ -183,14 +182,27 @@ export default function BudgetPage() {
     setFormData({
       mois: budget.mois,
       montant_max: budget.montant_max.toString(),
-      id_categories_depenses: budget.id_categories_depenses.toString()
+      id_categories_depenses: (budget.id_categorie_depense ?? budget.id_categories_depenses).toString()
     })
     setIsModalOpen(true)
   }
 
   const handleDelete = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce budget ?')) {
-      setBudgets(budgets.filter(budget => budget.id_budget !== id))
+    const budget = budgets.find(b => b.id_budget === id)
+    setSelectedBudget(budget || null)
+    setIsDeleteOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    try {
+      if (!selectedBudget) return
+      await budgetsService.deleteBudget(selectedBudget.id_budget)
+      await loadBudgets()
+    } catch (e) {
+      alert(e?.message || 'Erreur lors de la suppression du budget')
+    } finally {
+      setIsDeleteOpen(false)
+      setSelectedBudget(null)
     }
   }
 
@@ -229,68 +241,9 @@ export default function BudgetPage() {
           </button>
         </div>
 
-        {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Budget Total</p>
-                <p className="text-2xl font-bold text-gray-900">{totalBudgetMax.toLocaleString()}€</p>
-              </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Target className="w-6 h-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Dépensé</p>
-                <p className="text-2xl font-bold text-gray-900">{totalDepense.toLocaleString()}€</p>
-              </div>
-              <div className="bg-red-100 p-3 rounded-lg">
-                <TrendingDown className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Restant</p>
-                <p className="text-2xl font-bold text-green-600">{totalRestant.toLocaleString()}€</p>
-              </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <PiggyBank className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Alertes</p>
-                <p className="text-2xl font-bold text-orange-600">{budgetsAlertes}</p>
-              </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Utilisation Moy.</p>
-                <p className="text-2xl font-bold text-gray-900">{moyenneUtilisation.toFixed(0)}%</p>
-              </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Percent className="w-6 h-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-        </div>
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">{error}</div>
+        )}
       </div>
 
       {/* Graphiques */}
@@ -366,16 +319,12 @@ export default function BudgetPage() {
             </div>
           </div>
 
-          <select
+          <input
+            type="month"
             className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            <option value="">Tous les mois</option>
-            <option value="Janvier 2024">Janvier 2024</option>
-            <option value="Février 2024">Février 2024</option>
-            <option value="Mars 2024">Mars 2024</option>
-          </select>
+          />
 
           <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" />
@@ -386,7 +335,7 @@ export default function BudgetPage() {
 
       {/* Liste des Budgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBudgets.map((budget) => {
+        {(loading ? [] : filteredBudgets).map((budget) => {
           const status = getBudgetStatus(budget.pourcentage_utilise)
           const StatusIcon = status.icon
           
@@ -413,17 +362,17 @@ export default function BudgetPage() {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Budget</span>
-                  <span className="font-medium">{budget.montant_max.toLocaleString()}€</span>
+                  <span className="font-medium">{Number(budget.montant_max || 0).toLocaleString('fr-FR')}€</span>
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Dépensé</span>
-                  <span className="font-medium text-red-600">{budget.montant_depense.toLocaleString()}€</span>
+                  <span className="font-medium text-red-600">{Number(budget.montant_depense || 0).toLocaleString('fr-FR')}€</span>
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Restant</span>
-                  <span className="font-medium text-green-600">{budget.montant_restant.toLocaleString()}€</span>
+                  <span className="font-medium text-green-600">{Number(budget.montant_restant || 0).toLocaleString('fr-FR')}€</span>
                 </div>
 
                 {/* Barre de progression */}
@@ -476,12 +425,12 @@ export default function BudgetPage() {
                   Période/Mois
                 </label>
                 <input
-                  type="text"
+                  type="month"
                   required
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={formData.mois}
                   onChange={(e) => setFormData({...formData, mois: e.target.value})}
-                  placeholder="Ex: Février 2024"
+                  placeholder="YYYY-MM"
                 />
               </div>
 
@@ -533,6 +482,43 @@ export default function BudgetPage() {
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   {editingBudget ? 'Modifier' : 'Créer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="bg-red-100 rounded-full p-3">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Supprimer ce budget ?</h3>
+              <p className="text-gray-600 mb-6">
+                Êtes-vous sûr de vouloir supprimer
+                {selectedBudget?.categorie ? ` "${selectedBudget.categorie}"` : ''} ?<br />
+                Cette action est irréversible.
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setIsDeleteOpen(false); setSelectedBudget(null) }}
+                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Supprimer
                 </button>
               </div>
             </div>
