@@ -44,6 +44,12 @@ export const API_CONFIG = {
       DELETE: (id) => `/abonnements/${id}`,
       RENEW: '/abonnements/renew',
       SET_ACTIVE: (id) => `/abonnements/${id}/active`
+    },
+    TRANSFERTS: {
+      COMPTE_VERS_OBJECTIF: '/transferts/compte-vers-objectif',
+      OBJECTIF_VERS_COMPTE: '/transferts/objectif-vers-compte',
+      COMPTE_VERS_COMPTE: '/transferts/compte-vers-compte',
+      HISTORIQUE: '/transferts/historique'
     }
   }
 }

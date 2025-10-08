@@ -62,6 +62,13 @@ const Sidebar = () => {
       href: '/dashboard/trasactios'
     },
     {
+      id: 'transferts',
+      label: 'Transferts',
+      icon: ArrowLeftRight,
+      description: 'Mouvements entre comptes/objectifs',
+      href: '/dashboard/transferts'
+    },
+    {
       id: 'budget',
       label: 'Budget',
       icon: PiggyBank,

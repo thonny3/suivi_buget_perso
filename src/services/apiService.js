@@ -55,6 +55,56 @@ class ApiService {
     }
   }
 
+  // Méthode pour les requêtes multipart/form-data (FormData)
+  async requestForm(endpoint, formData, method = 'POST') {
+    const url = `${API_BASE_URL}${endpoint}`
+    const token = localStorage.getItem('authToken')
+
+    const headers = {}
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+
+    const config = {
+      method,
+      headers, // Ne pas définir Content-Type, laissé à fetch pour FormData
+      body: formData,
+    }
+
+    try {
+      const response = await fetch(url, config)
+      let data
+      let rawText
+      try {
+        data = await response.json()
+      } catch (_e) {
+        try {
+          rawText = await response.text()
+        } catch (_e2) {
+          rawText = ''
+        }
+      }
+
+      if (!response.ok) {
+        const details = (
+          typeof data === 'string' ? data :
+          data?.message || data?.error?.message || data?.error ||
+          rawText || response.statusText || 'Erreur de requête'
+        )
+        const message = typeof details === 'string' ? details : JSON.stringify(details)
+        const error = new Error(message)
+        error.status = response.status
+        error.payload = data ?? rawText
+        throw error
+      }
+
+      return data ?? rawText
+    } catch (error) {
+      console.error('Erreur API (form):', error, error?.payload)
+      throw error
+    }
+  }
+
   // Authentification
   async register(userData) {
     return this.request('/users/register', {
@@ -73,6 +123,31 @@ class ApiService {
   async verifyToken() {
     return this.request('/users/verify', {
       method: 'GET',
+    })
+  }
+
+  // Utilisateurs
+  async getCurrentUser() {
+    // Récupère l'utilisateur courant via vérification du token
+    return this.request('/users/verify', { method: 'GET' })
+  }
+
+  async updateUser(userId, { nom, prenom, email, devise, imageFile }) {
+    // Utilise FormData pour supporter l'upload d'image
+    const form = new FormData()
+    if (typeof nom !== 'undefined') form.append('nom', nom)
+    if (typeof prenom !== 'undefined') form.append('prenom', prenom)
+    if (typeof email !== 'undefined') form.append('email', email)
+    if (typeof devise !== 'undefined') form.append('devise', devise)
+    if (imageFile) form.append('image', imageFile)
+
+    return this.requestForm(`/users/${userId}`, form, 'PUT')
+  }
+
+  async changePassword({ currentPassword, newPassword }) {
+    return this.request('/users/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
     })
   }
 

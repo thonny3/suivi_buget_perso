@@ -1,6 +1,7 @@
 "use client"
 import React, { useState } from 'react'
 import { useAuth } from '@/app/context/AuthContext'
+import { API_CONFIG } from '@/config/api'
 import { useLanguage } from '@/context/LanguageContext'
 import { useSidebar } from '@/context/SidebarContext'
 import LanguageSelector from '@/components/LanguageSelector'
@@ -25,7 +26,8 @@ const DashboardNavbar = () => {
   const router = useRouter()
   const { toggleSidebar, isOpen } = useSidebar()
   
-  const { t } = useLanguage()
+  const { t, currentLanguage } = useLanguage()
+  const [avatarError, setAvatarError] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -82,8 +84,10 @@ const DashboardNavbar = () => {
   }
 
   // Obtenir le nom d'utilisateur depuis les données d'authentification
-  const userName = user?.fullName || user?.email || 'Utilisateur'
-  const userInitial = userName.charAt(0).toUpperCase()
+  const userName = user?.fullName || [user?.prenom, user?.nom].filter(Boolean).join(' ') || user?.email || 'Utilisateur'
+  const userInitial = (user?.prenom?.[0] || user?.nom?.[0] || userName?.[0] || 'U').toUpperCase()
+  const API_ORIGIN = API_CONFIG.BASE_URL.replace(/\/api$/, '')
+  const avatarUrl = user?.image && !avatarError ? `${API_ORIGIN}/uploads/${user.image}` : null
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
@@ -204,9 +208,18 @@ const DashboardNavbar = () => {
               onClick={toggleUserMenu}
               className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors group"
             >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.secondary }}>
-                <span className="text-white font-medium text-sm">{userInitial}</span>
-              </div>
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="avatar"
+                  className="w-8 h-8 rounded-full object-cover"
+                  onError={() => setAvatarError(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: colors.secondary }}>
+                  <span className="text-white font-medium text-sm">{userInitial}</span>
+                </div>
+              )}
               <div className="hidden md:block text-left">
                 <p className="text-sm font-medium text-gray-700 group-hover:text-green-700">{userName}</p>
                 <p className="text-xs text-gray-500">Utilisateur</p>
@@ -218,7 +231,7 @@ const DashboardNavbar = () => {
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                 <div className="p-2">
-                  <button className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors text-left">
+                  <button className="w-full flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg transition-colors text-left" onClick={() => { router.push(`/${currentLanguage}/dashboard/profil`); setShowUserMenu(false) }}>
                     <User className="w-4 h-4 text-gray-500" />
                     <span className="text-sm text-gray-700">{t('common.profile')}</span>
                   </button>
