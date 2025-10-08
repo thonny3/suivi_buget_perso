@@ -21,62 +21,60 @@ import {
   Plane,
   GraduationCap,
   Heart,
-  Smartphone
+  Smartphone,
+  Eye
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
+import objectifsService from '@/services/objectifsService'
+import contributionsService from '@/services/contributionsService'
+import accountsService from '@/services/accountsService'
+import useToast from '@/hooks/useToast'
 
 export default function ObjectifsPage() {
-  const [objectifs, setObjectifs] = useState([
-    {
-      id_objectif: 1,
-      id_user: 1,
-      nom: 'Achat Voiture',
-      montant_objectif: 25000.00,
-      date_limite: '2024-12-31',
-      montant_actuel: 18500.00,
-      pourcentage: 74,
-      statut: 'En cours',
-      icone: 'Car',
-      couleur: '#3B82F6'
-    },
-    {
-      id_objectif: 2,
-      id_user: 1,
-      nom: 'Voyage au Japon',
-      montant_objectif: 8000.00,
-      date_limite: '2024-08-15',
-      montant_actuel: 8000.00,
-      pourcentage: 100,
-      statut: 'Atteint',
-      icone: 'Plane',
-      couleur: '#10B981'
-    },
-    {
-      id_objectif: 3,
-      id_user: 1,
-      nom: 'Apport Maison',
-      montant_objectif: 50000.00,
-      date_limite: '2025-06-30',
-      montant_actuel: 12000.00,
-      pourcentage: 24,
-      statut: 'En cours',
-      icone: 'Home',
-      couleur: '#F59E0B'
-    },
-    {
-      id_objectif: 4,
-      id_user: 1,
-      nom: 'Formation Tech',
-      montant_objectif: 3500.00,
-      date_limite: '2024-03-15',
-      montant_actuel: 1200.00,
-      pourcentage: 34,
-      statut: 'Retard',
-      icone: 'GraduationCap',
-      couleur: '#EF4444'
+  const { showSuccess, showError } = useToast()
+  const [objectifs, setObjectifs] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [isContribOpen, setIsContribOpen] = useState(false)
+  const [contribLoading, setContribLoading] = useState(false)
+  const [contribError, setContribError] = useState('')
+  const [selectedForContrib, setSelectedForContrib] = useState(null)
+  const [contributions, setContributions] = useState([])
+  const [isRewardOpen, setIsRewardOpen] = useState(false)
+  const [rewardObjectif, setRewardObjectif] = useState(null)
+
+  useEffect(() => {
+    const fetchObjectifs = async () => {
+      try {
+        const data = await objectifsService.list()
+        setObjectifs(Array.isArray(data) ? data : [])
+      } catch (e) {
+        console.error('Erreur chargement objectifs', e)
+        const msg = e?.message || 'Erreur lors du chargement des objectifs'
+        setError(msg)
+        showError(msg)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  ])
+
+    fetchObjectifs()
+  }, [])
+
+  const toYYYYMMDD = (value) => {
+    if (!value) return ''
+    if (typeof value === 'string' && value.includes('T')) {
+      return value.slice(0, 10)
+    }
+    if (value instanceof Date) {
+      const y = value.getFullYear()
+      const m = String(value.getMonth() + 1).padStart(2, '0')
+      const d = String(value.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
+    }
+    return String(value).slice(0, 10)
+  }
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingObjectif, setEditingObjectif] = useState(null)
@@ -85,6 +83,8 @@ export default function ObjectifsPage() {
   const [isAddingMoney, setIsAddingMoney] = useState(false)
   const [addMoneyAmount, setAddMoneyAmount] = useState('')
   const [selectedObjectifForMoney, setSelectedObjectifForMoney] = useState(null)
+  const [accounts, setAccounts] = useState([])
+  const [selectedAccountId, setSelectedAccountId] = useState('')
 
   const [formData, setFormData] = useState({
     nom: '',
@@ -153,71 +153,86 @@ export default function ObjectifsPage() {
     }
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.nom || !formData.montant_objectif || !formData.date_limite) {
       alert('Veuillez remplir tous les champs')
       return
     }
 
-    if (editingObjectif) {
-      // Mise à jour
-      setObjectifs(objectifs.map(obj =>
-        obj.id_objectif === editingObjectif.id_objectif
-          ? {
-              ...obj,
-              ...formData,
-              montant_objectif: parseFloat(formData.montant_objectif),
-              pourcentage: Math.round((obj.montant_actuel / parseFloat(formData.montant_objectif)) * 100),
-              statut: updateObjectifStatus({
-                ...obj,
-                montant_objectif: parseFloat(formData.montant_objectif),
-                date_limite: formData.date_limite
-              })
-            }
-          : obj
-      ))
-    } else {
-      // Création
-      const newObjectif = {
-        id_objectif: Math.max(...objectifs.map(o => o.id_objectif)) + 1,
-        id_user: 1,
-        ...formData,
-        montant_objectif: parseFloat(formData.montant_objectif),
-        montant_actuel: 0,
-        pourcentage: 0,
-        statut: 'En cours'
+    try {
+      const normalizedDate = toYYYYMMDD(formData.date_limite)
+      if (editingObjectif) {
+        await objectifsService.update(editingObjectif.id_objectif, {
+          nom: formData.nom,
+          montant_objectif: parseFloat(formData.montant_objectif),
+          date_limite: normalizedDate,
+          // backend columns include montant_actuel optionally on update
+          montant_actuel: editingObjectif.montant_actuel,
+          icone: formData.icone,
+          couleur: formData.couleur,
+        })
+      } else {
+        await objectifsService.create({
+          nom: formData.nom,
+          montant_objectif: parseFloat(formData.montant_objectif),
+          date_limite: normalizedDate,
+          montant_actuel: 0,
+          statut: 'En cours',
+          pourcentage: 0,
+          icone: formData.icone,
+          couleur: formData.couleur,
+        })
       }
-      setObjectifs([...objectifs, newObjectif])
+      // refresh list
+      const refreshed = await objectifsService.list()
+      setObjectifs(Array.isArray(refreshed) ? refreshed : [])
+    } catch (e) {
+      console.error('Erreur enregistrement objectif', e)
+      showError(e?.message || 'Erreur lors de la sauvegarde de l\'objectif')
+      return
     }
     
     resetForm()
+    showSuccess(editingObjectif ? 'Objectif modifié' : 'Objectif créé')
   }
 
-  const handleAddMoney = () => {
+  const handleAddMoney = async () => {
     if (!addMoneyAmount || !selectedObjectifForMoney) {
       alert('Veuillez saisir un montant')
       return
     }
+    if (!selectedAccountId) {
+      alert('Veuillez sélectionner un compte')
+      return
+    }
 
     const montant = parseFloat(addMoneyAmount)
-    setObjectifs(objectifs.map(obj =>
-      obj.id_objectif === selectedObjectifForMoney.id_objectif
-        ? {
-            ...obj,
-            montant_actuel: obj.montant_actuel + montant,
-            pourcentage: Math.round(((obj.montant_actuel + montant) / obj.montant_objectif) * 100),
-            statut: updateObjectifStatus({
-              ...obj,
-              montant_actuel: obj.montant_actuel + montant,
-              pourcentage: Math.round(((obj.montant_actuel + montant) / obj.montant_objectif) * 100)
-            })
-          }
-        : obj
-    ))
+    try {
+      await contributionsService.create({
+        id_objectif: selectedObjectifForMoney.id_objectif,
+        montant,
+        id_compte: Number(selectedAccountId),
+      })
+      const refreshed = await objectifsService.list()
+      setObjectifs(Array.isArray(refreshed) ? refreshed : [])
+      const updated = Array.isArray(refreshed) ? refreshed.find(o => o.id_objectif === selectedObjectifForMoney.id_objectif) : null
+      if (updated && updated.statut === 'Atteint') {
+        setRewardObjectif(updated)
+        setIsRewardOpen(true)
+        showSuccess('Bravo ! Objectif atteint 🎉')
+      } else {
+        showSuccess('Contribution ajoutée')
+      }
+    } catch (e) {
+      console.error('Erreur ajout d\'argent', e)
+      showError(e?.message || 'Erreur lors de la mise à jour du montant')
+      return
+    }
 
     setAddMoneyAmount('')
     setSelectedObjectifForMoney(null)
     setIsAddingMoney(false)
+    setSelectedAccountId('')
   }
 
   const resetForm = () => {
@@ -244,9 +259,34 @@ export default function ObjectifsPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet objectif ?')) {
-      setObjectifs(objectifs.filter(obj => obj.id_objectif !== id))
+  const handleDelete = async (id) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet objectif ?')) return
+    try {
+      await objectifsService.remove(id)
+      const refreshed = await objectifsService.list()
+      setObjectifs(Array.isArray(refreshed) ? refreshed : [])
+    } catch (e) {
+      console.error('Erreur suppression objectif', e)
+      showError(e?.message || 'Erreur lors de la suppression')
+    }
+  }
+
+  const openContributions = async (objectif) => {
+    setSelectedForContrib(objectif)
+    setContributions([])
+    setContribError('')
+    setIsContribOpen(true)
+    setContribLoading(true)
+    try {
+      const data = await contributionsService.listByObjectif(objectif.id_objectif)
+      setContributions(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('Erreur chargement contributions', e)
+      const msg = e?.message || 'Erreur lors du chargement des contributions'
+      setContribError(msg)
+      showError(msg)
+    } finally {
+      setContribLoading(false)
     }
   }
 
@@ -283,8 +323,21 @@ export default function ObjectifsPage() {
     return iconOption ? iconOption.component : Target
   }
 
+  if (isLoading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <p className="text-gray-600">Chargement des objectifs...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      {error && (
+        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+          {error}
+        </div>
+      )}
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
@@ -457,6 +510,13 @@ export default function ObjectifsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => openContributions(objectif)}
+                    className="p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                    title="Voir les contributions"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleEdit(objectif)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   >
@@ -529,6 +589,10 @@ export default function ObjectifsPage() {
                   onClick={() => {
                     setSelectedObjectifForMoney(objectif)
                     setIsAddingMoney(true)
+                    ;(async () => {
+                      const res = await accountsService.getMyAccounts()
+                      setAccounts(res.success ? res.data : [])
+                    })()
                   }}
                   className="w-full text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
                   style={{ backgroundColor: colors.secondary }}
@@ -698,6 +762,24 @@ export default function ObjectifsPage() {
                 />
               </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Compte de débit
+                  </label>
+                  <select
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    value={selectedAccountId}
+                    onChange={(e) => setSelectedAccountId(e.target.value)}
+                  >
+                    <option value="">Sélectionner un compte</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id_compte} value={acc.id_compte}>
+                        {acc.nom} — {(parseFloat(acc.solde) || 0).toLocaleString()}€
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between text-sm mb-2">
                   <span>Montant actuel:</span>
@@ -740,6 +822,137 @@ export default function ObjectifsPage() {
                   Ajouter
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Contributions */}
+      {isContribOpen && selectedForContrib && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold">
+                Contributions — {selectedForContrib.nom}
+              </h2>
+              <button
+                type="button"
+                onClick={() => { setIsContribOpen(false); setSelectedForContrib(null); setContributions([]); setContribError('') }}
+                className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
+              >
+                Fermer
+              </button>
+            </div>
+
+            {contribError && (
+              <div className="mb-3 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+                {contribError}
+              </div>
+            )}
+            {contribLoading ? (
+              <p className="text-gray-600">Chargement des contributions...</p>
+            ) : (
+              <div className="space-y-3">
+                {contributions.length === 0 ? (
+                  <p className="text-gray-500">Aucune contribution.</p>
+                ) : (
+                  contributions.map((c) => (
+                    <div key={c.id_contribution || `${c.id_objectif}-${c.date_contribution}-${c.montant}`}
+                      className="border border-gray-200 rounded-lg p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-gray-700">
+                          {new Date(c.date_contribution).toLocaleDateString('fr-FR')} — <span className="font-medium">{Number(c.montant).toLocaleString()}€</span>
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Compte: {c.compte_nom || '—'} | Objectif: {c.objectif_nom || selectedForContrib.nom}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reward / Celebration Modal */}
+      {isRewardOpen && rewardObjectif && (
+        <div className="fixed inset-0 z-50">
+          {/* Backdrop (solid, no gradient) */}
+          <div className="absolute inset-0 bg-black/60"></div>
+          {/* Container */}
+          <div className="relative w-full h-full flex items-center justify-center p-4">
+            <div className="relative rounded-2xl max-w-xl w-full p-8 overflow-hidden shadow-2xl" style={{ backgroundColor: colors.light }}>
+              {/* No glow ring / rays to avoid gradients */}
+              {/* Confetti */}
+              <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                {Array.from({ length: 40 }).map((_, i) => {
+                  const left = Math.random() * 100
+                  const delay = Math.random() * 1.2
+                  const duration = 2 + Math.random() * 1.5
+                  const size = 6 + Math.random() * 6
+                  const colors = ['#ef4444','#f59e0b','#10b981','#3b82f6','#8b5cf6','#ec4899']
+                  const color = colors[i % colors.length]
+                  const rotate = Math.random() * 360
+                  return (
+                    <span
+                      key={`confetti-${i}`}
+                      className="absolute confetti"
+                      style={{
+                        left: `${left}%`,
+                        top: '-10px',
+                        width: `${size}px`,
+                        height: `${size * 0.4}px`,
+                        backgroundColor: color,
+                        transform: `rotate(${rotate}deg)`,
+                        animationDelay: `${delay}s`,
+                        animationDuration: `${duration}s`,
+                      }}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* Content */}
+              <div className="relative z-10 text-center">
+                <div className="mx-auto mb-4 w-20 h-20 rounded-full flex items-center justify-center shadow-inner" style={{ backgroundColor: '#FEF3C7', boxShadow: '0 0 0 6px rgba(254, 243, 199, 0.7)' }}>
+                  <Trophy className="w-10 h-10 text-yellow-600 animate-bounce" />
+                </div>
+                <h3 className="text-3xl font-extrabold mb-2 bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg,#16a34a,#22c55e,#10b981)' }}>
+                  Bravo, objectif atteint !
+                </h3>
+                <p className="text-gray-700 mb-1 font-medium">{rewardObjectif.nom}</p>
+                <p className="text-green-600 font-semibold mb-6 text-lg">{Number(rewardObjectif.montant_objectif).toLocaleString()}€ atteints</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setIsRewardOpen(false); setRewardObjectif(null) }}
+                    className="px-5 py-2.5 rounded-lg text-white shadow-md"
+                    style={{ backgroundColor: colors.secondary }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
+                  >
+                    Merci 🎁
+                  </button>
+                </div>
+              </div>
+
+              {/* Local styles for confetti */}
+              <style jsx>{`
+                @keyframes confetti-fall {
+                  0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+                  10% { opacity: 1; }
+                  100% { transform: translateY(120vh) rotate(720deg); opacity: 0; }
+                }
+                .confetti {
+                  position: absolute;
+                  border-radius: 2px;
+                  animation-name: confetti-fall;
+                  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+                  animation-iteration-count: 1;
+                }
+              `}</style>
             </div>
           </div>
         </div>
