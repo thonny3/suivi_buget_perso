@@ -36,6 +36,14 @@ export const API_CONFIG = {
       CREATE: '/objectifs',
       UPDATE: (id) => `/objectifs/${id}`,
       DELETE: (id) => `/objectifs/${id}`
+    },
+    ABONNEMENTS: {
+      LIST_BY_USER: (userId, includeInactive = false) => `/abonnements/${userId}?includeInactive=${includeInactive}`,
+      CREATE: '/abonnements',
+      UPDATE: (id) => `/abonnements/${id}`,
+      DELETE: (id) => `/abonnements/${id}`,
+      RENEW: '/abonnements/renew',
+      SET_ACTIVE: (id) => `/abonnements/${id}/active`
     }
   }
 }

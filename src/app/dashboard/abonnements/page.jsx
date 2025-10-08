@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react'
 import {
   Plus,
   Search,
-  Filter,
   Download,
   Edit3,
   Trash2,
@@ -25,76 +24,23 @@ import {
   Zap
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
-import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
+import abonnementsService from '@/services/abonnementsService'
+import { useAuth } from '@/app/context/AuthContext'
+import accountsService from '@/services/accountsService'
+ 
 
 export default function AbonnementsPage() {
-  const [abonnements, setAbonnements] = useState([
-    {
-      id_abonnement: 1,
-      id_user: 1,
-      nom: 'Netflix',
-      montant: 15.99,
-      frequence: 'Mensuel',
-      prochaine_echeance: '2024-02-15',
-      rappel: true,
-      icone: 'Tv',
-      couleur: '#EF4444',
-      statut: 'Actuel',
-      jours_restants: 8
-    },
-    {
-      id_abonnement: 2,
-      id_user: 1,
-      nom: 'Spotify Premium',
-      montant: 9.99,
-      frequence: 'Mensuel',
-      prochaine_echeance: '2024-02-20',
-      rappel: true,
-      icone: 'Music',
-      couleur: '#10B981',
-      statut: 'Actuel',
-      jours_restants: 13
-    },
-    {
-      id_abonnement: 3,
-      id_user: 1,
-      nom: 'Microsoft 365',
-      montant: 99.00,
-      frequence: 'Annuel',
-      prochaine_echeance: '2024-12-01',
-      rappel: false,
-      icone: 'Cloud',
-      couleur: '#3B82F6',
-      statut: 'Actuel',
-      jours_restants: 298
-    },
-    {
-      id_abonnement: 4,
-      id_user: 1,
-      nom: 'PlayStation Plus',
-      montant: 8.99,
-      frequence: 'Mensuel',
-      prochaine_echeance: '2024-02-10',
-      rappel: true,
-      icone: 'Gamepad2',
-      couleur: '#8B5CF6',
-      statut: 'Expire bientôt',
-      jours_restants: 3
-    },
-    {
-      id_abonnement: 5,
-      id_user: 1,
-      nom: 'Assurance Auto',
-      montant: 450.00,
-      frequence: 'Annuel',
-      prochaine_echeance: '2024-01-30',
-      rappel: true,
-      icone: 'Car',
-      couleur: '#F59E0B',
-      statut: 'Expiré',
-      jours_restants: -8
-    }
-  ])
+  const { user } = useAuth()
+  const [abonnements, setAbonnements] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [renewedHistory, setRenewedHistory] = useState({})
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false)
+  const [renewTarget, setRenewTarget] = useState(null)
+  const [comptes, setComptes] = useState([])
+  const [loadingComptes, setLoadingComptes] = useState(false)
+  const [selectedCompteId, setSelectedCompteId] = useState(null)
+  const [selectedPeriods, setSelectedPeriods] = useState(1)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAbonnement, setEditingAbonnement] = useState(null)
@@ -155,8 +101,48 @@ export default function AbonnementsPage() {
   }
 
   useEffect(() => {
-    setAbonnements(updateAbonnementsStatus())
-  }, [])
+    const load = async () => {
+      if (!user?.id_user) return
+      try {
+        setLoading(true)
+        setError('')
+        // Charger l'historique de renouvellement (date ISO par abonnement)
+        try {
+          const rawHist = localStorage.getItem('abos-renewed-history')
+          if (rawHist) setRenewedHistory(JSON.parse(rawHist))
+        } catch (_e) {}
+        const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
+        const normalized = Array.isArray(data) ? data.map(row => ({
+          id_abonnement: row.id_abonnement,
+          id_user: row.id_user,
+          nom: row.nom,
+          montant: Number(row.montant) || 0,
+          frequence: row['fréquence'] || row.frequence || 'Mensuel',
+          prochaine_echeance: row.prochaine_echeance,
+          rappel: !!row.rappel,
+          icone: row.icon || 'RefreshCw',
+          couleur: row.couleur || '#3B82F6'
+        })) : []
+        setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
+      } catch (e) {
+        setError(e?.message || 'Erreur lors du chargement')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [user?.id_user])
+
+  const computeStatus = (ab) => {
+    const today = new Date()
+    const echeance = new Date(ab.prochaine_echeance)
+    const diffTime = echeance - today
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    let statut = 'Actuel'
+    if (diffDays < 0) statut = 'Expiré'
+    else if (diffDays <= 7) statut = 'Expire bientôt'
+    return { jours_restants: diffDays, statut }
+  }
 
   // Calculs statistiques
   const totalAbonnements = abonnements.length
@@ -202,50 +188,51 @@ export default function AbonnementsPage() {
     return matchesSearch && matchesFrequence && matchesStatut
   })
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!formData.nom || !formData.montant || !formData.prochaine_echeance) {
       alert('Veuillez remplir tous les champs')
       return
     }
-
-    const today = new Date()
-    const echeance = new Date(formData.prochaine_echeance)
-    const diffDays = Math.ceil((echeance - today) / (1000 * 60 * 60 * 24))
-    
-    let statut = 'Actuel'
-    if (diffDays < 0) {
-      statut = 'Expiré'
-    } else if (diffDays <= 7) {
-      statut = 'Expire bientôt'
-    }
-
-    if (editingAbonnement) {
-      // Mise à jour
-      setAbonnements(abonnements.map(ab =>
-        ab.id_abonnement === editingAbonnement.id_abonnement
-          ? {
-              ...ab,
-              ...formData,
-              montant: parseFloat(formData.montant),
-              jours_restants: diffDays,
-              statut
-            }
-          : ab
-      ))
-    } else {
-      // Création
-      const newAbonnement = {
-        id_abonnement: Math.max(...abonnements.map(a => a.id_abonnement)) + 1,
-        id_user: 1,
-        ...formData,
-        montant: parseFloat(formData.montant),
-        jours_restants: diffDays,
-        statut
+    try {
+      if (editingAbonnement) {
+        await abonnementsService.update(editingAbonnement.id_abonnement, {
+          nom: formData.nom,
+          montant: parseFloat(formData.montant),
+          frequence: formData.frequence,
+          prochaine_echeance: formData.prochaine_echeance,
+          rappel: formData.rappel ? 1 : 0,
+          icon: formData.icone,
+          couleur: formData.couleur
+        })
+      } else {
+        await abonnementsService.create({
+          id_user: user.id_user,
+          nom: formData.nom,
+          montant: parseFloat(formData.montant),
+          frequence: formData.frequence,
+          prochaine_echeance: formData.prochaine_echeance,
+          rappel: formData.rappel ? 1 : 0,
+          icon: formData.icone,
+          couleur: formData.couleur
+        })
       }
-      setAbonnements([...abonnements, newAbonnement])
+      const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
+      const normalized = Array.isArray(data) ? data.map(row => ({
+        id_abonnement: row.id_abonnement,
+        id_user: row.id_user,
+        nom: row.nom,
+        montant: Number(row.montant) || 0,
+        frequence: row['fréquence'] || row.frequence || 'Mensuel',
+        prochaine_echeance: row.prochaine_echeance,
+        rappel: !!row.rappel,
+        icone: row.icon || 'RefreshCw',
+        couleur: row.couleur || '#3B82F6'
+      })) : []
+      setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
+      resetForm()
+    } catch (e) {
+      alert(e?.message || 'Erreur lors de l\'enregistrement')
     }
-    
-    resetForm()
   }
 
   const resetForm = () => {
@@ -276,9 +263,13 @@ export default function AbonnementsPage() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = (id) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet abonnement ?')) {
+  const handleDelete = async (id) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet abonnement ?')) return
+    try {
+      await abonnementsService.remove(id)
       setAbonnements(abonnements.filter(ab => ab.id_abonnement !== id))
+    } catch (e) {
+      alert(e?.message || 'Erreur lors de la suppression')
     }
   }
 
@@ -412,57 +403,7 @@ export default function AbonnementsPage() {
         </div>
       </div>
 
-      {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Répartition des Statuts</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <PieChart>
-              <Pie
-                data={repartitionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {repartitionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => [value, 'Abonnements']} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Coût par Fréquence</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={coutParFrequence}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="frequence" />
-              <YAxis />
-              <Tooltip formatter={(value) => [`${value}€`, 'Coût']} />
-              <Bar dataKey="cout" fill="#8B5CF6" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Évolution des Coûts</h3>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={evolutionData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mois" />
-              <YAxis />
-              <Tooltip formatter={(value) => [`${value}€`, 'Coût']} />
-              <Line type="monotone" dataKey="cout" stroke="#EC4899" strokeWidth={3} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      {/* Graphiques supprimés */}
 
       {/* Filtres et Recherche */}
       <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
@@ -605,30 +546,49 @@ export default function AbonnementsPage() {
               </div>
 
               {/* Actions rapides */}
-              {abonnement.statut === 'Expiré' && (
-                <button
-                  onClick={() => {
-                    const nouvelleEcheance = getProchainPaiement(abonnement.frequence, new Date().toISOString().split('T')[0])
-                    setAbonnements(abonnements.map(ab =>
-                      ab.id_abonnement === abonnement.id_abonnement
-                        ? {
-                            ...ab,
-                            prochaine_echeance: nouvelleEcheance,
-                            statut: 'Actuel',
-                            jours_restants: Math.ceil((new Date(nouvelleEcheance) - new Date()) / (1000 * 60 * 60 * 24))
-                          }
-                        : ab
-                    ))
-                  }}
-                  className="w-full mt-3 text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: colors.secondary }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                  Renouveler
-                </button>
-              )}
+              <button
+                onClick={async () => {
+                  try {
+                    setRenewTarget(abonnement)
+                    setIsRenewModalOpen(true)
+                    setLoadingComptes(true)
+                    setSelectedCompteId(abonnement.id_compte || null)
+                    const res = await accountsService.getMyAccounts()
+                    if (res.success) {
+                      setComptes(Array.isArray(res.data) ? res.data : [])
+                      if (!abonnement.id_compte && Array.isArray(res.data) && res.data.length > 0) {
+                        setSelectedCompteId(res.data[0].id_compte || res.data[0].id)
+                      }
+                    } else {
+                      alert(res.error || 'Impossible de charger les comptes')
+                    }
+                  } catch (e) {
+                    alert(e?.message || 'Erreur lors du chargement des comptes')
+                  } finally {
+                    setLoadingComptes(false)
+                  }
+                }}
+                className="w-full mt-3 text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                style={{ backgroundColor: colors.secondary }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
+              >
+                <RefreshCw className="w-4 h-4" />
+                {abonnement.statut === 'Expiré' ? 'Renouveler' : 'Renouveler maintenant'}
+              </button>
+
+              {/* Badge de dernier renouvellement (mois affiché) */}
+              {renewedHistory[abonnement.id_abonnement] && (() => {
+                const d = new Date(renewedHistory[abonnement.id_abonnement])
+                const monthName = d.toLocaleDateString('fr-FR', { month: 'long' })
+                const label = monthName.charAt(0).toUpperCase() + monthName.slice(1)
+                const year = d.getFullYear()
+                return (
+                  <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium">
+                    <CheckCircle className="w-3 h-3" /> Renouvelé en {label} {year}
+                  </div>
+                )
+              })()}
             </div>
           )
         })}
@@ -638,6 +598,133 @@ export default function AbonnementsPage() {
         <div className="text-center py-12">
           <RefreshCw className="w-12 h-12 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500">Aucun abonnement trouvé</p>
+        </div>
+      )}
+
+      {/* Modal de renouvellement: choix du compte */}
+      {isRenewModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-semibold mb-4">Sélectionner le compte à débiter</h2>
+            {renewTarget && (
+              <div className="mb-4 text-sm text-gray-700">
+                Abonnement: <span className="font-medium">{renewTarget.nom}</span> • Montant: <span className="font-medium">{Number(renewTarget.montant).toFixed(2)}€</span>
+              </div>
+            )}
+            {loadingComptes ? (
+              <div className="text-gray-500">Chargement des comptes...</div>
+            ) : (
+              <div className="space-y-3">
+                {Array.isArray(comptes) && comptes.length > 0 ? (
+                  comptes.map((c) => (
+                    <label key={c.id_compte || c.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="compte"
+                          checked={selectedCompteId === (c.id_compte || c.id)}
+                          onChange={() => setSelectedCompteId(c.id_compte || c.id)}
+                          className="w-4 h-4 text-purple-600"
+                        />
+                        <div>
+                          <div className="font-medium text-gray-900">{c.nom || c.name || `Compte ${c.id_compte || c.id}`}</div>
+                          <div className="text-xs text-gray-500">Solde: {(parseFloat(c.solde) || 0).toFixed(2)}€ • {c.type || ''}</div>
+                        </div>
+                      </div>
+                    </label>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">Aucun compte disponible. Créez un compte d'abord.</div>
+                )}
+              </div>
+            )}
+
+            {/* Nombre de périodes à renouveler */}
+            <div className="mt-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Nombre de périodes à renouveler
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={24}
+                value={selectedPeriods}
+                onChange={(e) => setSelectedPeriods(Math.max(1, Math.min(24, parseInt(e.target.value || '1', 10))))}
+                className="w-28 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+              />
+              <div className="text-xs text-gray-500 mt-1">
+                Une période = selon la fréquence (Mensuel = 1 mois, Trimestriel = 1 trimestre, ...)
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-5">
+              <button
+                type="button"
+                onClick={() => { setIsRenewModalOpen(false); setRenewTarget(null) }}
+                className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={!selectedCompteId}
+                onClick={async () => {
+                  if (!renewTarget || !selectedCompteId) return
+                  try {
+                    let lastProchaine = null
+                    for (let i = 0; i < (selectedPeriods || 1); i++) {
+                      const res = await abonnementsService.renew({ id_abonnement: renewTarget.id_abonnement, id_compte: selectedCompteId })
+                      if (res && res.prochaine_echeance) {
+                        lastProchaine = res.prochaine_echeance
+                      }
+                    }
+                    // Déterminer le mois couvert par le dernier renouvellement: mois précédent la prochaine échéance
+                    if (lastProchaine) {
+                      const nextDate = new Date(lastProchaine + 'T00:00:00')
+                      const coveredDate = new Date(nextDate)
+                      coveredDate.setDate(coveredDate.getDate() - 1)
+                      setRenewedHistory(prev => {
+                        const next = { ...prev, [renewTarget.id_abonnement]: coveredDate.toISOString() }
+                        try { localStorage.setItem('abos-renewed-history', JSON.stringify(next)) } catch (_e) {}
+                        return next
+                      })
+                    } else {
+                      // fallback: date du jour
+                      setRenewedHistory(prev => {
+                        const next = { ...prev, [renewTarget.id_abonnement]: new Date().toISOString() }
+                        try { localStorage.setItem('abos-renewed-history', JSON.stringify(next)) } catch (_e) {}
+                        return next
+                      })
+                    }
+                    const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
+                    const normalized = Array.isArray(data) ? data.map(row => ({
+                      id_abonnement: row.id_abonnement,
+                      id_user: row.id_user,
+                      nom: row.nom,
+                      montant: Number(row.montant) || 0,
+                      frequence: row['fréquence'] || row.frequence || 'Mensuel',
+                      prochaine_echeance: row.prochaine_echeance,
+                      rappel: !!row.rappel,
+                      icone: row.icon || 'RefreshCw',
+                      couleur: row.couleur || '#3B82F6'
+                    })) : []
+                    setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
+                    setIsRenewModalOpen(false)
+                    setRenewTarget(null)
+                    setSelectedPeriods(1)
+                  } catch (e) {
+                    alert(e?.message || 'Erreur lors du renouvellement')
+                  }
+                }}
+                className={`flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200 ${!selectedCompteId ? 'opacity-60 cursor-not-allowed' : ''}`}
+                style={{ backgroundColor: colors.secondary }}
+                onMouseEnter={(e) => { if (selectedCompteId) e.target.style.backgroundColor = colors.secondaryDark }}
+                onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
+              >
+                Confirmer le renouvellement
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
