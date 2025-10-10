@@ -61,7 +61,7 @@
     "login": "Sign in"
   },
   "header": {
-    "title": "TetiboPro",
+    "title": "MyJalako",
     "welcome": "Welcome",
     "dashboard": "Dashboard",
     "logout": "Logout"
@@ -77,7 +77,8 @@
       "users": "Active users",
       "transactions": "Transactions processed",
       "uptime": "Uptime"
-    }
+    },
+    "imageAlt": "Financial dashboard and personal budget management"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -113,5 +114,129 @@
     "fr": "Français",
     "mg": "Malagasy",
     "en": "English"
+  },
+  "landing": {
+    "footer": {
+      "brand": "MyJalako",
+      "tagline": "Manage your money, simplify your life.",
+      "product": "Product",
+      "features": "Features",
+      "resources": "Resources",
+      "contact": "Contact",
+      "support": "Support",
+      "legal": "Legal",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "rights": "All rights reserved."
+    },
+    "features": {
+      "title": "Everything you need",
+      "subtitle": "Powerful and simple tools to transform your relationship with money",
+      "items": {
+        "budget": { "title": "Budget Management", "description": "Plan and track your monthly budgets with smart notifications" },
+        "income": { "title": "Income Tracking", "description": "Analyze income sources and grow your earnings" },
+        "goals": { "title": "Savings Goals", "description": "Define and reach your financial goals with visual tracking" },
+        "subscriptions": { "title": "Subscription Management", "description": "Never miss due dates with automated reminders" },
+        "analytics": { "title": "Detailed Analytics", "description": "See your financial habits with interactive charts" },
+        "security": { "title": "Full Security", "description": "Your data stays private and secure on your device" },
+        "usability": { "title": "Easy to Use", "description": "Simple, user-friendly interface for everyone" },
+        "global": { "title": "Global", "description": "Supports multiple currencies and languages" },
+        "trust": { "title": "Trusted", "description": "Highly rated and trusted by users" }
+      }
+    },
+    "pricing": {
+      "title": "Simple, transparent pricing",
+      "subtitle": "Choose the plan that fits you.",
+      "plans": {
+        "free": {
+          "name": "Free",
+          "price": "$0",
+          "period": "/month",
+          "features": ["Expenses & incomes", "Basic budgets", "Simple goals"],
+          "cta": "Get started"
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "$4.99",
+          "period": "/month",
+          "features": ["Everything in Free", "Advanced transfers", "Alerts & Subscriptions", "PDF export"],
+          "cta": "Try Pro"
+        },
+        "enterprise": {
+          "name": "Enterprise",
+          "price": "Contact us",
+          "period": "",
+          "features": ["Shared accounts", "Priority support", "Integrations"],
+          "cta": "Contact us"
+        }
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "subtitle": "Answers to frequently asked questions.",
+      "items": [
+        { "q": "Is MyJalako free?", "a": "Yes, a free plan is available. A Pro plan offers advanced features." },
+        { "q": "Is my data secure?", "a": "Yes, we use HTTPS, access controls, and backups." },
+        { "q": "Can I export my data?", "a": "Yes, PDF export is available and more formats are coming." }
+      ]
+    },
+    "contact": {
+      "badge": "Responsive support",
+      "title": "Contact our team",
+      "subtitle": "We usually respond within 24 business hours.",
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Your name",
+        "email": "Email",
+        "emailPlaceholder": "you@example.com",
+        "message": "Message",
+        "messagePlaceholder": "Describe your request..."
+      },
+      "errors": {
+        "name": "Name is required",
+        "emailRequired": "Email is required",
+        "emailInvalid": "Invalid email",
+        "messageShort": "Message too short"
+      },
+      "mailto": "Or write to us: support@myjalako.app",
+      "sending": "Sending...",
+      "send": "Send",
+      "sent": {
+        "title": "Message sent",
+        "desc": "Thanks for your message. We'll get back to you shortly."
+      },
+      "details": {
+        "title": "Contact details",
+        "subtitle": "Our team is available Monday to Friday.",
+        "email": "Email",
+        "phone": "Phone",
+        "address": "Address"
+      },
+      "tip": "Tip: bullet your needs for a faster response."
+    },
+    "cta": {
+      "title": "Ready to take control?",
+      "subtitle": "Sign up for free and get started in minutes.",
+      "createAccount": "Create an account"
+    },
+    "security": {
+      "title": "Security at heart",
+      "subtitle": "Your personal data is our priority.",
+      "items": {
+        "protection": { "title": "Data protection", "text": "Encryption in transit (HTTPS) and security best practices." },
+        "access": { "title": "Access control", "text": "Secure authentication and role management." },
+        "backups": { "title": "Backups", "text": "Regular backups and easy recovery." }
+      }
+    },
+    "testimonials": {
+      "title": "Trusted by users",
+      "subtitle": "Feedback from satisfied users.",
+      "photoAlt": "Photo of {{name}}",
+      "items": [
+        { "name": "Aina", "role": "Entrepreneur", "text": "MyJalako helped me control my expenses and save every month.", "photo": "https://i.pravatar.cc/150?img=47" },
+        { "name": "Tina", "role": "Student", "text": "Clear interface and helpful alerts, I know where my money goes.", "photo": "https://i.pravatar.cc/150?img=12" },
+        { "name": "Lova", "role": "Freelancer", "text": "Goal tracking and PDF exports save me time.", "photo": "https://i.pravatar.cc/150?img=22" }
+      ]
+    }
   }
 }

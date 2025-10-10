@@ -6,6 +6,7 @@ import LanguageSelector from '@/components/LanguageSelector'
 import { useRouter } from 'next/navigation'
 import React from 'react'
 import { colors } from '@/styles/colors'
+import logo from '@/image/logo.png'
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth()
@@ -34,9 +35,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
-            <div className="rounded-xl p-2 shadow-lg" style={{ backgroundColor: colors.secondary }}>
-              <PieChart className="w-8 h-8 text-white" />
-            </div>
+            <img src={logo.src} alt="MyJalako" className="w-8 h-8 object-contain" />
             <h1 className="ml-3 text-2xl font-bold" style={{ color: colors.secondary }}>
               {t('header.title')}
             </h1>

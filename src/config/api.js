@@ -50,6 +50,11 @@ export const API_CONFIG = {
       OBJECTIF_VERS_COMPTE: '/transferts/objectif-vers-compte',
       COMPTE_VERS_COMPTE: '/transferts/compte-vers-compte',
       HISTORIQUE: '/transferts/historique'
+    },
+    AI: {
+      INSIGHTS: '/ai/insights',
+      PREDICT: '/ai/predict',
+      RECOMMENDATIONS: '/ai/recommendations'
     }
   }
 }

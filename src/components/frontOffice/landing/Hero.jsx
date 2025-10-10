@@ -10,7 +10,8 @@ export default function Hero() {
   return (
     <section className="relative overflow-hidden py-20 lg:py-32" style={{ backgroundColor: colors.light }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div className="text-center lg:text-left">
           {/* Badge de confiance */}
           <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-sm border border-green-200 rounded-full px-4 py-2 mb-8 shadow-sm">
             <div className="flex items-center space-x-1">
@@ -37,7 +38,7 @@ export default function Hero() {
           </p>
 
           {/* Boutons d'action */}
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
+          <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-6 mb-12">
             <button 
               className="group text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105 shadow-lg flex items-center space-x-2"
               style={{ backgroundColor: colors.secondary }}
@@ -57,18 +58,33 @@ export default function Hero() {
           </div>
 
           {/* Statistiques */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto lg:mx-0">
+            <div className="text-center lg:text-left">
               <div className="text-3xl font-bold mb-2" style={{ color: colors.secondary }}>10K+</div>
               <div className="text-gray-600">{t('hero.stats.users')}</div>
             </div>
-            <div className="text-center">
+            <div className="text-center lg:text-left">
               <div className="text-3xl font-bold mb-2" style={{ color: colors.secondary }}>50M+</div>
               <div className="text-gray-600">{t('hero.stats.transactions')}</div>
             </div>
-            <div className="text-center">
+            <div className="text-center lg:text-left">
               <div className="text-3xl font-bold mb-2" style={{ color: colors.secondary }}>99.9%</div>
               <div className="text-gray-600">{t('hero.stats.uptime')}</div>
+            </div>
+          </div>
+          </div>
+
+          {/* Illustration */}
+          <div className="relative block mt-10 lg:mt-0">
+            <div className="absolute -top-6 -left-6 w-24 h-24 bg-emerald-100 rounded-3xl rotate-6 opacity-70"></div>
+            <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-green-100 rounded-full opacity-60"></div>
+            <div className="relative rounded-3xl overflow-hidden border border-emerald-100 shadow-xl">
+              <img
+                src="https://images.unsplash.com/photo-1553729459-efe14ef6055d?q=80&w=1200&auto=format&fit=crop"
+                alt={t('hero.imageAlt')}
+                className="w-full h-[420px] object-cover"
+                loading="lazy"
+              />
             </div>
           </div>
         </div>

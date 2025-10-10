@@ -58,10 +58,14 @@ export const LanguageProvider = ({ children }) => {
   const changeLanguage = (languageCode) => {
     if (['fr', 'mg', 'en'].includes(languageCode)) {
       setCurrentLanguage(languageCode)
-      // Rediriger vers la nouvelle langue
-      const currentPath = window.location.pathname
-      const newPath = currentPath.replace(/^\/[a-z]{2}/, `/${languageCode}`)
-      router.push(newPath)
+      // Rediriger vers la nouvelle langue en conservant la section (#hash) et les paramètres (?search)
+      const { pathname, search, hash } = window.location
+      const hasLocalePrefix = /^\/[a-z]{2}\b/.test(pathname)
+      const basePath = hasLocalePrefix
+        ? pathname.replace(/^\/[a-z]{2}\b/, `/${languageCode}`)
+        : `/${languageCode}${pathname}`
+      const target = `${basePath}${search}${hash}`
+      router.push(target)
     }
   }
 

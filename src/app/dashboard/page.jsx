@@ -15,6 +15,9 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
 import { colors } from '@/styles/colors'
+import dynamic from 'next/dynamic'
+
+const AIInsights = dynamic(() => import('./AIInsights'), { ssr: false })
 
 export default function Dashboard() {
   // Données simulées pour les graphiques
@@ -323,6 +326,12 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Insights IA */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Insights IA</h3>
+          <AIInsights />
         </div>
 
         {/* Objectifs financiers */}

@@ -61,7 +61,7 @@
     "login": "Hiditra"
   },
   "header": {
-    "title": "TetiboPro",
+    "title": "MyJalako",
     "welcome": "Tongasoa",
     "dashboard": "Dashboard",
     "logout": "Fialàna"
@@ -77,7 +77,8 @@
       "users": "Mpampiasa mavitrika",
       "transactions": "Fifanakalozana voatahiry",
       "uptime": "Fahafahana"
-    }
+    },
+    "imageAlt": "Dashboard ara-bola sy fitantanana tetibola manokana"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -113,5 +114,129 @@
     "fr": "Français",
     "mg": "Malagasy",
     "en": "English"
+  },
+  "landing": {
+    "footer": {
+      "brand": "MyJalako",
+      "tagline": "Fehezo ny volanao, ahamorao ny andavanandro.",
+      "product": "Vokatra",
+      "features": "Fomba fiasa",
+      "resources": "Loharanon-kevitra",
+      "contact": "Fifandraisana",
+      "support": "Fanohanana",
+      "legal": "Lalàna",
+      "privacy": "Tsiambaratelo",
+      "terms": "Fepetra",
+      "rights": "Zon-dàlana rehetra voatokana."
+    },
+    "features": {
+      "title": "Zavatra ilainao rehetra",
+      "subtitle": "Fitaovana mahery sy tsotra hanovana ny fifandraisanao amin'ny vola",
+      "items": {
+        "budget": { "title": "Fitantanana Tetibola", "description": "Drafy sy fanarahana tetibola isam-bolana miaraka amin'ny fampandrenesana marani-tsaina" },
+        "income": { "title": "Fanaraha-maso ny Fidiram-bola", "description": "Diniho ny loharanom-bola ary ampio ny fidiram-bola" },
+        "goals": { "title": "Tanjona Fitahirizana", "description": "Farito sy tratraro ny tanjona ara-bola amin'ny fanaraha-maso hita maso" },
+        "subscriptions": { "title": "Fitantanana Famandrihana", "description": "Aza adino ny fe-potoana amin'ny fampahatsiahivana mandeha ho azy" },
+        "analytics": { "title": "Famakafakana amin'ny antsipiriany", "description": "Jereo ny fahazaranao ara-bola amin'ny kisary ifanakalozana" },
+        "security": { "title": "Fiarovana feno", "description": "Mijanona ho tsiambaratelo sy voaaro ny angonao" },
+        "usability": { "title": "Mora ampiasaina", "description": "Endrika tsotra sy mora ho an'ny rehetra" },
+        "global": { "title": "Maneran-tany", "description": "Manohana vola sy fiteny maromaro" },
+        "trust": { "title": "Tsy miova fahatokisana", "description": "Tian'ny mpampiasa maro sy atokisan'izy ireo" }
+      }
+    },
+    "pricing": {
+      "title": "Vidiny tsotra sy mazava",
+      "subtitle": "Misafidiana drafitra mifanaraka aminao.",
+      "plans": {
+        "free": {
+          "name": "Maimaim-poana",
+          "price": "$0",
+          "period": "/isam-bolana",
+          "features": ["Fandaniana sy fidiram-bola", "Tetibola fototra", "Tanjona tsotra"],
+          "cta": "Hanomboka"
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "$4.99",
+          "period": "/isam-bolana",
+          "features": ["Zavatra rehetra ao amin'ny Maimaim-poana", "Famindrana mandroso", "Fampitandremana & Famandrihana", "Fanondranana PDF"],
+          "cta": "Andramo ny Pro"
+        },
+        "enterprise": {
+          "name": "Orinasa",
+          "price": "Ifanarahana",
+          "period": "",
+          "features": ["Kaonty iombonana", "Fanampiana laharam-pahamehana", "Fampiombonana"],
+          "cta": "Mifandraisa aminay"
+        }
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "subtitle": "Valiny amin'ny fanontaniana matetika.",
+      "items": [
+        { "q": "Maimaim-poana ve ny MyJalako?", "a": "Eny, misy drafitra maimaim-poana. Ny Pro dia manome endri-javatra mandroso." },
+        { "q": "Azo antoka ve ny angon-drakitra?", "a": "Eny, mampiasa HTTPS, fifehezana fidirana ary tahiry izahay." },
+        { "q": "Afaka manondrana angona ve aho?", "a": "Eny, misy fanondranana PDF ary hisy endrika hafa." }
+      ]
+    },
+    "contact": {
+      "badge": "Fanohanana haingana",
+      "title": "Mifandraisa amin'ny ekipanay",
+      "subtitle": "Matetika mamaly ao anatin'ny ora fiasana 24 izahay.",
+      "form": {
+        "name": "Anarana",
+        "namePlaceholder": "Ny anaranao",
+        "email": "Mailaka",
+        "emailPlaceholder": "ianao@ohatra.com",
+        "message": "Hafatra",
+        "messagePlaceholder": "Hazavao ny fangatahanao..."
+      },
+      "errors": {
+        "name": "Ilaina ny anarana",
+        "emailRequired": "Ilaina ny mailaka",
+        "emailInvalid": "Mailaka tsy manankery",
+        "messageShort": "Fohy loatra ny hafatra"
+      },
+      "mailto": "Na manorata aty: support@myjalako.app",
+      "sending": "Mandefa...",
+      "send": "Alefa",
+      "sent": {
+        "title": "Voalefa ny hafatra",
+        "desc": "Misaotra tamin'ny hafatrao. Hifandray tsy ho ela izahay."
+      },
+      "details": {
+        "title": "Antsipirihany ifandraisana",
+        "subtitle": "Misy ny ekipanay hatramin'ny alatsinainy ka hatramin'ny zoma.",
+        "email": "Mailaka",
+        "phone": "Telefaona",
+        "address": "Adiresy"
+      },
+      "tip": "Torohevitra: hazavao amin'ny bullet mba hahazoana valiny haingana."
+    },
+    "cta": {
+      "title": "Vonona hifehy?",
+      "subtitle": "Hisoratra maimaim-poana ary manomboka ao anatin'ny minitra vitsy.",
+      "createAccount": "Hamorona kaonty"
+    },
+    "security": {
+      "title": "Fiarovana eo afovoany",
+      "subtitle": "Ny angonao manokana no laharam-pahamehanay.",
+      "items": {
+        "protection": { "title": "Fiarovana angona", "text": "Fanakambanana amin'ny fifindrana (HTTPS) sy fanao fiarovana tsara." },
+        "access": { "title": "Fifehezana fidirana", "text": "Fampidirana azo antoka sy fitantanana andraikitra." },
+        "backups": { "title": "Tahiry", "text": "Tahiry tsy tapaka sy famerenana mora." }
+      }
+    },
+    "testimonials": {
+      "title": "Atokisan'ny mpampiasa",
+      "subtitle": "Fanehoan-kevitra avy amin'ny mpampiasa afa-po.",
+      "photoAlt": "Sarin'i {{name}}",
+      "items": [
+        { "name": "Aina", "role": "Mpandraharaha", "text": "Nampian'i MyJalako aho hifehy ny fandaniana sy hitahiry isam-bolana.", "photo": "https://i.pravatar.cc/150?img=47" },
+        { "name": "Tina", "role": "Mpianatra", "text": "Mazava ny interface ary mahasoa ny fampitandremana, fantatro ny lalan'ny volako.", "photo": "https://i.pravatar.cc/150?img=12" },
+        { "name": "Lova", "role": "Mpiasa mahaleotena", "text": "Mamonjy fotoana ny fitantanana tanjona sy ny fanondranana PDF.", "photo": "https://i.pravatar.cc/150?img=22" }
+      ]
+    }
   }
 }

@@ -61,7 +61,7 @@
     "login": "Se connecter"
   },
   "header": {
-    "title": "TetiboPro",
+    "title": "MyJalako",
     "welcome": "Bienvenue",
     "dashboard": "Tableau de bord",
     "logout": "Déconnexion"
@@ -77,7 +77,8 @@
       "users": "Utilisateurs actifs",
       "transactions": "Transactions traitées",
       "uptime": "Disponibilité"
-    }
+    },
+    "imageAlt": "Tableau de bord financier et gestion de budget personnelle"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -113,5 +114,129 @@
     "fr": "Français",
     "mg": "Malagasy",
     "en": "English"
+  },
+  "landing": {
+    "footer": {
+      "brand": "MyJalako",
+      "tagline": "Gérez votre argent, simplifiez votre quotidien.",
+      "product": "Produit",
+      "features": "Fonctionnalités",
+      "resources": "Ressources",
+      "contact": "Contact",
+      "support": "Support",
+      "legal": "Légal",
+      "privacy": "Confidentialité",
+      "terms": "Conditions",
+      "rights": "Tous droits réservés."
+    },
+    "features": {
+      "title": "Tout ce dont vous avez besoin",
+      "subtitle": "Des outils puissants et simples pour transformer votre relation à l'argent",
+      "items": {
+        "budget": { "title": "Fitantanana Tetibola", "description": "Manomana sy manaraka ny tetibolanao isam-bolana miaraka amin'ny fampandrenesana marani-tsaina" },
+        "income": { "title": "Fanaraha-maso ny Fidiram-bola", "description": "Analisao ny loharanon'ny fidiram-bolanao ary ampatsaro ny fidiran'ny vola" },
+        "goals": { "title": "Tanjona Fitahirizana", "description": "Farito sy hatraho ny tanjonanao ara-bola miaraka amin'ny fanaraha-maso hita maso" },
+        "subscriptions": { "title": "Fitantanana Famandrihana", "description": "Aza adino intsony ny fe-potoana miaraka amin'ny fampahatsiahavanay mandeha ho azy" },
+        "analytics": { "title": "Famakafakana Amin'ny Antsipiriany", "description": "Jereo ny fahazaranao ara-bola miaraka amin'ny sary an-tsary interactive" },
+        "security": { "title": "Fiarovana Tanteraka", "description": "Ny angon-drakitrao dia mijanona ho tsy miharihary sy voaaro amin'ny fitaovanao" },
+        "usability": { "title": "Fampiasana Mora", "description": "Interface tsotra sy mora ampiasaina ho an'ny rehetra" },
+        "global": { "title": "Manerantany", "description": "Manohana vola maro samihafa sy fiteny maro" },
+        "trust": { "title": "Mendrika Mahatoky", "description": "Nahazo mari-pankasitrahana maro avy amin'ny mpampiasa" }
+      }
+    },
+    "pricing": {
+      "title": "Tarifs simples et transparents",
+      "subtitle": "Choisissez le plan qui vous convient.",
+      "plans": {
+        "free": {
+          "name": "Gratuit",
+          "price": "0€",
+          "period": "/mois",
+          "features": ["Dépenses et revenus", "Budgets de base", "Objectifs simples"],
+          "cta": "Commencer"
+        },
+        "pro": {
+          "name": "Pro",
+          "price": "4,99€",
+          "period": "/mois",
+          "features": ["Tout Gratuit", "Transferts avancés", "Alertes & Abonnements", "Export PDF"],
+          "cta": "Essayer Pro"
+        },
+        "enterprise": {
+          "name": "Entreprise",
+          "price": "Sur devis",
+          "period": "",
+          "features": ["Comptes partagés", "Support prioritaire", "Intégrations"],
+          "cta": "Nous contacter"
+        }
+      }
+    },
+    "faq": {
+      "title": "FAQ",
+      "subtitle": "Réponses aux questions fréquentes.",
+      "items": [
+        { "q": "MyJalako est-il gratuit ?", "a": "Oui, un plan gratuit est disponible. Une offre Pro propose des fonctionnalités avancées." },
+        { "q": "Mes données sont-elles sécurisées ?", "a": "Oui, nous appliquons le HTTPS, des contrôles d’accès et des sauvegardes." },
+        { "q": "Puis-je exporter mes données ?", "a": "Oui, l’export PDF est disponible et d’autres formats arrivent." }
+      ]
+    },
+    "contact": {
+      "badge": "Support réactif",
+      "title": "Contactez notre équipe",
+      "subtitle": "Nous répondons généralement sous 24h ouvrées.",
+      "form": {
+        "name": "Nom",
+        "namePlaceholder": "Votre nom",
+        "email": "Email",
+        "emailPlaceholder": "vous@exemple.com",
+        "message": "Message",
+        "messagePlaceholder": "Expliquez votre demande..."
+      },
+      "errors": {
+        "name": "Le nom est requis",
+        "emailRequired": "L'email est requis",
+        "emailInvalid": "Email invalide",
+        "messageShort": "Message trop court"
+      },
+      "mailto": "Ou écrivez-nous: support@myjalako.app",
+      "sending": "Envoi...",
+      "send": "Envoyer",
+      "sent": {
+        "title": "Message envoyé",
+        "desc": "Merci pour votre message. Nous revenons vers vous très vite."
+      },
+      "details": {
+        "title": "Coordonnées",
+        "subtitle": "Notre équipe est à votre écoute du lundi au vendredi.",
+        "email": "Email",
+        "phone": "Téléphone",
+        "address": "Adresse"
+      },
+      "tip": "Astuce: décrivez votre besoin en quelques points pour une réponse plus rapide."
+    },
+    "cta": {
+      "title": "Prêt à reprendre le contrôle ?",
+      "subtitle": "Inscrivez-vous gratuitement et commencez en quelques minutes.",
+      "createAccount": "Créer un compte"
+    },
+    "security": {
+      "title": "Sécurité au cœur",
+      "subtitle": "Vos données personnelles sont notre priorité.",
+      "items": {
+        "protection": { "title": "Protection des données", "text": "Chiffrement en transit (HTTPS) et bonnes pratiques de sécurité." },
+        "access": { "title": "Contrôle d’accès", "text": "Authentification sécurisée et gestion des rôles." },
+        "backups": { "title": "Sauvegardes", "text": "Sauvegardes régulières et récupération simplifiée." }
+      }
+    },
+    "testimonials": {
+      "title": "Ils nous font confiance",
+      "subtitle": "Avis d’utilisateurs satisfaits.",
+      "photoAlt": "Photo de {{name}}",
+      "items": [
+        { "name": "Aina", "role": "Entrepreneure", "text": "MyJalako m’a permis de maîtriser mes dépenses et d’économiser chaque mois.", "photo": "https://i.pravatar.cc/150?img=47" },
+        { "name": "Tina", "role": "Étudiant", "text": "Interface claire et alertes utiles, je sais où va mon argent.", "photo": "https://i.pravatar.cc/150?img=12" },
+        { "name": "Lova", "role": "Freelance", "text": "La gestion des objectifs et les exports PDF me font gagner du temps.", "photo": "https://i.pravatar.cc/150?img=22" }
+      ]
+    }
   }
 }
