@@ -21,11 +21,15 @@ import {
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, Legend } from 'recharts'
 import { colors } from '@/styles/colors'
 import revenuesService from '@/services/revenuesService'
+import sharedAccountsService from '@/services/sharedAccountsService'
+import apiService from '@/services/apiService'
+import { API_CONFIG } from '@/config/api'
 
 export default function RevenuePage() {
   const [revenues, setRevenues] = useState([])
   const [categories, setCategories] = useState([])
   const [comptes, setComptes] = useState([])
+  const [usersById, setUsersById] = useState({})
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRevenue, setEditingRevenue] = useState(null)
@@ -66,7 +70,11 @@ export default function RevenuePage() {
       id_categorie_revenu: r.id_categorie_revenu,
       id_compte: r.id_compte,
       categorie: r.categorie_nom || r.categorie || '',
-      compte: r.compte_nom || r.compte || ''
+      compte: r.compte_nom || r.compte || '',
+      user_prenom: r.user_prenom,
+      user_nom: r.user_nom,
+      user_email: r.user_email,
+      user_image: r.user_image,
     }))
     setRevenues(mapped)
   }
@@ -78,8 +86,8 @@ export default function RevenuePage() {
   }
 
   const fetchComptes = async () => {
-    const data = await revenuesService.getMyComptes()
-    const mapped = (Array.isArray(data) ? data : []).map((a) => ({
+    const my = await revenuesService.getMyComptes()
+    const own = (Array.isArray(my) ? my : []).map((a) => ({
       id: a.id_compte ?? a.id,
       nom: a.nom,
       type: a.type,
@@ -88,7 +96,65 @@ export default function RevenuePage() {
       currency: a.currency,
       currencySymbol: a.currencySymbol
     }))
-    setComptes(mapped)
+
+    // Shared contributor accounts
+    let sharedContrib = []
+    try {
+      const storedUser = localStorage.getItem('user')
+      const userId = storedUser ? (JSON.parse(storedUser)?.id_user || null) : null
+      if (userId) {
+        const sharedRes = await sharedAccountsService.getSharedAccountsByUser(userId)
+        if (sharedRes?.success && Array.isArray(sharedRes.data)) {
+          const baseShared = sharedRes.data
+            .map(acc => sharedAccountsService.formatSharedAccount(acc))
+            .filter(acc => acc.role === 'contributeur')
+
+          const detailed = await Promise.all(baseShared.map(async (acc) => {
+            try {
+              const accountId = acc.id_compte ?? acc.id
+              const details = accountId ? await apiService.getAccountById(accountId) : null
+              const devise = details?.devise || details?.currency || acc.devise || acc.currency || ''
+              const currencySymbol = (devise && devise.toUpperCase() === 'MGA') ? 'Ar' : (details?.currencySymbol || acc.currencySymbol)
+              return { id: accountId, nom: acc.nom, type: acc.type, solde: acc.solde, devise, currency: devise, currencySymbol, isShared: true }
+            } catch (_) {
+              const accountId = acc.id_compte ?? acc.id
+              return { id: accountId, nom: acc.nom, type: acc.type, solde: acc.solde, devise: acc.devise, currency: acc.currency, currencySymbol: acc.currencySymbol, isShared: true }
+            }
+          }))
+          sharedContrib = detailed
+        }
+      }
+    } catch {}
+
+    const merged = [...own, ...sharedContrib]
+    setComptes(merged)
+
+    // Build user map (for avatars in table)
+    const userMap = {}
+    try {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const u = JSON.parse(storedUser)
+        if (u?.id_user) {
+          userMap[u.id_user] = { id_user: u.id_user, prenom: u.prenom, nom: u.nom, email: u.email, image: u.image || null }
+        }
+      }
+    } catch {}
+    const accountIds = Array.from(new Set(merged.map(a => a.id).filter(Boolean)))
+    try {
+      const lists = await Promise.all(accountIds.map(async (accId) => {
+        try {
+          const res = await sharedAccountsService.getSharedUsersByAccount(accId)
+          return Array.isArray(res?.data) ? res.data : []
+        } catch { return [] }
+      }))
+      lists.flat().forEach(u => {
+        const id = u.id_user ?? u.user_id ?? u.id
+        if (!id) return
+        userMap[id] = { id_user: id, prenom: u.prenom || u.firstName || '', nom: u.nom || u.lastName || '', email: u.email || '', image: u.image || u.image_utilisateur || null }
+      })
+    } catch {}
+    setUsersById(userMap)
   }
 
   const formatDateForInput = (value) => {
@@ -188,20 +254,28 @@ export default function RevenuePage() {
 
   const getAccountCurrencySymbol = (accountId) => {
     const account = getAccountById(accountId)
+    const devise = (account?.devise || account?.currency || '').toString().toUpperCase()
+    if (devise === 'MGA') return 'Ar'
     return account?.currencySymbol || account?.devise || account?.currency || '€'
   }
 
   const isAccountMGA = (accountId) => {
     const account = getAccountById(accountId)
     const code = (account?.devise || account?.currency || '').toString().toUpperCase()
-    return code === 'MGA'
+    const symbol = (account?.currencySymbol || '').toString()
+    if (code === 'MGA' || symbol === 'Ar') return true
+    try {
+      const user = localStorage.getItem('user')
+      const userDevise = user ? (JSON.parse(user)?.devise || '').toString().toUpperCase() : ''
+      return userDevise === 'MGA'
+    } catch { return false }
   }
 
   const formatAmountForAccount = (amount, accountId) => {
     const num = Number(amount || 0)
     if (isAccountMGA(accountId)) {
       const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
-      return `${intStr}Ar`
+      return `${intStr} Ar`
     }
     const symbol = getAccountCurrencySymbol(accountId)
     return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
@@ -224,7 +298,7 @@ export default function RevenuePage() {
     const num = Number(amount || 0)
     if (code === 'MGA') {
       const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
-      return `${intStr}Ar`
+      return `${intStr} Ar`
     }
     const symbol = getDefaultCurrencySymbol()
     return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
@@ -239,9 +313,9 @@ export default function RevenuePage() {
 
   // Filtrage des revenus
   const filteredRevenues = revenues.filter(revenue => {
-    const matchesSearch = revenue.source.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         revenue.categorie.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = !selectedCategory || revenue.id_categorie_revenu.toString() === selectedCategory
+    const matchesSearch = (revenue.source || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (revenue.categorie || '').toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = !selectedCategory || String(revenue.id_categorie_revenu ?? '') === selectedCategory
     const matchesMonth = !selectedMonth || new Date(revenue.date_revenu).getMonth().toString() === selectedMonth
     
     return matchesSearch && matchesCategory && matchesMonth
@@ -495,6 +569,7 @@ export default function RevenuePage() {
                 <th className="text-left p-4 font-medium text-gray-700">Source</th>
                 <th className="text-left p-4 font-medium text-gray-700">Catégorie</th>
                 <th className="text-left p-4 font-medium text-gray-700">Compte</th>
+                <th className="text-left p-4 font-medium text-gray-700">Utilisateur</th>
                 <th className="text-right p-4 font-medium text-gray-700">Montant</th>
                 <th className="text-center p-4 font-medium text-gray-700">Actions</th>
               </tr>
@@ -517,6 +592,35 @@ export default function RevenuePage() {
                     </span>
                   </td>
                   <td className="p-4 text-gray-600">{revenue.compte}</td>
+                  <td className="p-4">
+                    {(() => {
+                      const backendUser = { prenom: revenue.user_prenom, nom: revenue.user_nom, email: revenue.user_email, image: revenue.user_image }
+                      const hasBackendUser = backendUser.prenom || backendUser.nom || backendUser.email || backendUser.image
+                      const u = hasBackendUser ? backendUser : (usersById[revenue.id_user] || {})
+                      const displayName = (u.prenom || u.nom) ? `${u.prenom || ''} ${u.nom || ''}`.trim() : (u.email || `ID: ${revenue.id_user}`)
+                      const initial = (u.prenom || u.nom || u.email || 'U').toString().trim().charAt(0).toUpperCase()
+                      const img = u.image
+                      const url = (() => {
+                        if (!img) return null
+                        if (/^https?:\/\//i.test(img)) return img
+                        const API_ORIGIN = API_CONFIG.BASE_URL.replace(/\/api$/, '')
+                        const cleaned = img.replace(/^\/+/, '')
+                        return cleaned.toLowerCase().startsWith('uploads/') ? `${API_ORIGIN}/${cleaned}` : `${API_ORIGIN}/uploads/${cleaned}`
+                      })()
+                      return (
+                        <div className="flex items-center gap-2">
+                          {url ? (
+                            <img src={url} alt={displayName} className="w-6 h-6 rounded-full object-cover border" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                          ) : (
+                            <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center border">
+                              <span className="text-emerald-700 text-xs font-medium">{initial}</span>
+                            </div>
+                          )}
+                          <span className="text-sm text-gray-700">{displayName}</span>
+                        </div>
+                      )
+                    })()}
+                  </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <span className="font-semibold text-green-600">{formatAmountForAccount(revenue.montant, revenue.id_compte)}</span>

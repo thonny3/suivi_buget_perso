@@ -27,6 +27,12 @@ export const API_CONFIG = {
       UPDATE: (id) => `/depenses/${id}`,
       DELETE: (id) => `/depenses/${id}`
     },
+    REVENUS: {
+      LIST: '/revenus',
+      CREATE: '/revenus',
+      UPDATE: (id) => `/revenus/${id}`,
+      DELETE: (id) => `/revenus/${id}`
+    },
     CONTRIBUTIONS: {
       GET_BY_OBJECTIF: (objectifId) => `/contributions/${objectifId}`,
       CREATE: '/contributions'

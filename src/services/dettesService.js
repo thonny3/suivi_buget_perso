@@ -1,9 +1,11 @@
 import Api from './apiService'
-import { API_CONFIG } from '@/config/api'
 
 const BASE = '/dettes'
 
 class DettesService {
+  async getDettes() {
+    return this.list()
+  }
   async list() {
     return Api.request(BASE, { method: 'GET' })
   }
@@ -19,5 +21,8 @@ class DettesService {
 }
 
 export default new DettesService()
+
+
+
 
 

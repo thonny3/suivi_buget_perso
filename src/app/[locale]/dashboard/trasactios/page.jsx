@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Search, Calendar, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import apiService from '@/services/apiService'
+import { API_CONFIG } from '@/config/api'
 
 // Utilise Recharts (déjà présent dans le projet) pour un graphique plus lisible
 function CurrencyYAxisTick({ x, y, payload }) {
@@ -26,6 +27,7 @@ export default function AllTransactionsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const [currency, setCurrency] = useState('EUR')
+  const [userFilter, setUserFilter] = useState('all')
 
   useEffect(() => {
     try {
@@ -88,6 +90,11 @@ export default function AllTransactionsPage() {
         if (kind !== typeFilter) return false
       }
 
+      // user filter
+      if (userFilter !== 'all') {
+        if (String(t.id_user ?? '') !== String(userFilter)) return false
+      }
+
       // date range filter
       const txDate = parseDate(t.date || t.date_transaction || t.date_revenu || t.date_depense)
       if (dateFrom) {
@@ -101,12 +108,26 @@ export default function AllTransactionsPage() {
 
       return true
     })
-  }, [transactions, search, typeFilter, dateFrom, dateTo])
+  }, [transactions, search, typeFilter, dateFrom, dateTo, userFilter])
 
   // Réinitialiser la pagination lorsque les filtres changent
   useEffect(() => {
     setCurrentPage(1)
-  }, [search, typeFilter, dateFrom, dateTo])
+  }, [search, typeFilter, dateFrom, dateTo, userFilter])
+
+  const userOptions = useMemo(() => {
+    const map = new Map()
+    for (const t of transactions) {
+      const id = t.id_user
+      if (!id) continue
+      const prenom = t.user_prenom || ''
+      const nom = t.user_nom || ''
+      const email = t.user_email || ''
+      const label = (prenom || nom) ? `${prenom} ${nom}`.trim() : (email || `ID ${id}`)
+      if (!map.has(String(id))) map.set(String(id), { id: String(id), label })
+    }
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label))
+  }, [transactions])
 
   const formatDateFr = (v) => {
     if (!v) return ''
@@ -255,6 +276,18 @@ export default function AllTransactionsPage() {
             </select>
           </div>
           <div className="flex gap-2">
+            <select
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              className="w-full md:w-auto flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="all">Tous les utilisateurs</option>
+              {userOptions.map(u => (
+                <option key={u.id} value={u.id}>{u.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex gap-2">
             <div className="relative flex-1">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
@@ -328,17 +361,18 @@ export default function AllTransactionsPage() {
                 <th className="text-left p-4 font-medium text-gray-700">Type</th>
                 <th className="text-left p-4 font-medium text-gray-700">Source/Description</th>
                 <th className="text-left p-4 font-medium text-gray-700">Compte</th>
+                <th className="text-left p-4 font-medium text-gray-700">Utilisateur</th>
                 <th className="text-right p-4 font-medium text-gray-700">Montant</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={5}>Chargement...</td>
+                  <td className="p-6 text-center text-gray-500" colSpan={6}>Chargement...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td className="p-8 text-center text-gray-500" colSpan={5}>Aucune transaction trouvée</td>
+                  <td className="p-8 text-center text-gray-500" colSpan={6}>Aucune transaction trouvée</td>
                 </tr>
               ) : (
                 pageItems.map((t, idx) => (
@@ -370,6 +404,33 @@ export default function AllTransactionsPage() {
                     </td>
                     <td className="p-4 text-gray-800">{t.source || t.description || ''}</td>
                     <td className="p-4 text-gray-600">{t.compte || t.compte_nom || t.account_name || ''}</td>
+                    <td className="p-4">
+                      {(() => {
+                        const u = { prenom: t.user_prenom, nom: t.user_nom, email: t.user_email, image: t.user_image }
+                        const displayName = (u.prenom || u.nom) ? `${u.prenom || ''} ${u.nom || ''}`.trim() : (u.email || '')
+                        const initial = (u.prenom || u.nom || u.email || 'U').toString().trim().charAt(0).toUpperCase()
+                        const img = u.image
+                        const url = (() => {
+                          if (!img) return null
+                          if (/^https?:\/\//i.test(img)) return img
+                          const API_ORIGIN = API_CONFIG.BASE_URL.replace(/\/api$/, '')
+                          const cleaned = img.replace(/^\/+/, '')
+                          return cleaned.toLowerCase().startsWith('uploads/') ? `${API_ORIGIN}/${cleaned}` : `${API_ORIGIN}/uploads/${cleaned}`
+                        })()
+                        return (
+                          <div className="flex items-center gap-2">
+                            {url ? (
+                              <img src={url} alt={displayName} className="w-6 h-6 rounded-full object-cover border" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                            ) : (
+                              <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center border">
+                                <span className="text-emerald-700 text-xs font-medium">{initial}</span>
+                              </div>
+                            )}
+                            <span className="text-sm text-gray-700">{displayName || `ID: ${t.id_user || ''}`}</span>
+                          </div>
+                        )
+                      })()}
+                    </td>
                     <td className="p-4 text-right">
                       {(() => {
                         const kind = getTxKind(t)

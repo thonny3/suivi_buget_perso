@@ -1,4 +1,5 @@
 "use client"
+import { API_CONFIG } from '@/config/api'
 import React, { useState, useEffect } from 'react'
 import {
   Plus,
@@ -762,15 +763,7 @@ export default function GestionnaireComptes() {
               <span>Nouveau compte</span>
             </button>
             {/* Bouton de test temporaire */}
-            <button
-              onClick={() => {
-                console.log('Test chargement comptes partagés...');
-                loadSharedAccounts();
-              }}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
-            >
-              Test Comptes Partagés
-            </button>
+         
           </div>
         </div>
 
@@ -1011,10 +1004,64 @@ export default function GestionnaireComptes() {
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-gray-500">Partagé avec vous</span>
                         <div className="flex items-center space-x-2">
+                          {(() => {
+                            const firstName = (
+                              account.proprietaire_prenom ||
+                              account.ownerFirstName ||
+                              account.prenom_utilisateur ||
+                              account.prenom ||
+                              account.owner_prenom ||
+                              account.utilisateur_prenom ||
+                              ''
+                            )
+                            const lastName = (
+                              account.proprietaire_nom ||
+                              account.ownerLastName ||
+                              account.nom_utilisateur ||
+                              account.nom ||
+                              account.owner_nom ||
+                              account.utilisateur_nom ||
+                              ''
+                            )
+                            let sharedByName = `${firstName} ${lastName}`.trim()
+                            if (!sharedByName) {
+                              sharedByName = (
+                                account.ownerName ||
+                                account.sharedByName ||
+                                account.nom_proprietaire ||
+                                account.proprietaire ||
+                                account.shared_by_name ||
+                                account.username ||
+                                ''
+                              )
+                            }
+                            if (!sharedByName && account.email) {
+                              sharedByName = String(account.email).split('@')[0]
+                            }
+                            const API_ORIGIN = API_CONFIG.BASE_URL.replace(/\/api$/, '')
+                            const sharedImage = account.image_utilisateur || account.ownerImage || account.image || null
+                            const imageUrl = sharedImage ? `${API_ORIGIN}/uploads/${sharedImage}` : null
+                            const initialSource = firstName || sharedByName || account.email || 'U'
+                            const initial = String(initialSource).trim().charAt(0).toUpperCase() || 'U'
+
+                            // Always show the sharer (owner) avatar/name only
+                            return (
+                              <>
+                                {imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={sharedByName || 'Utilisateur'}
+                                    className="w-6 h-6 rounded-full object-cover border-2 border-white"
+                                  />
+                                ) : (
                           <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center border-2 border-white">
-                            <span className="text-blue-600 text-xs font-medium">S</span>
+                                    <span className="text-blue-600 text-xs font-medium">{initial}</span>
                           </div>
-                          <span className="text-blue-600 text-xs font-medium">Partagé</span>
+                                )}
+                                <span className="text-blue-600 text-xs font-medium">{`${firstName} ${lastName}`.trim() || sharedByName || 'Partagé'}</span>
+                              </>
+                            )
+                          })()}
                         </div>
                       </div>
                     </div>

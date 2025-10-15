@@ -29,6 +29,9 @@ import {
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import depensesService from '@/services/depensesService'
+import sharedAccountsService from '@/services/sharedAccountsService'
+import apiService from '@/services/apiService'
+import { API_CONFIG } from '@/config/api'
 import logo from '@/image/logo.png'
 
 // Composant Modal de base
@@ -152,10 +155,7 @@ const ExpenseForm = ({ isOpen, onClose, onSave, item = null, categories = [], co
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Montant ({(() => {
-                const selected = comptes.find(c => (c.id_compte ?? c.id) === parseInt(formData.id_compte))
-                return selected?.currencySymbol || selected?.devise || selected?.currency || '€'
-              })()})
+              Montant 
             </label>
             <input
               type="number"
@@ -218,7 +218,7 @@ const ExpenseForm = ({ isOpen, onClose, onSave, item = null, categories = [], co
             <option value="">Sélectionner un compte</option>
             {comptes.map((compte) => (
               <option key={(compte.id_compte ?? compte.id)} value={(compte.id_compte ?? compte.id)}>
-                {compte.nom} ({compte.type})
+                {compte.nom} ({compte.type}) {compte.isShared ? '— partagé (contributeur)' : ''}
               </option>
             ))}
           </select>
@@ -394,21 +394,99 @@ export default function GestionDepenses() {
   const [error, setError] = useState('');
   const [categories, setCategories] = useState([])
   const [comptes, setComptes] = useState([])
+  const [usersById, setUsersById] = useState({})
 
   useEffect(() => {
     const load = async () => {
       try {
         setIsLoading(true)
         setError('')
-        const [deps, cats, accs] = await Promise.all([
+        const [deps, cats, myAccs] = await Promise.all([
           depensesService.getDepenses(),
           depensesService.getDepenseCategories(),
           depensesService.getMyComptes(),
         ])
-        console.log(cats)
+        console.log('Dépenses chargées:', deps)
+        // Load shared accounts where current user is contributeur
+        let sharedContrib = []
+        try {
+          const storedUser = localStorage.getItem('user')
+          const userId = storedUser ? (JSON.parse(storedUser)?.id_user || null) : null
+          if (userId) {
+            const sharedRes = await sharedAccountsService.getSharedAccountsByUser(userId)
+            if (sharedRes?.success && Array.isArray(sharedRes.data)) {
+              // Format shared accounts
+              const baseShared = sharedRes.data
+                .map(acc => sharedAccountsService.formatSharedAccount(acc))
+                .filter(acc => acc.role === 'contributeur')
+
+              // Enrich with account details for currency/devise
+              const detailedShared = await Promise.all(baseShared.map(async (acc) => {
+                try {
+                  const accountId = acc.id_compte ?? acc.id
+                  const details = accountId ? await apiService.getAccountById(accountId) : null
+                  const devise = details?.devise || details?.currency || acc.devise || acc.currency || ''
+                  const currencySymbol = (devise && devise.toUpperCase() === 'MGA') ? 'Ar' : (details?.currencySymbol || acc.currencySymbol)
+                  return { ...acc, devise, currency: devise, currencySymbol, isShared: true }
+                } catch (_) {
+                  return { ...acc, isShared: true }
+                }
+              }))
+              const formattedShared = detailedShared
+              sharedContrib = formattedShared
+            }
+          }
+        } catch (_) {}
+
         setExpenses(Array.isArray(deps) ? deps : [])
         setCategories(Array.isArray(cats) ? cats : [])
-        setComptes(Array.isArray(accs) ? accs : [])
+        // Merge own accounts and shared contributor accounts
+        const ownAccounts = Array.isArray(myAccs) ? myAccs : []
+        const mergedAccs = [...ownAccounts, ...sharedContrib]
+        setComptes(mergedAccs)
+
+        // Build user map: include current user and shared users per account
+        const userMap = {}
+        try {
+          const storedUser = localStorage.getItem('user')
+          if (storedUser) {
+            const u = JSON.parse(storedUser)
+            if (u?.id_user) {
+              userMap[u.id_user] = {
+                id_user: u.id_user,
+                prenom: u.prenom,
+                nom: u.nom,
+                email: u.email,
+                image: u.image || null
+              }
+            }
+          }
+        } catch {}
+
+        // Fetch shared users for each account to resolve names by id_user
+        const accountIds = Array.from(new Set(mergedAccs.map(a => (a.id_compte ?? a.id)).filter(Boolean)))
+        try {
+          const lists = await Promise.all(accountIds.map(async (accId) => {
+            try {
+              const res = await sharedAccountsService.getSharedUsersByAccount(accId)
+              return Array.isArray(res?.data) ? res.data : []
+            } catch {
+              return []
+            }
+          }))
+          lists.flat().forEach(u => {
+            const id = u.id_user ?? u.user_id ?? u.id
+            if (!id) return
+            userMap[id] = {
+              id_user: id,
+              prenom: u.prenom || u.firstName || '',
+              nom: u.nom || u.lastName || '',
+              email: u.email || '',
+              image: u.image || u.image_utilisateur || null
+            }
+          })
+        } catch {}
+        setUsersById(userMap)
       } catch (e) {
         setError(e.message || 'Erreur lors du chargement des dépenses')
       } finally {
@@ -417,6 +495,10 @@ export default function GestionDepenses() {
     }
     load()
   }, [])
+
+  useEffect(() => {
+    console.log('Dépenses (state):', expenses)
+  }, [expenses])
 
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
@@ -433,8 +515,9 @@ export default function GestionDepenses() {
 
   // Filtrage et recherche
   const filteredExpenses = expenses.filter(expense => {
-    const matchesSearch = expense.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || expense.id_categorie_depense.toString() === filterCategory;
+    const desc = (expense.description ?? '').toString().toLowerCase()
+    const matchesSearch = desc.includes(searchTerm.toLowerCase());
+    const matchesCategory = filterCategory === 'all' || String(expense.id_categorie_depense ?? '') === filterCategory;
     
     let matchesDate = true;
     if (filterDateRange !== 'all') {
@@ -471,6 +554,12 @@ export default function GestionDepenses() {
     const today = new Date();
     return expenseDate.getMonth() === today.getMonth() && expenseDate.getFullYear() === today.getFullYear();
   }).reduce((sum, expense) => sum + Number(expense.montant || 0), 0);
+
+  const todaysExpenses = expenses.filter(expense => {
+    const d = new Date(expense.date_depense)
+    const t = new Date()
+    return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate()
+  }).reduce((sum, e) => sum + Number(e.montant || 0), 0)
 
   const categoryStats = categories.map(category => {
     const categoryExpenses = expenses.filter(expense => expense.id_categorie_depense === category.id);
@@ -555,15 +644,56 @@ export default function GestionDepenses() {
     return account ? account.nom : 'Compte inconnu';
   };
 
+  const getUserInfo = (userId) => {
+    const info = usersById[userId]
+    if (info) return info
+    return { id_user: userId, prenom: '', nom: '', email: '', image: null }
+  }
+
+  const getUserImageUrl = (user) => {
+    const img = user?.image
+    if (!img) return null
+    if (/^https?:\/\//i.test(img)) return img
+    const API_ORIGIN = API_CONFIG.BASE_URL.replace(/\/api$/, '')
+    // If img already includes uploads path, avoid duplicating it
+    const cleaned = img.replace(/^\/+/, '')
+    if (cleaned.toLowerCase().startsWith('uploads/')) {
+      return `${API_ORIGIN}/${cleaned}`
+    }
+    return `${API_ORIGIN}/uploads/${cleaned}`
+  }
+
   const getAccountCurrencySymbol = (accountId) => {
     const account = comptes.find(c => (c.id_compte ?? c.id) === accountId)
+    const devise = (account?.devise || account?.currency || '').toString().toUpperCase()
+    if (devise === 'MGA') return 'Ar'
+    // Fallback to user's currency if account not found
+    if (!account) {
+      try {
+        const user = localStorage.getItem('user')
+        const userDevise = user ? (JSON.parse(user)?.devise || '').toString().toUpperCase() : ''
+        if (userDevise === 'MGA') return 'Ar'
+        return userDevise || '€'
+      } catch {
+        return '€'
+      }
+    }
     return account?.currencySymbol || account?.devise || account?.currency || '€'
   }
 
   const isAccountMGA = (accountId) => {
     const account = comptes.find(c => (c.id_compte ?? c.id) === accountId)
     const code = (account?.devise || account?.currency || '').toString().toUpperCase()
-    return code === 'MGA'
+    const symbol = (account?.currencySymbol || '').toString()
+    if (code === 'MGA' || symbol === 'Ar') return true
+    // Fallback to user's currency
+    try {
+      const user = localStorage.getItem('user')
+      const userDevise = user ? (JSON.parse(user)?.devise || '').toString().toUpperCase() : ''
+      return userDevise === 'MGA'
+    } catch {
+      return false
+    }
   }
 
   const formatAmountForAccount = (amount, accountId) => {
@@ -571,7 +701,7 @@ export default function GestionDepenses() {
     if (isAccountMGA(accountId)) {
       // Ariary: space thousands, no decimals, suffix 'Ar'
       const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
-      return `${intStr}Ar`
+      return `${intStr} Ar`
     }
     const symbol = getAccountCurrencySymbol(accountId)
     return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
@@ -590,7 +720,7 @@ export default function GestionDepenses() {
     const num = Number(amount || 0)
     if (code === 'MGA') {
       const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
-      return `${intStr}Ar`
+      return `${intStr} Ar`
     }
     const symbol = getDefaultCurrencySymbol()
     return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
@@ -710,13 +840,10 @@ export default function GestionDepenses() {
             <h3 className="text-sm font-medium text-gray-600">Ce mois</h3>
             <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(monthlyExpenses)}</p>
           </div>
+      
           <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">Nombre de dépenses</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900">{expenses.length}</p>
-          </div>
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">Moyenne journalière</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(expenses.length > 0 ? (totalExpenses / 30) : 0)}</p>
+            <h3 className="text-sm font-medium text-gray-600">Dépense aujourd'hui</h3>
+            <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(todaysExpenses)}</p>
           </div>
         </div>
 
@@ -776,12 +903,12 @@ export default function GestionDepenses() {
               <span className="font-bold text-green-900">{formatAmountDefault(Math.min(...expenses.map(e => Number(e.montant || 0))))}</span>
             </div>
 
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+              <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
               <div className="flex items-center space-x-2">
                 <BarChart3 className="w-5 h-5 text-purple-600" />
-                <span className="text-purple-900 font-medium">Moyenne par dépense</span>
+                <span className="text-purple-900 font-medium">Dépense aujourd'hui</span>
               </div>
-              <span className="font-bold text-purple-900">{formatAmountDefault(expenses.length > 0 ? (totalExpenses / expenses.length) : 0)}</span>
+              <span className="font-bold text-purple-900">{formatAmountDefault(todaysExpenses)}</span>
             </div>
 
             <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
@@ -868,6 +995,7 @@ export default function GestionDepenses() {
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Description</th>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Catégorie</th>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Compte</th>
+                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Utilisateur</th>
                   <th className="text-right py-4 px-6 text-gray-600 font-medium">Montant</th>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Date</th>
                   <th className="text-center py-4 px-6 text-gray-600 font-medium">Actions</th>
@@ -876,16 +1004,27 @@ export default function GestionDepenses() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-10 text-center text-gray-500">Chargement...</td>
+                    <td colSpan={7} className="py-10 text-center text-gray-500">Chargement...</td>
                   </tr>
                 ) : paginatedExpenses.map((expense) => {
                   const IconComponent = getCategoryIcon(expense.id_categorie_depense);
+                  // Prefer backend-provided user fields on expense; fallback to usersById map
+                  const backendUser = {
+                    prenom: expense.user_prenom,
+                    nom: expense.user_nom,
+                    email: expense.user_email,
+                    image: expense.user_image,
+                  }
+                  const hasBackendUser = backendUser.prenom || backendUser.nom || backendUser.email || backendUser.image
+                  const u = hasBackendUser ? backendUser : getUserInfo(expense.id_user)
+                  const displayName = (u.prenom || u.nom) ? `${u.prenom || ''} ${u.nom || ''}`.trim() : (u.email || `ID: ${expense.id_user}`)
+                  const initial = (u.prenom || u.nom || u.email || 'U').toString().trim().charAt(0).toUpperCase()
                   return (
                     <tr key={expense.id_depense} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                       <td className="py-4 px-6">
                         <div>
                           <p className="font-medium text-gray-900">{expense.description}</p>
-                          <p className="text-sm text-gray-500">ID: {expense.id_depense}</p>
+                          
                         </div>
                       </td>
                       <td className="py-4 px-6">
@@ -903,9 +1042,21 @@ export default function GestionDepenses() {
                           {getAccountName(expense.id_compte)}
                         </span>
                       </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center space-x-2">
+                          {getUserImageUrl(u) ? (
+                            <img src={getUserImageUrl(u)} alt={displayName} className="w-6 h-6 rounded-full object-cover border" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                          ) : (
+                            <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center border">
+                              <span className="text-emerald-700 text-xs font-medium">{initial}</span>
+                            </div>
+                          )}
+                          <span className="text-sm text-gray-700">{displayName}</span>
+                        </div>
+                      </td>
                       <td className="py-4 px-6 text-right">
                         <span className="text-lg font-bold text-gray-900">
-                          {Number(expense.montant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{getAccountCurrencySymbol(expense.id_compte)}
+                          {formatAmountForAccount(expense.montant, expense.id_compte)}
                         </span>
                       </td>
                       <td className="py-4 px-6 text-gray-900">

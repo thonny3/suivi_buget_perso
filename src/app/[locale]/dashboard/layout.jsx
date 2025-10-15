@@ -4,6 +4,7 @@ import { SidebarProvider } from '@/context/SidebarContext'
 import Sidebar from '@/components/backoffice/Sidebar'
 import DashboardNavbar from '@/components/backoffice/DashboardNavbar'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import Chatbot from '@/components/Chatbot'
 
 export default function DashboardLayout({ children, params }) {
   const { locale } = params
@@ -19,6 +20,7 @@ export default function DashboardLayout({ children, params }) {
               {children}
             </main>
           </div>
+          <Chatbot />
         </div>
       </SidebarProvider>
     </ProtectedRoute>

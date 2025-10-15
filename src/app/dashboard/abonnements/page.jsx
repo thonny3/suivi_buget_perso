@@ -318,6 +318,16 @@ export default function AbonnementsPage() {
     return date.toISOString().split('T')[0]
   }
 
+  const resolveCurrencySymbol = (deviseLike) => {
+    const d = (deviseLike || '').toString().toUpperCase()
+    if (!d) return ''
+    if (d === 'MGA') return 'Ar'
+    if (d === 'EUR') return '€'
+    if (d === 'USD') return '$'
+    if (d === 'GBP') return '£'
+    return d
+  }
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
@@ -381,7 +391,7 @@ export default function AbonnementsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Coût Mensuel</p>
-                <p className="text-2xl font-bold text-purple-600">{coutMensuelTotal.toFixed(2)}€</p>
+                <p className="text-2xl font-bold text-purple-600">{coutMensuelTotal.toFixed(2)}</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
                 <DollarSign className="w-6 h-6 text-purple-600" />
@@ -393,7 +403,7 @@ export default function AbonnementsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Coût Annuel</p>
-                <p className="text-2xl font-bold text-pink-600">{coutAnnuelTotal.toFixed(0)}€</p>
+                <p className="text-2xl font-bold text-pink-600">{coutAnnuelTotal.toFixed(0)}</p>
               </div>
               <div className="bg-pink-100 p-3 rounded-lg">
                 <Calendar className="w-6 h-6 text-pink-600" />
@@ -608,7 +618,16 @@ export default function AbonnementsPage() {
             <h2 className="text-xl font-semibold mb-4">Sélectionner le compte à débiter</h2>
             {renewTarget && (
               <div className="mb-4 text-sm text-gray-700">
-                Abonnement: <span className="font-medium">{renewTarget.nom}</span> • Montant: <span className="font-medium">{Number(renewTarget.montant).toFixed(2)}€</span>
+                {(() => {
+                  const selected = Array.isArray(comptes) ? comptes.find(c => (c.id_compte || c.id) === selectedCompteId) : null
+                  const symbol = selected?.currencySymbol || resolveCurrencySymbol(selected?.devise || selected?.currency) || '€'
+                  const amount = Number(renewTarget.montant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                  return (
+                    <>
+                      Abonnement: <span className="font-medium">{renewTarget.nom}</span> • Montant: <span className="font-medium">{amount} {symbol}</span>
+                    </>
+                  )
+                })()}
               </div>
             )}
             {loadingComptes ? (
@@ -731,7 +750,7 @@ export default function AbonnementsPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-6">
               {editingAbonnement ? 'Modifier l\'Abonnement' : 'Nouvel Abonnement'}
             </h2>

@@ -16,7 +16,8 @@ import {
   Sun,
   MessageSquare,
   HelpCircle,
-  LogOut
+  LogOut,
+  RefreshCw
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/styles/colors'
@@ -77,6 +78,13 @@ const DashboardNavbar = () => {
     console.log('Mode sombre:', !isDarkMode)
   }
 
+  const handleReset = () => {
+    setSearchQuery('')
+    setShowNotifications(false)
+    setShowUserMenu(false)
+    setIsDarkMode(false)
+  }
+
   const handleLogout = () => {
     logout()
     router.push('/connexion')
@@ -102,9 +110,9 @@ const DashboardNavbar = () => {
             title={isOpen ? 'Fermer la sidebar' : 'Ouvrir la sidebar'}
           >
             <div className="flex flex-col space-y-1">
-              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200 ${isOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200 ${isOpen ? 'opacity-0' : ''}`}></div>
-              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200 ${isOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
+              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200`}></div>
+              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200`}></div>
+              <div className={`w-5 h-0.5 bg-gray-600 group-hover:bg-gray-800 transition-all duration-200`}></div>
             </div>
           </button>
 
@@ -153,6 +161,15 @@ const DashboardNavbar = () => {
             ) : (
               <Moon className="w-5 h-5 text-gray-600 group-hover:text-blue-600" />
             )}
+          </button>
+
+          {/* Reset navbar UI state */}
+          <button
+            onClick={handleReset}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors group"
+            title="Reset"
+          >
+            <RefreshCw className="w-5 h-5 text-gray-600 group-hover:text-green-600" />
           </button>
 
           {/* Notifications */}

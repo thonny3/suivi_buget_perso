@@ -29,6 +29,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import objectifsService from '@/services/objectifsService'
 import contributionsService from '@/services/contributionsService'
 import accountsService from '@/services/accountsService'
+import sharedAccountsService from '@/services/sharedAccountsService'
+import apiService from '@/services/apiService'
 import useToast from '@/hooks/useToast'
 
 export default function ObjectifsPage() {
@@ -43,10 +45,26 @@ export default function ObjectifsPage() {
   const [contributions, setContributions] = useState([])
   const [isRewardOpen, setIsRewardOpen] = useState(false)
   const [rewardObjectif, setRewardObjectif] = useState(null)
+  const [userSymbol, setUserSymbol] = useState('')
+
+  const resolveCurrencySymbol = (deviseLike) => {
+    const d = (deviseLike || '').toString().toUpperCase()
+    if (!d) return ''
+    if (d === 'MGA') return 'Ar'
+    if (d === 'EUR') return '€'
+    if (d === 'USD') return '$'
+    if (d === 'GBP') return '£'
+    return d
+  }
 
   useEffect(() => {
     const fetchObjectifs = async () => {
       try {
+        try {
+          const storedUser = localStorage.getItem('user')
+          const devise = storedUser ? (JSON.parse(storedUser)?.devise || '') : ''
+          setUserSymbol(resolveCurrencySymbol(devise))
+        } catch (_) {}
         const data = await objectifsService.list()
         setObjectifs(Array.isArray(data) ? data : [])
       } catch (e) {
@@ -115,8 +133,8 @@ export default function ObjectifsPage() {
   const objectifsAtteints = objectifs.filter(obj => obj.statut === 'Atteint').length
   const objectifsEnCours = objectifs.filter(obj => obj.statut === 'En cours').length
   const objectifsRetard = objectifs.filter(obj => obj.statut === 'Retard').length
-  const montantTotalObjectifs = objectifs.reduce((sum, obj) => sum + obj.montant_objectif, 0)
-  const montantTotalActuel = objectifs.reduce((sum, obj) => sum + obj.montant_actuel, 0)
+  const montantTotalObjectifs = objectifs.reduce((sum, obj) => sum + (parseFloat(obj.montant_objectif) || 0), 0)
+  const montantTotalActuel = objectifs.reduce((sum, obj) => sum + (parseFloat(obj.montant_actuel) || 0), 0)
   const progressionGlobale = montantTotalObjectifs > 0 ? Math.round((montantTotalActuel / montantTotalObjectifs) * 100) : 0
 
   // Données pour les graphiques
@@ -252,7 +270,7 @@ export default function ObjectifsPage() {
     setFormData({
       nom: objectif.nom,
       montant_objectif: objectif.montant_objectif.toString(),
-      date_limite: objectif.date_limite,
+      date_limite: toYYYYMMDD(objectif.date_limite),
       icone: objectif.icone,
       couleur: objectif.couleur
     })
@@ -399,7 +417,7 @@ export default function ObjectifsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Montant Total</p>
-                <p className="text-2xl font-bold text-gray-900">{montantTotalObjectifs.toLocaleString()}€</p>
+                <p className="text-2xl font-bold text-gray-900">{Number(montantTotalObjectifs).toLocaleString()}{userSymbol}</p>
               </div>
               <div className="bg-yellow-100 p-3 rounded-lg">
                 <DollarSign className="w-6 h-6 text-yellow-600" />
@@ -418,7 +436,7 @@ export default function ObjectifsPage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="nom" />
               <YAxis />
-              <Tooltip formatter={(value) => [`${value}€`, '']} />
+              <Tooltip formatter={(value) => [`${Number(value).toLocaleString()}${userSymbol}`, '']} />
               <Legend />
               <Bar dataKey="objectif" fill="#E5E7EB" name="Objectif" />
               <Bar dataKey="actuel" fill="#10B981" name="Actuel" />
@@ -549,16 +567,16 @@ export default function ObjectifsPage() {
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Actuel</span>
-                  <span className="font-medium">{objectif.montant_actuel.toLocaleString()}€</span>
+                  <span className="font-medium">{Number(objectif.montant_actuel).toLocaleString()}{userSymbol}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Objectif</span>
-                  <span className="font-medium">{objectif.montant_objectif.toLocaleString()}€</span>
+                  <span className="font-medium">{Number(objectif.montant_objectif).toLocaleString()}{userSymbol}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Restant</span>
                   <span className="font-medium text-orange-600">
-                    {(objectif.montant_objectif - objectif.montant_actuel).toLocaleString()}€
+                    {Number((parseFloat(objectif.montant_objectif)||0) - (parseFloat(objectif.montant_actuel)||0)).toLocaleString()}{userSymbol}
                   </span>
                 </div>
               </div>
@@ -590,8 +608,39 @@ export default function ObjectifsPage() {
                     setSelectedObjectifForMoney(objectif)
                     setIsAddingMoney(true)
                     ;(async () => {
+                      // Charger comptes propres + comptes partagés (si contributeur)
                       const res = await accountsService.getMyAccounts()
-                      setAccounts(res.success ? res.data : [])
+                      const ownAccounts = res?.success && Array.isArray(res.data) ? res.data : []
+                      let sharedContrib = []
+                      try {
+                        const storedUser = localStorage.getItem('user')
+                        const userId = storedUser ? (JSON.parse(storedUser)?.id_user || null) : null
+                        if (userId) {
+                          const sharedRes = await sharedAccountsService.getSharedAccountsByUser(userId)
+                          if (sharedRes?.success && Array.isArray(sharedRes.data)) {
+                            const baseShared = sharedRes.data
+                              .map(acc => sharedAccountsService.formatSharedAccount(acc))
+                              .filter(acc => acc.role === 'contributeur')
+
+                            const detailed = await Promise.all(baseShared.map(async (acc) => {
+                              try {
+                                const accountId = acc.id_compte ?? acc.id
+                                const details = accountId ? await apiService.getAccountById(accountId) : null
+                                const devise = details?.devise || details?.currency || acc.devise || acc.currency || ''
+                                const currencySymbol = (devise && devise.toUpperCase() === 'MGA') ? 'Ar' : (details?.currencySymbol || acc.currencySymbol)
+                                return { ...acc, id: accountId, id_compte: accountId, devise, currency: devise, currencySymbol, isShared: true }
+                              } catch (_) {
+                                const accountId = acc.id_compte ?? acc.id
+                                return { ...acc, id: accountId, id_compte: accountId, isShared: true }
+                              }
+                            }))
+                            sharedContrib = detailed
+                          }
+                        }
+                      } catch (_) {}
+
+                      const merged = [...ownAccounts, ...sharedContrib]
+                      setAccounts(merged)
                     })()
                   }}
                   className="w-full text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
@@ -618,7 +667,7 @@ export default function ObjectifsPage() {
       {/* Modal Création/Modification */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
             <h2 className="text-xl font-semibold mb-6">
               {editingObjectif ? 'Modifier l\'Objectif' : 'Nouvel Objectif'}
             </h2>
@@ -640,7 +689,7 @@ export default function ObjectifsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant objectif (€)
+                  Montant objectif 
                 </label>
                 <input
                   type="number"
@@ -739,7 +788,7 @@ export default function ObjectifsPage() {
       {/* Modal Ajout d'argent */}
       {isAddingMoney && selectedObjectifForMoney && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6">
             <h2 className="text-xl font-semibold mb-4">
               Ajouter de l'argent
             </h2>
@@ -750,7 +799,7 @@ export default function ObjectifsPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant à ajouter (€)
+                  Montant à ajouter 
                 </label>
                 <input
                   type="number"
@@ -774,7 +823,7 @@ export default function ObjectifsPage() {
                     <option value="">Sélectionner un compte</option>
                     {accounts.map((acc) => (
                       <option key={acc.id_compte} value={acc.id_compte}>
-                        {acc.nom} — {(parseFloat(acc.solde) || 0).toLocaleString()}€
+                        {acc.nom} — {(parseFloat(acc.solde) || 0).toLocaleString()}{userSymbol}
                       </option>
                     ))}
                   </select>
@@ -783,12 +832,28 @@ export default function ObjectifsPage() {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex justify-between text-sm mb-2">
                   <span>Montant actuel:</span>
-                  <span className="font-medium">{selectedObjectifForMoney.montant_actuel.toLocaleString()}€</span>
+                  <span className="font-medium">{Number(selectedObjectifForMoney.montant_actuel).toLocaleString()}{userSymbol}</span>
+                </div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Montant objectif:</span>
+                  <span className="font-medium">{Number(selectedObjectifForMoney.montant_objectif).toLocaleString()}{userSymbol}</span>
+                </div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Restant (avant):</span>
+                  <span className="font-medium text-orange-600">
+                    {Number((parseFloat(selectedObjectifForMoney.montant_objectif)||0) - (parseFloat(selectedObjectifForMoney.montant_actuel)||0)).toLocaleString()}{userSymbol}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
                   <span>Après ajout:</span>
                   <span className="font-medium text-green-600">
-                    {(selectedObjectifForMoney.montant_actuel + (parseFloat(addMoneyAmount) || 0)).toLocaleString()}€
+                    {Number((parseFloat(selectedObjectifForMoney.montant_actuel) || 0) + (parseFloat(addMoneyAmount) || 0)).toLocaleString()}{userSymbol}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span>Restant (après ajout):</span>
+                  <span className="font-medium text-emerald-700">
+                    {Number((parseFloat(selectedObjectifForMoney.montant_objectif)||0) - ((parseFloat(selectedObjectifForMoney.montant_actuel)||0) + (parseFloat(addMoneyAmount)||0))).toLocaleString()}{userSymbol}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -853,19 +918,48 @@ export default function ObjectifsPage() {
               <p className="text-gray-600">Chargement des contributions...</p>
             ) : (
               <div className="space-y-3">
+                {/* Summary */}
+                {contributions.length > 0 && (
+                  <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50">
+                      <div className="text-xs text-gray-500 mb-1">Total contribué</div>
+                      <div className="text-lg font-semibold text-emerald-700">
+                        {Number(contributions.reduce((sum, c) => sum + (parseFloat(c.montant) || 0), 0)).toLocaleString()} {userSymbol}
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50">
+                      <div className="text-xs text-gray-500 mb-1">Nombre de contributions</div>
+                      <div className="text-lg font-semibold text-gray-900">{contributions.length}</div>
+                    </div>
+                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50">
+                      <div className="text-xs text-gray-500 mb-1">Objectif</div>
+                      <div className="text-sm font-medium text-gray-900 truncate">{selectedForContrib.nom}</div>
+                    </div>
+                  </div>
+                )}
+
                 {contributions.length === 0 ? (
                   <p className="text-gray-500">Aucune contribution.</p>
                 ) : (
                   contributions.map((c) => (
                     <div key={c.id_contribution || `${c.id_objectif}-${c.date_contribution}-${c.montant}`}
-                      className="border border-gray-200 rounded-lg p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-gray-700">
-                          {new Date(c.date_contribution).toLocaleDateString('fr-FR')} — <span className="font-medium">{Number(c.montant).toLocaleString()}€</span>
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          Compte: {c.compte_nom || '—'} | Objectif: {c.objectif_nom || selectedForContrib.nom}
-                        </p>
+                      className="border border-gray-200 rounded-lg p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-semibold">
+                          +
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-700">
+                            {new Date(c.date_contribution).toLocaleDateString('fr-FR')}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Compte: {c.compte_nom || '—'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-base font-semibold text-emerald-700">{Number(c.montant).toLocaleString()}{userSymbol}</div>
+                        <div className="text-[11px] text-gray-500">Objectif: {c.objectif_nom || selectedForContrib.nom}</div>
                       </div>
                     </div>
                   ))
@@ -923,7 +1017,7 @@ export default function ObjectifsPage() {
                   Bravo, objectif atteint !
                 </h3>
                 <p className="text-gray-700 mb-1 font-medium">{rewardObjectif.nom}</p>
-                <p className="text-green-600 font-semibold mb-6 text-lg">{Number(rewardObjectif.montant_objectif).toLocaleString()}€ atteints</p>
+                <p className="text-green-600 font-semibold mb-6 text-lg">{Number(rewardObjectif.montant_objectif).toLocaleString()}{userSymbol} atteints</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     type="button"

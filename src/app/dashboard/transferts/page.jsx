@@ -2,6 +2,9 @@
 import React, { useEffect, useState } from 'react'
 import transfertsService from '@/services/transfertsService'
 import accountsService from '@/services/accountsService'
+import sharedAccountsService from '@/services/sharedAccountsService'
+import apiService from '@/services/apiService'
+import { API_CONFIG } from '@/config/api'
 import objectifsService from '@/services/objectifsService'
 import { colors } from '@/styles/colors'
 
@@ -17,20 +20,137 @@ export default function TransfertsPage() {
   const [historique, setHistorique] = useState([])
   const [loadError, setLoadError] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [userSymbol, setUserSymbol] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  const resolveCurrencySymbol = (deviseLike) => {
+    const d = (deviseLike || '').toString().toUpperCase()
+    if (!d) return ''
+    if (d === 'MGA') return 'Ar'
+    if (d === 'EUR') return '€'
+    if (d === 'USD') return '$'
+    if (d === 'GBP') return '£'
+    return d
+  }
+
+  const getAccountSymbol = (acc) => {
+    return acc?.currencySymbol || resolveCurrencySymbol(acc?.devise || acc?.currency) || userSymbol || ''
+  }
+
+  const getTypeLabel = (t) => {
+    if (t === 'compte_to_compte') return 'Compte ➜ Compte'
+    if (t === 'compte_to_objectif') return 'Compte ➜ Objectif'
+    if (t === 'objectif_to_compte') return 'Objectif ➜ Compte'
+    return t
+  }
+
+  const getDisplayUser = (h) => {
+    const full = `${h?.user_prenom || ''} ${h?.user_nom || ''}`.trim()
+    if (full) return full
+    if (h?.user_email) return h.user_email
+    try {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const u = JSON.parse(storedUser)
+        const fallbackFull = `${u?.prenom || ''} ${u?.nom || ''}`.trim()
+        return fallbackFull || u?.email || '-'
+      }
+    } catch (_) {}
+    return '-'
+  }
+
+  const getUserVisual = (h) => {
+    // Prefer backend-provided fields
+    const prenom = h?.user_prenom
+    const nom = h?.user_nom
+    const email = h?.user_email
+    const image = h?.user_image
+    let initials = ''
+    const full = `${prenom || ''} ${nom || ''}`.trim()
+    if (full) {
+      const parts = full.split(' ').filter(Boolean)
+      initials = (parts[0]?.[0] || '') + (parts[parts.length - 1]?.[0] || '')
+    } else if (email) {
+      initials = email?.[0]?.toUpperCase() || '?'
+    } else {
+      try {
+        const storedUser = localStorage.getItem('user')
+        if (storedUser) {
+          const u = JSON.parse(storedUser)
+          const fallbackFull = `${u?.prenom || ''} ${u?.nom || ''}`.trim()
+          if (fallbackFull) {
+            const ps = fallbackFull.split(' ').filter(Boolean)
+            initials = (ps[0]?.[0] || '') + (ps[ps.length - 1]?.[0] || '')
+          } else if (u?.email) {
+            initials = u.email[0]?.toUpperCase() || '?'
+          }
+        }
+      } catch (_) {}
+    }
+    initials = (initials || '?').toUpperCase()
+    const buildImageUrl = (img) => {
+      if (!img) return ''
+      if (typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))) return img
+      const base = (API_CONFIG.BASE_URL || '').replace(/\/$/,'')
+      const host = base.replace(/\/api$/, '')
+      const raw = String(img)
+      const normalized = raw.startsWith('/uploads/') ? raw : `/uploads/${raw.replace(/^\/+/, '')}`
+      const path = normalized.startsWith('/') ? normalized : `/${normalized}`
+      return `${host}${path}`
+    }
+    return { image: buildImageUrl(image), initials }
+  }
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoadError('')
+        // Load user symbol from localStorage
+        try {
+          const storedUser = localStorage.getItem('user')
+          const devise = storedUser ? (JSON.parse(storedUser)?.devise || '') : ''
+          setUserSymbol(resolveCurrencySymbol(devise))
+        } catch (_) {}
         const [accRes, hist] = await Promise.all([
           accountsService.getMyAccounts(),
-          transfertsService.historique({ limit: 20 })
+          transfertsService.historique({ limit: 200 })
         ])
-        if (accRes.success) {
-          setComptes(Array.isArray(accRes.data) ? accRes.data : [])
+
+        // Merge own accounts with shared contributor accounts
+        let mergedAccounts = []
+        if (accRes?.success && Array.isArray(accRes.data)) {
+          mergedAccounts = [...accRes.data]
+          try {
+            const storedUser = localStorage.getItem('user')
+            const userId = storedUser ? (JSON.parse(storedUser)?.id_user || null) : null
+            if (userId) {
+              const sharedRes = await sharedAccountsService.getSharedAccountsByUser(userId)
+              if (sharedRes?.success && Array.isArray(sharedRes.data)) {
+                const baseShared = sharedRes.data
+                  .map(acc => sharedAccountsService.formatSharedAccount(acc))
+                  .filter(acc => acc.role === 'contributeur')
+
+                const detailed = await Promise.all(baseShared.map(async (acc) => {
+                  try {
+                    const accountId = acc.id_compte ?? acc.id
+                    const details = accountId ? await apiService.getAccountById(accountId) : null
+                    const devise = details?.devise || details?.currency || acc.devise || acc.currency || ''
+                    const currencySymbol = (devise && devise.toUpperCase() === 'MGA') ? 'Ar' : (details?.currencySymbol || acc.currencySymbol)
+                    return { ...acc, id: accountId, id_compte: accountId, devise, currency: devise, currencySymbol, isShared: true }
+                  } catch (_) {
+                    const accountId = acc.id_compte ?? acc.id
+                    return { ...acc, id: accountId, id_compte: accountId, isShared: true }
+                  }
+                }))
+                mergedAccounts = [...mergedAccounts, ...detailed]
+              }
+            }
+          } catch (_) {}
+          setComptes(mergedAccounts)
         } else {
           setComptes([])
-          setLoadError(accRes.error || 'Impossible de charger vos comptes')
+          setLoadError(accRes?.error || 'Impossible de charger vos comptes')
         }
         setHistorique(Array.isArray(hist) ? hist : [])
         const objs = await objectifsService.list()
@@ -41,6 +161,13 @@ export default function TransfertsPage() {
     }
     load()
   }, [])
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil((historique?.length || 0) / pageSize))
+    if (currentPage > totalPages) {
+      setCurrentPage(1)
+    }
+  }, [historique, pageSize])
 
   const submit = async () => {
     try {
@@ -61,12 +188,41 @@ export default function TransfertsPage() {
       setCible('')
       // Rafraîchir l'historique, les comptes et les objectifs pour mettre à jour soldes et pourcentages
       const [hist, accRes, objs] = await Promise.all([
-        transfertsService.historique({ limit: 20 }),
+        transfertsService.historique({ limit: 200 }),
         accountsService.getMyAccounts(),
         objectifsService.list()
       ])
       setHistorique(Array.isArray(hist) ? hist : [])
-      if (accRes?.success) setComptes(Array.isArray(accRes.data) ? accRes.data : [])
+      if (accRes?.success && Array.isArray(accRes.data)) {
+        let mergedAccounts = [...accRes.data]
+        try {
+          const storedUser = localStorage.getItem('user')
+          const userId = storedUser ? (JSON.parse(storedUser)?.id_user || null) : null
+          if (userId) {
+            const sharedRes = await sharedAccountsService.getSharedAccountsByUser(userId)
+            if (sharedRes?.success && Array.isArray(sharedRes.data)) {
+              const baseShared = sharedRes.data
+                .map(acc => sharedAccountsService.formatSharedAccount(acc))
+                .filter(acc => acc.role === 'contributeur')
+
+              const detailed = await Promise.all(baseShared.map(async (acc) => {
+                try {
+                  const accountId = acc.id_compte ?? acc.id
+                  const details = accountId ? await apiService.getAccountById(accountId) : null
+                  const devise = details?.devise || details?.currency || acc.devise || acc.currency || ''
+                  const currencySymbol = (devise && devise.toUpperCase() === 'MGA') ? 'Ar' : (details?.currencySymbol || acc.currencySymbol)
+                  return { ...acc, id: accountId, id_compte: accountId, devise, currency: devise, currencySymbol, isShared: true }
+                } catch (_) {
+                  const accountId = acc.id_compte ?? acc.id
+                  return { ...acc, id: accountId, id_compte: accountId, isShared: true }
+                }
+              }))
+              mergedAccounts = [...mergedAccounts, ...detailed]
+            }
+          }
+        } catch (_) {}
+        setComptes(mergedAccounts)
+      }
       setObjectifs(Array.isArray(objs) ? objs : (Array.isArray(objs?.data) ? objs.data : []))
     } catch (e) {
       setMessage(e?.message || 'Erreur transfert')
@@ -77,6 +233,18 @@ export default function TransfertsPage() {
 
   const comptesOptions = Array.isArray(comptes) ? comptes : []
   const objectifsOptions = Array.isArray(objectifs) ? objectifs : []
+  const comptesOptionsSource = type === 'compte_to_compte'
+    ? comptesOptions.filter(c => String(c.id_compte || c.id) !== String(cible || ''))
+    : comptesOptions
+  const comptesOptionsCible = type === 'compte_to_compte'
+    ? comptesOptions.filter(c => String(c.id_compte || c.id) !== String(source || ''))
+    : comptesOptions
+
+  const totalItems = Array.isArray(historique) ? historique.length : 0
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = startIndex + pageSize
+  const pageItems = (Array.isArray(historique) ? historique : []).slice(startIndex, endIndex)
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
@@ -110,19 +278,38 @@ export default function TransfertsPage() {
               <tr className="text-left text-gray-600">
                 <th className="py-2">Date</th>
                 <th className="py-2">Type</th>
+                <th className="py-2">Utilisateur</th>
                 <th className="py-2">Source</th>
                 <th className="py-2">Cible</th>
                 <th className="py-2 text-right">Montant</th>
               </tr>
             </thead>
             <tbody>
-              {historique.map((h) => (
+              {pageItems.map((h) => (
                 <tr key={h.id || `${h.type}-${h.date_transfert}-${Math.random()}`} className="border-t border-gray-100">
                   <td className="py-2">{new Date(h.date_transfert).toLocaleString('fr-FR')}</td>
-                  <td className="py-2">{h.type}</td>
+                  <td className="py-2">{getTypeLabel(h.type)}</td>
+                  <td className="py-2">
+                    {(() => {
+                      const u = getUserVisual(h)
+                      const nameOrEmail = getDisplayUser(h)
+                      return (
+                        <div className="flex items-center gap-2">
+                          {u.image ? (
+                            <img src={u.image} alt={nameOrEmail} className="w-6 h-6 rounded-full object-cover" />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs font-semibold">
+                              {u.initials}
+                            </div>
+                          )}
+                          <span>{nameOrEmail}</span>
+                        </div>
+                      )
+                    })()}
+                  </td>
                   <td className="py-2">{h.source_nom || '-'}</td>
                   <td className="py-2">{h.cible_nom || '-'}</td>
-                  <td className="py-2 text-right">{Number(h.montant).toFixed(2)}€</td>
+                  <td className="py-2 text-right">{Number(h.montant).toFixed(2)}{userSymbol}</td>
                 </tr>
               ))}
               {(!historique || historique.length === 0) && (
@@ -133,6 +320,41 @@ export default function TransfertsPage() {
             </tbody>
           </table>
         </div>
+        {historique && historique.length > 0 && (
+          <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="text-sm text-gray-600">
+              Affichage {totalItems === 0 ? 0 : startIndex + 1}–{Math.min(endIndex, totalItems)} sur {totalItems}
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Par page</label>
+              <select
+                className="px-2 py-1 border border-gray-200 rounded"
+                value={pageSize}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+              <button
+                className={`px-3 py-1 border border-gray-200 rounded ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                Précédent
+              </button>
+              <span className="text-sm text-gray-600">Page {currentPage} / {totalPages}</span>
+              <button
+                className={`px-3 py-1 border border-gray-200 rounded ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
@@ -163,11 +385,14 @@ export default function TransfertsPage() {
                     ))}
                   </select>
                 ) : (
-                  <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!comptesOptions.length}>
+                  <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!comptesOptionsSource.length}>
                     <option value="">Sélectionner</option>
-                    {comptesOptions.map(c => (
-                      <option key={c.id_compte || c.id} value={c.id_compte || c.id}>{c.nom} ({(parseFloat(c.solde)||0).toFixed(2)}€)</option>
-                    ))}
+                    {comptesOptionsSource.map(c => {
+                      const sym = getAccountSymbol(c)
+                      return (
+                        <option key={c.id_compte || c.id} value={c.id_compte || c.id}>{c.nom} ({(parseFloat(c.solde)||0).toFixed(2)}{sym})</option>
+                      )
+                    })}
                   </select>
                 )}
                 {source && (
@@ -196,7 +421,7 @@ export default function TransfertsPage() {
                             <div className="font-medium text-gray-900">{c?.nom || 'Compte'}</div>
                             <div className="text-right">
                               <div className="text-[13px] text-gray-500">Solde</div>
-                              <div className="text-xl font-semibold text-emerald-700">{(parseFloat(c?.solde)||0).toFixed(2)}€</div>
+                              <div className="text-xl font-semibold text-emerald-700">{(parseFloat(c?.solde)||0).toFixed(2)}{getAccountSymbol(c)}</div>
                             </div>
                           </div>
                         )
@@ -216,11 +441,14 @@ export default function TransfertsPage() {
                     ))}
                   </select>
                 ) : (
-                  <select value={cible} onChange={(e) => setCible(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!comptesOptions.length}>
+                  <select value={cible} onChange={(e) => setCible(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!comptesOptionsCible.length}>
                     <option value="">Sélectionner</option>
-                    {comptesOptions.map(c => (
-                      <option key={c.id_compte || c.id} value={c.id_compte || c.id}>{c.nom} ({(parseFloat(c.solde)||0).toFixed(2)}€)</option>
-                    ))}
+                    {comptesOptionsCible.map(c => {
+                      const sym = getAccountSymbol(c)
+                      return (
+                        <option key={c.id_compte || c.id} value={c.id_compte || c.id}>{c.nom} ({(parseFloat(c.solde)||0).toFixed(2)}{sym})</option>
+                      )
+                    })}
                   </select>
                 )}
                 {cible && (
@@ -249,7 +477,7 @@ export default function TransfertsPage() {
                             <div className="font-medium text-gray-900">{c?.nom || 'Compte'}</div>
                             <div className="text-right">
                               <div className="text-[13px] text-gray-500">Solde</div>
-                              <div className="text-xl font-semibold text-emerald-700">{(parseFloat(c?.solde)||0).toFixed(2)}€</div>
+                              <div className="text-xl font-semibold text-emerald-700">{(parseFloat(c?.solde)||0).toFixed(2)}{getAccountSymbol(c)}</div>
                             </div>
                           </div>
                         )
