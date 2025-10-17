@@ -21,7 +21,9 @@ import {
   Gamepad2,
   Car,
   Heart,
-  Zap
+  Zap,
+  Power,
+  PowerOff
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import abonnementsService from '@/services/abonnementsService'
@@ -37,6 +39,8 @@ export default function AbonnementsPage() {
   const [renewedHistory, setRenewedHistory] = useState({})
   const [isRenewModalOpen, setIsRenewModalOpen] = useState(false)
   const [renewTarget, setRenewTarget] = useState(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [comptes, setComptes] = useState([])
   const [loadingComptes, setLoadingComptes] = useState(false)
   const [selectedCompteId, setSelectedCompteId] = useState(null)
@@ -55,7 +59,9 @@ export default function AbonnementsPage() {
     prochaine_echeance: '',
     rappel: true,
     icone: 'RefreshCw',
-    couleur: '#3B82F6'
+    couleur: '#3B82F6',
+    id_compte: '',
+    auto_renouvellement: false
   })
 
   const iconOptions = [
@@ -111,7 +117,7 @@ export default function AbonnementsPage() {
           const rawHist = localStorage.getItem('abos-renewed-history')
           if (rawHist) setRenewedHistory(JSON.parse(rawHist))
         } catch (_e) {}
-        const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
+        const data = await abonnementsService.listByUser(user.id_user, { includeInactive: false })
         const normalized = Array.isArray(data) ? data.map(row => ({
           id_abonnement: row.id_abonnement,
           id_user: row.id_user,
@@ -121,9 +127,18 @@ export default function AbonnementsPage() {
           prochaine_echeance: row.prochaine_echeance,
           rappel: !!row.rappel,
           icone: row.icon || 'RefreshCw',
-          couleur: row.couleur || '#3B82F6'
+          couleur: row.couleur || '#3B82F6',
+          id_compte: row.id_compte || null,
+          auto_renouvellement: !!row.auto_renouvellement,
+          date_dernier_renouvellement: row.date_dernier_renouvellement || null,
+          actif: (row.actif == null ? 1 : Number(row.actif)) === 1
         })) : []
         setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
+        // Charger les comptes pour connaître les devises associées
+        try {
+          const res = await accountsService.getMyAccounts()
+          if (res.success) setComptes(Array.isArray(res.data) ? res.data : [])
+        } catch (_e) {}
       } catch (e) {
         setError(e?.message || 'Erreur lors du chargement')
       } finally {
@@ -202,7 +217,9 @@ export default function AbonnementsPage() {
           prochaine_echeance: formData.prochaine_echeance,
           rappel: formData.rappel ? 1 : 0,
           icon: formData.icone,
-          couleur: formData.couleur
+          couleur: formData.couleur,
+          id_compte: formData.id_compte || null,
+          auto_renouvellement: !!formData.auto_renouvellement
         })
       } else {
         await abonnementsService.create({
@@ -213,10 +230,12 @@ export default function AbonnementsPage() {
           prochaine_echeance: formData.prochaine_echeance,
           rappel: formData.rappel ? 1 : 0,
           icon: formData.icone,
-          couleur: formData.couleur
+          couleur: formData.couleur,
+          id_compte: formData.id_compte || null,
+          auto_renouvellement: !!formData.auto_renouvellement
         })
       }
-      const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
+      const data = await abonnementsService.listByUser(user.id_user, { includeInactive: false })
       const normalized = Array.isArray(data) ? data.map(row => ({
         id_abonnement: row.id_abonnement,
         id_user: row.id_user,
@@ -226,7 +245,10 @@ export default function AbonnementsPage() {
         prochaine_echeance: row.prochaine_echeance,
         rappel: !!row.rappel,
         icone: row.icon || 'RefreshCw',
-        couleur: row.couleur || '#3B82F6'
+        couleur: row.couleur || '#3B82F6',
+        id_compte: row.id_compte || null,
+        auto_renouvellement: !!row.auto_renouvellement,
+        actif: (row.actif == null ? 1 : Number(row.actif)) === 1
       })) : []
       setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
       resetForm()
@@ -243,7 +265,9 @@ export default function AbonnementsPage() {
       prochaine_echeance: '',
       rappel: true,
       icone: 'RefreshCw',
-      couleur: '#3B82F6'
+      couleur: '#3B82F6',
+      id_compte: '',
+      auto_renouvellement: false
     })
     setEditingAbonnement(null)
     setIsModalOpen(false)
@@ -258,13 +282,14 @@ export default function AbonnementsPage() {
       prochaine_echeance: abonnement.prochaine_echeance,
       rappel: abonnement.rappel,
       icone: abonnement.icone,
-      couleur: abonnement.couleur
+      couleur: abonnement.couleur,
+      id_compte: abonnement.id_compte || '',
+      auto_renouvellement: !!abonnement.auto_renouvellement
     })
     setIsModalOpen(true)
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet abonnement ?')) return
     try {
       await abonnementsService.remove(id)
       setAbonnements(abonnements.filter(ab => ab.id_abonnement !== id))
@@ -316,6 +341,36 @@ export default function AbonnementsPage() {
         break
     }
     return date.toISOString().split('T')[0]
+  }
+
+  const getCurrencySymbolForAbonnement = (abonnement) => {
+    // 1) Si un compte est lié et connu, utiliser sa devise
+    if (abonnement?.id_compte && Array.isArray(comptes) && comptes.length > 0) {
+      const c = comptes.find(x => (x.id_compte || x.id) === abonnement.id_compte)
+      const sym = c?.currencySymbol || resolveCurrencySymbol(c?.devise || c?.currency)
+      if (sym) return sym
+    }
+    // 2) Essayer un champ devise/currency sur l'abonnement si existant
+    const sym2 = resolveCurrencySymbol(abonnement?.devise || abonnement?.currency)
+    if (sym2) return sym2
+    // 3) Par défaut euro
+    return '€'
+  }
+
+  const getCurrencyCodeForAbonnement = (abonnement) => {
+    if (abonnement?.id_compte && Array.isArray(comptes) && comptes.length > 0) {
+      const c = comptes.find(x => (x.id_compte || x.id) === abonnement.id_compte)
+      return (c?.devise || c?.currency || '').toString().toUpperCase()
+    }
+    return (abonnement?.devise || abonnement?.currency || '').toString().toUpperCase()
+  }
+
+  const formatAmountForAbonnement = (abonnement) => {
+    const code = getCurrencyCodeForAbonnement(abonnement)
+    const symbol = getCurrencySymbolForAbonnement(abonnement)
+    const decimals = (symbol === 'Ar' || code === 'MGA') ? 0 : 2
+    const num = Number(abonnement.montant) || 0
+    return `${num.toFixed(decimals)} ${symbol}`
   }
 
   const resolveCurrencySymbol = (deviseLike) => {
@@ -468,7 +523,7 @@ export default function AbonnementsPage() {
           const IconComponent = getIconComponent(abonnement.icone)
           
           return (
-            <div key={abonnement.id_abonnement} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div key={abonnement.id_abonnement} className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow ${abonnement.actif ? 'bg-white border-gray-100' : 'bg-red-50 border-red-200'}`}>
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -502,8 +557,25 @@ export default function AbonnementsPage() {
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(abonnement.id_abonnement)}
+                    onClick={async () => {
+                      try {
+                        const nextActif = !abonnement.actif
+                        await abonnementsService.setActive(abonnement.id_abonnement, nextActif)
+                        setAbonnements(prev => prev.map(x => x.id_abonnement === abonnement.id_abonnement ? { ...x, actif: nextActif } : x))
+                      } catch (e) {
+                        alert(e?.message || 'Erreur lors du changement de statut')
+                      }
+                    }}
+                    className={`p-2 rounded-lg transition-colors ${abonnement.actif ? 'text-emerald-600 hover:bg-emerald-50' : 'text-gray-500 hover:bg-gray-100'}`}
+                    title={abonnement.actif ? 'Désactiver' : 'Activer'}
+                  >
+                    {abonnement.actif ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                  </button>
+
+                  <button
+                    onClick={() => { setDeleteTarget(abonnement); setIsDeleteModalOpen(true) }}
                     className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Supprimer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -514,7 +586,7 @@ export default function AbonnementsPage() {
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600">Montant</span>
-                  <span className="font-semibold text-lg">{abonnement.montant.toFixed(2)}€</span>
+                  <span className="font-semibold text-lg">{formatAmountForAbonnement(abonnement)}</span>
                 </div>
 
                 <div className="flex justify-between items-center">
@@ -548,54 +620,71 @@ export default function AbonnementsPage() {
               </div>
 
               {/* Statut */}
-              <div className={`flex items-center gap-2 p-3 rounded-lg ${status.bg}`}>
-                <StatusIcon className={`w-4 h-4 ${status.color}`} />
-                <span className={`text-sm font-medium ${status.color}`}>
-                  {abonnement.statut}
+              <div className={`flex items-center justify-between gap-2 p-3 rounded-lg ${abonnement.actif ? status.bg : 'bg-red-100'}`}>
+                <div className="flex items-center gap-2">
+                  <StatusIcon className={`w-4 h-4 ${abonnement.actif ? status.color : 'text-red-700'}`} />
+                  <span className={`text-sm font-medium ${abonnement.actif ? status.color : 'text-red-700'}`}>
+                    {abonnement.statut}
+                  </span>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded ${abonnement.actif ? 'bg-emerald-100 text-emerald-700' : 'bg-red-200 text-red-800'}`}>
+                  {abonnement.actif ? 'Actif' : 'Inactif'}
                 </span>
               </div>
 
               {/* Actions rapides */}
-              <button
-                onClick={async () => {
-                  try {
-                    setRenewTarget(abonnement)
-                    setIsRenewModalOpen(true)
-                    setLoadingComptes(true)
-                    setSelectedCompteId(abonnement.id_compte || null)
-                    const res = await accountsService.getMyAccounts()
-                    if (res.success) {
-                      setComptes(Array.isArray(res.data) ? res.data : [])
-                      if (!abonnement.id_compte && Array.isArray(res.data) && res.data.length > 0) {
-                        setSelectedCompteId(res.data[0].id_compte || res.data[0].id)
+              {!abonnement.actif ? (
+                <div className="w-full mt-3 px-4 py-2 rounded-lg bg-red-100 text-red-700 text-sm flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Renouvellement désactivé (abonnement inactif)
+                </div>
+              ) : abonnement.auto_renouvellement ? (
+                <div className="w-full mt-3 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-sm flex items-center justify-center gap-2">
+                  <RefreshCw className="w-4 h-4" />
+                  Auto-renouvellement activé
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    try {
+                      setRenewTarget(abonnement)
+                      setIsRenewModalOpen(true)
+                      setLoadingComptes(true)
+                      setSelectedCompteId(abonnement.id_compte || null)
+                      const res = await accountsService.getMyAccounts()
+                      if (res.success) {
+                        setComptes(Array.isArray(res.data) ? res.data : [])
+                        if (!abonnement.id_compte && Array.isArray(res.data) && res.data.length > 0) {
+                          setSelectedCompteId(res.data[0].id_compte || res.data[0].id)
+                        }
+                      } else {
+                        alert(res.error || 'Impossible de charger les comptes')
                       }
-                    } else {
-                      alert(res.error || 'Impossible de charger les comptes')
+                    } catch (e) {
+                      alert(e?.message || 'Erreur lors du chargement des comptes')
+                    } finally {
+                      setLoadingComptes(false)
                     }
-                  } catch (e) {
-                    alert(e?.message || 'Erreur lors du chargement des comptes')
-                  } finally {
-                    setLoadingComptes(false)
-                  }
-                }}
-                className="w-full mt-3 text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                style={{ backgroundColor: colors.secondary }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
-                onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
-              >
-                <RefreshCw className="w-4 h-4" />
-                {abonnement.statut === 'Expiré' ? 'Renouveler' : 'Renouveler maintenant'}
-              </button>
+                  }}
+                  className="w-full mt-3 text-white py-2 px-4 rounded-lg hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: colors.secondary }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  {abonnement.statut === 'Expiré' ? 'Renouveler' : 'Renouveler maintenant'}
+                </button>
+              )}
 
-              {/* Badge de dernier renouvellement (mois affiché) */}
-              {renewedHistory[abonnement.id_abonnement] && (() => {
-                const d = new Date(renewedHistory[abonnement.id_abonnement])
-                const monthName = d.toLocaleDateString('fr-FR', { month: 'long' })
-                const label = monthName.charAt(0).toUpperCase() + monthName.slice(1)
-                const year = d.getFullYear()
+              {/* Badge de dernier renouvellement: backend si dispo, sinon historique local */}
+              {(() => {
+                const iso = abonnement.date_dernier_renouvellement || renewedHistory[abonnement.id_abonnement]
+                if (!iso) return null
+                const d = new Date(iso)
+                const formatted = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
                 return (
-                  <div className="mt-2 inline-flex items-center gap-2 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 text-xs font-medium">
-                    <CheckCircle className="w-3 h-3" /> Renouvelé en {label} {year}
+                  <div className={`mt-2 inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${abonnement.actif ? 'bg-emerald-50 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                    <CheckCircle className="w-3 h-3" /> Renouvelé le {formatted}
                   </div>
                 )
               })()}
@@ -647,7 +736,7 @@ export default function AbonnementsPage() {
                         />
                         <div>
                           <div className="font-medium text-gray-900">{c.nom || c.name || `Compte ${c.id_compte || c.id}`}</div>
-                          <div className="text-xs text-gray-500">Solde: {(parseFloat(c.solde) || 0).toFixed(2)}€ • {c.type || ''}</div>
+                          <div className="text-xs text-gray-500">Solde: {(parseFloat(c.solde) || 0).toFixed(2)}• {c.type || ''}</div>
                         </div>
                       </div>
                     </label>
@@ -697,24 +786,12 @@ export default function AbonnementsPage() {
                         lastProchaine = res.prochaine_echeance
                       }
                     }
-                    // Déterminer le mois couvert par le dernier renouvellement: mois précédent la prochaine échéance
-                    if (lastProchaine) {
-                      const nextDate = new Date(lastProchaine + 'T00:00:00')
-                      const coveredDate = new Date(nextDate)
-                      coveredDate.setDate(coveredDate.getDate() - 1)
-                      setRenewedHistory(prev => {
-                        const next = { ...prev, [renewTarget.id_abonnement]: coveredDate.toISOString() }
-                        try { localStorage.setItem('abos-renewed-history', JSON.stringify(next)) } catch (_e) {}
-                        return next
-                      })
-                    } else {
-                      // fallback: date du jour
-                      setRenewedHistory(prev => {
-                        const next = { ...prev, [renewTarget.id_abonnement]: new Date().toISOString() }
-                        try { localStorage.setItem('abos-renewed-history', JSON.stringify(next)) } catch (_e) {}
-                        return next
-                      })
-                    }
+                    // Enregistrer la vraie date de renouvellement (aujourd'hui)
+                    setRenewedHistory(prev => {
+                      const next = { ...prev, [renewTarget.id_abonnement]: new Date().toISOString() }
+                      try { localStorage.setItem('abos-renewed-history', JSON.stringify(next)) } catch (_e) {}
+                      return next
+                    })
                     const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
                     const normalized = Array.isArray(data) ? data.map(row => ({
                       id_abonnement: row.id_abonnement,
@@ -772,7 +849,7 @@ export default function AbonnementsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant (€)
+                  Montant 
                 </label>
                 <input
                   type="number"
@@ -814,6 +891,41 @@ export default function AbonnementsPage() {
                 />
               </div>
 
+              {/* Compte lié pour le prélèvement */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Compte à débiter (optionnel)
+                </label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  value={formData.id_compte}
+                  onChange={(e) => setFormData({ ...formData, id_compte: e.target.value })}
+                  onFocus={async () => {
+                    if (!Array.isArray(comptes) || comptes.length === 0) {
+                      try {
+                        setLoadingComptes(true)
+                        const res = await accountsService.getMyAccounts()
+                        if (res.success) setComptes(Array.isArray(res.data) ? res.data : [])
+                      } catch (_e) {
+                        // noop
+                      } finally {
+                        setLoadingComptes(false)
+                      }
+                    }
+                  }}
+                >
+                  <option value="">-- Sélectionner un compte --</option>
+                  {Array.isArray(comptes) && comptes.map(c => (
+                    <option key={c.id_compte || c.id} value={c.id_compte || c.id}>
+                      {(c.nom || c.name || `Compte ${c.id_compte || c.id}`)}
+                    </option>
+                  ))}
+                </select>
+                {loadingComptes && (
+                  <div className="text-xs text-gray-500 mt-1">Chargement des comptes...</div>
+                )}
+              </div>
+
               <div>
                 <label className="flex items-center gap-3">
                   <input
@@ -826,6 +938,24 @@ export default function AbonnementsPage() {
                     Activer les rappels
                   </span>
                 </label>
+              </div>
+
+              {/* Auto-renouvellement */}
+              <div>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                    checked={!!formData.auto_renouvellement}
+                    onChange={(e) => setFormData({ ...formData, auto_renouvellement: e.target.checked })}
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Activer l'auto-renouvellement automatique à l'échéance
+                  </span>
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Si activé, le système renouvellera automatiquement en débitant le compte choisi lorsque la date d'échéance arrive.
+                </p>
               </div>
 
               <div>
@@ -894,6 +1024,44 @@ export default function AbonnementsPage() {
                   {editingAbonnement ? 'Modifier' : 'Créer'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* (Modal de test email retirée) */}
+      {/* Modal de confirmation de suppression */}
+      {isDeleteModalOpen && deleteTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900">Confirmer la suppression</h3>
+            <p className="text-sm text-gray-600 mt-2">
+              Voulez-vous vraiment supprimer l'abonnement
+              {' '}<span className="font-medium">{deleteTarget.nom}</span> ? Cette action est irréversible.
+            </p>
+            <div className="flex gap-3 pt-6">
+              <button
+                type="button"
+                onClick={() => { setIsDeleteModalOpen(false); setDeleteTarget(null) }}
+                className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const id = deleteTarget.id_abonnement
+                  await handleDelete(id)
+                  setIsDeleteModalOpen(false)
+                  setDeleteTarget(null)
+                }}
+                className="flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200"
+                style={{ backgroundColor: '#ef4444' }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
+              >
+                Supprimer
+              </button>
             </div>
           </div>
         </div>

@@ -7,7 +7,7 @@ class AbonnementsService {
   }
 
   async create(payload) {
-    // payload: { id_user, nom, montant, frequence|fréquence, prochaine_echeance, rappel, icon?, couleur? }
+    // payload: { id_user, nom, montant, frequence|fréquence, prochaine_echeance, rappel, icon?, couleur?, id_compte?, auto_renouvellement? }
     return apiService.request(API_CONFIG.ENDPOINTS.ABONNEMENTS.CREATE, {
       method: 'POST',
       body: JSON.stringify(payload)

@@ -1,7 +1,9 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAuth } from '@/app/context/AuthContext'
 import { API_CONFIG } from '@/config/api'
+import apiService from '@/services/apiService'
+import alertThresholdsService from '@/services/alertThresholdsService'
 import { useLanguage } from '@/context/LanguageContext'
 import { useSidebar } from '@/context/SidebarContext'
 import LanguageSelector from '@/components/LanguageSelector'
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { colors } from '@/styles/colors'
+import { io as socketIO } from 'socket.io-client'
 
 const DashboardNavbar = () => {
   const { user, logout } = useAuth()
@@ -33,30 +36,93 @@ const DashboardNavbar = () => {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [alerts, setAlerts] = useState([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [hasComptesAlert, setHasComptesAlert] = useState(false)
+  const [visibleCount, setVisibleCount] = useState(5)
 
-  const notifications = [
-    {
-      id: 1,
-      title: t('dashboard.notifications.newPayment'),
-      message: '250,000 Ar de Rakoto Jean',
-      time: '2 min',
-      unread: true
-    },
-    {
-      id: 2,
-      title: t('dashboard.notifications.budgetWarning'),
-      message: 'Votre budget alimentaire est à 90%',
-      time: '1h',
-      unread: true
-    },
-    {
-      id: 3,
-      title: t('dashboard.notifications.goalAchieved'),
-      message: 'Félicitations ! Objectif épargne réalisé',
-      time: '2h',
-      unread: false
+  const sortAlertsByDate = (list) => {
+    return [...list].sort((a, b) => {
+      const ad = a?.date_declenchement || a?.date_creation || 0
+      const bd = b?.date_declenchement || b?.date_creation || 0
+      return new Date(bd).getTime() - new Date(ad).getTime()
+    })
+  }
+
+  const alertKey = (a) => `${a?.type_alerte || ''}|${a?.message || ''}`
+
+  // Charger les alertes (quasi temps réel via polling)
+  useEffect(() => {
+    let timer
+    let socket
+    const load = async () => {
+      if (!user?.id_user) return
+      try {
+        const data = await apiService.request(`/alertes/${user.id_user}`, { method: 'GET' })
+        const list = Array.isArray(data) ? data : []
+        const sorted = sortAlertsByDate(list)
+        setAlerts(sorted)
+        setUnreadCount(sorted.filter(a => a.lue === false || a.lue === 0).length)
+        setVisibleCount(5)
+      } catch (_e) {}
     }
-  ]
+    load()
+    timer = setInterval(load, 60000)
+
+    // Socket real-time
+    try {
+      socket = socketIO(API_CONFIG.BASE_URL.replace('/api', ''), { transports: ['websocket'], autoConnect: true })
+      socket.emit('auth:join', user?.id_user)
+      socket.on('alert:new', (a) => {
+        setAlerts((prev) => {
+          const key = alertKey(a)
+          if (prev.some(p => alertKey(p) === key)) return prev
+          const next = sortAlertsByDate([{ ...a, lue: 0 }, ...prev])
+          setUnreadCount((c) => c + 1)
+          setVisibleCount((v) => Math.max(5, v))
+          return next
+        })
+      })
+    } catch (_e) {}
+    return () => { if (timer) clearInterval(timer) }
+  }, [user?.id_user])
+
+  // Comparaison locale: somme des comptes vs seuil 'comptes' => notifie dans la navbar
+  useEffect(() => {
+    const checkComptesThreshold = async () => {
+      if (!user?.id_user || hasComptesAlert) return
+      try {
+        // Récupère le seuil 'comptes'
+        const threshold = await alertThresholdsService.getOne(user.id_user, 'comptes')
+        const thresholdValue = Number(threshold?.value)
+        if (!Number.isFinite(thresholdValue)) return
+        // Récupère les comptes et calcule la somme
+        const comptes = await apiService.request('/comptes/mycompte/user', { method: 'GET' })
+        const totalSolde = Array.isArray(comptes) ? comptes.reduce((s, c) => s + Number(c.solde || 0), 0) : 0
+        if (totalSolde <= thresholdValue) {
+          const alertItem = {
+            id_alerte: `local-comptes-${Date.now()}`,
+            id_user: user.id_user,
+            type_alerte: 'Alerte seuil comptes',
+            message: `Votre somme des comptes (${totalSolde}) est inférieure ou égale au seuil défini (${thresholdValue}).`,
+            date_declenchement: new Date().toISOString(),
+            lue: 0
+          }
+          setAlerts((prev) => {
+            const key = alertKey(alertItem)
+            if (prev.some(p => alertKey(p) === key)) return prev
+            const next = sortAlertsByDate([alertItem, ...prev])
+            setUnreadCount((c) => c + 1)
+            return next
+          })
+          setHasComptesAlert(true)
+        }
+      } catch (_e) {
+        // ignore
+      }
+    }
+    checkComptesThreshold()
+  }, [user?.id_user, hasComptesAlert])
 
   const handleSearch = (e) => {
     setSearchQuery(e.target.value)
@@ -83,6 +149,24 @@ const DashboardNavbar = () => {
     setShowNotifications(false)
     setShowUserMenu(false)
     setIsDarkMode(false)
+    setAlerts([])
+    setUnreadCount(0)
+    setHasComptesAlert(false)
+    setVisibleCount(5)
+  }
+
+  const markOneAsRead = async (a) => {
+    const wasUnread = (a?.lue === false || a?.lue === 0)
+    // If we have an id, persist on backend
+    if (a?.id_alerte) {
+      try { await apiService.request(`/alertes/${a.id_alerte}`, { method: 'PATCH' }) } catch (_e) {}
+      setAlerts((prev) => prev.map((it) => it.id_alerte === a.id_alerte ? { ...it, lue: true } : it))
+    } else {
+      // Fallback: mark locally by key
+      const key = alertKey(a)
+      setAlerts((prev) => prev.map((it) => (alertKey(it) === key ? { ...it, lue: true } : it)))
+    }
+    if (wasUnread) setUnreadCount((c) => Math.max(0, c - 1))
   }
 
   const handleLogout = () => {
@@ -180,35 +264,77 @@ const DashboardNavbar = () => {
             >
               <Bell className="w-5 h-5 text-gray-600 group-hover:text-green-600" />
               {/* Badge de notification */}
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white font-bold">2</span>
-              </span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-red-500 rounded-full flex items-center justify-center">
+                  <span className="text-[10px] leading-none text-white font-bold">{unreadCount}</span>
+                </span>
+              )}
             </button>
 
             {/* Dropdown notifications */}
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50">
                 <div className="p-4 border-b border-gray-100">
-                  <h3 className="font-semibold text-gray-800">{t('common.notifications')}</h3>
+                  <h3 className="font-semibold text-gray-800 flex items-center gap-2">
+                    {t('common.notifications')}
+                    <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[11px] font-semibold rounded-full bg-gray-100 text-gray-700">
+                      {unreadCount}
+                    </span>
+                  </h3>
                 </div>
                 <div className="max-h-96 overflow-y-auto">
-                  {notifications.map((notif) => (
-                    <div key={notif.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <div className="flex items-start space-x-3">
-                        <div className={`w-2 h-2 rounded-full mt-2 ${notif.unread ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-800 text-sm">{notif.title}</h4>
-                          <p className="text-gray-600 text-xs mt-1">{notif.message}</p>
-                          <p className="text-gray-400 text-xs mt-2">{notif.time}</p>
+                  {alerts.length === 0 ? (
+                    <div className="p-4 text-sm text-gray-500">{t('common.noNotifications') || 'Aucune notification'}</div>
+                  ) : (
+                    alerts.slice(0, visibleCount).map((a) => (
+                      <button key={a.id_alerte || `${a.id_user}-${a.type_alerte}-${a.date_declenchement}`} onClick={() => markOneAsRead(a)} className="w-full text-left p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start space-x-3">
+                          {(() => { const isUnread = a.lue === false || a.lue === 0; return (
+                            <div className={`w-2 h-2 rounded-full mt-2 ${isUnread ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                          )})()}
+                          <div className="flex-1">
+                            {(() => { const isUnread = a.lue === false || a.lue === 0; return (
+                              <div className="flex items-center gap-2">
+                                <h4 className={`${isUnread ? 'font-semibold' : 'font-medium'} text-gray-800 text-sm`}>{a.type_alerte || 'Alerte'}</h4>
+                                {isUnread && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-green-50 text-green-700 text-[10px] font-semibold">Non lue</span>
+                                )}
+                              </div>
+                            )})()}
+                            <p className={`text-xs mt-1 ${((a.lue === false || a.lue === 0) ? 'text-gray-700' : 'text-gray-600')}`}>{a.message || ''}</p>
+                            {a.date_declenchement && (
+                              <p className="text-gray-400 text-xs mt-2">{new Date(a.date_declenchement).toLocaleString()}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                      </button>
+                    ))
+                  )}
                 </div>
-                <div className="p-3 border-t border-gray-100">
-                  <button className="w-full text-center text-green-600 hover:text-green-700 font-medium text-sm py-2 hover:bg-green-50 rounded-lg transition-colors">
-                    {t('dashboard.notifications.viewAll')}
-                  </button>
+                <div className="p-3 border-t border-gray-100 flex items-center gap-2">
+                  <div className="flex-1 flex items-center gap-2">
+                    <button
+                      onClick={() => setVisibleCount((v) => v + 5)}
+                      disabled={visibleCount >= alerts.length}
+                      className={`flex-1 text-center font-medium text-sm py-2 rounded-lg transition-colors ${visibleCount >= alerts.length ? 'text-gray-400 bg-gray-50 cursor-not-allowed' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}`}
+                    >
+                      Afficher plus
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          if (!user?.id_user) return
+                          await apiService.request(`/alertes/${user.id_user}/read-all`, { method: 'PATCH' })
+                          setAlerts((prev) => prev.map((a) => ({ ...a, lue: true })))
+                          setUnreadCount(0)
+                          setHasComptesAlert(false)
+                        } catch (_e) {}
+                      }}
+                      className="flex-1 text-center text-gray-600 hover:text-gray-700 font-medium text-sm py-2 hover:bg-gray-50 rounded-lg transition-colors"
+                    >
+                      Marquer tout comme lu
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

@@ -61,6 +61,12 @@ export const API_CONFIG = {
       INSIGHTS: '/ai/insights',
       PREDICT: '/ai/predict',
       RECOMMENDATIONS: '/ai/recommendations'
+    },
+    ALERT_THRESHOLDS: {
+      LIST_BY_USER: (userId) => `/alert-thresholds/${userId}`,
+      GET_ONE: (userId, domain) => `/alert-thresholds/${userId}/${domain}`,
+      UPSERT: '/alert-thresholds',
+      DELETE_ONE: (userId, domain) => `/alert-thresholds/${userId}/${domain}`
     }
   }
 }
