@@ -45,11 +45,21 @@ class ApiService {
         // attach extra context for debugging
         error.status = response.status
         error.payload = data ?? rawText
+        if (process.env.NEXT_PUBLIC_DEBUG_API === '1') {
+          // eslint-disable-next-line no-console
+          console.warn('[API ERROR]', { url, status: response.status, message, payload: error.payload })
+        }
         throw error
+      }
+
+      if (process.env.NEXT_PUBLIC_DEBUG_API === '1') {
+        // eslint-disable-next-line no-console
+        console.log('[API OK]', { url, status: response.status, data: data ?? rawText })
       }
 
       return data ?? rawText
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Erreur API:', error, error?.payload)
       throw error
     }

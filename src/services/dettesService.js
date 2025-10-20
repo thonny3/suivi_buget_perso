@@ -18,6 +18,20 @@ class DettesService {
   async remove(id) {
     return Api.request(`${BASE}/${id}`, { method: 'DELETE' })
   }
+
+  // Aliases to match page usage
+  async createDette(payload) {
+    return this.create(payload)
+  }
+  async updateDette(id, payload) {
+    return this.update(id, payload)
+  }
+  async deleteDette(id) {
+    return this.remove(id)
+  }
+  async addRemboursement(id_dette, payload) {
+    return Api.request(`${BASE}/${id_dette}/remboursements`, { method: 'POST', body: JSON.stringify(payload) })
+  }
 }
 
 export default new DettesService()

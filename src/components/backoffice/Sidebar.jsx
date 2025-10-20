@@ -55,6 +55,13 @@ const Sidebar = () => {
       href: withLocale('/dashboard/portefeuille')
     },
     {
+      id: 'investissements',
+      label: 'Investissements',
+      icon: TrendingUp,
+      description: 'Suivi des investissements',
+      href: withLocale('/dashboard/investissement')
+    },
+    {
       id: 'depenses',
       label: 'Dépenses',
       icon: CreditCard,

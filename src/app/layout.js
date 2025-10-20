@@ -3,6 +3,7 @@ import "./globals.css";
 import "../styles/toast.css";
 import { AuthProvider } from "./context/AuthContext";
 import { LanguageProvider } from "../context/LanguageContext";
+import CustomToaster from "@/components/CustomToaster";
 
 
 const geistSans = localFont({
@@ -30,6 +31,7 @@ export default function RootLayout({ children }) {
       
           <LanguageProvider>
             <AuthProvider>
+              <CustomToaster />
               {children}
             </AuthProvider>
           </LanguageProvider>

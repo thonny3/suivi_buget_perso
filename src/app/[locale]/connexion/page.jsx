@@ -1,9 +1,10 @@
 "use client"
 import LoadingScreen from '@/components/LoadingScreen'
 import { useAuth } from '@/app/context/AuthContext'
-import { ArrowLeft, Lock, LogIn, User, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Lock, LogIn, User, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {signIn} from 'next-auth/react'
 import Logo from '@/components/Logo'
 import { colors, customClasses } from '@/styles/colors'
@@ -39,6 +40,7 @@ export default function ConnexionPage({ params }) {
   })
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showPwd, setShowPwd] = useState(false)
 
   // Loading effet au montage du composant
   useEffect(() => {
@@ -240,14 +242,22 @@ export default function ConnexionPage({ params }) {
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                type="password"
+                type={showPwd ? 'text' : 'password'}
                 value={formData.password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none text-sm ${
+                className={`w-full pl-10 pr-10 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#93A664] focus:border-[#93A664] transition-all outline-none text-sm ${
                   errors.password ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPwd(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                aria-label={showPwd ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+              >
+                {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
             {errors.password && (
               <div className="flex items-center mt-1 text-red-500 text-xs">
@@ -258,9 +268,9 @@ export default function ConnexionPage({ params }) {
           </div>
 
           <div className="flex justify-end">
-            <button className="hover:underline text-xs font-medium" style={{ color: colors.secondary }}>
+            <Link href={`/${locale}/forgot-password`} className="hover:underline text-xs font-medium" style={{ color: colors.secondary }}>
               {t('login.forgotPassword')}
-            </button>
+            </Link>
           </div>
 
           <button

@@ -4,7 +4,11 @@ export const API_CONFIG = {
     USERS: {
       REGISTER: '/users/register',
       LOGIN: '/users/login',
-      VERIFY: '/users/verify'
+      VERIFY: '/users/verify',
+      FORGOT_PASSWORD: '/users/forgot-password',
+      RESET_PASSWORD: '/users/reset-password',
+      FORGOT_PASSWORD_OTP: '/users/forgot-password-otp',
+      RESET_PASSWORD_OTP: '/users/reset-password-otp'
     },
     ACCOUNTS: {
       LIST: '/comptes',

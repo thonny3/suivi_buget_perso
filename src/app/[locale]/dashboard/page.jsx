@@ -1,5 +1,5 @@
 "use client"
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   TrendingUp,
   TrendingDown,
@@ -15,71 +15,156 @@ import {
 } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts'
 import { colors } from '@/styles/colors'
+import dashboardService from '@/services/dashboardService'
 
 export default function Dashboard({ params }) {
   const { locale } = params
 
-  // Données simulées pour les graphiques
-  const revenueData = [
-    { month: 'Jan', revenue: 4000, expenses: 2400 },
-    { month: 'Fév', revenue: 3000, expenses: 1398 },
-    { month: 'Mar', revenue: 2000, expenses: 9800 },
-    { month: 'Avr', revenue: 2780, expenses: 3908 },
-    { month: 'Mai', revenue: 1890, expenses: 4800 },
-    { month: 'Jun', revenue: 2390, expenses: 3800 },
-    { month: 'Jul', revenue: 3490, expenses: 4300 },
-  ]
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [summary, setSummary] = useState({
+    totalBalance: 0,
+    monthlyIncome: 0,
+    monthlyExpenses: 0,
+    goalsAchieved: 0,
+    revenueData: [],
+    expenseCategories: [],
+    recentTransactions: []
+  })
+  const [currencyCode, setCurrencyCode] = useState('EUR')
 
-  const expenseCategories = [
-    { name: 'Alimentation', value: 400, color: '#ef4444' },
-    { name: 'Transport', value: 300, color: '#f97316' },
-    { name: 'Logement', value: 300, color: '#eab308' },
-    { name: 'Loisirs', value: 200, color: '#22c55e' },
-    { name: 'Santé', value: 150, color: '#3b82f6' },
-    { name: 'Autres', value: 100, color: '#a855f7' }
-  ]
+  const currentMonthLabel = useMemo(() => {
+    try {
+      return new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    } catch {
+      return ''
+    }
+  }, [])
 
-  const monthlyBudget = [
-    { category: 'Alimentation', budget: 500, spent: 420 },
-    { category: 'Transport', budget: 200, spent: 180 },
-    { category: 'Logement', budget: 800, spent: 800 },
-    { category: 'Loisirs', budget: 300, spent: 250 },
-  ]
+  const currencySymbol = useMemo(() => {
+    const code = (currencyCode || '').toString().trim().toUpperCase()
+    if (code === 'MGA') return 'Ar'
+    if (code === 'EUR') return '€'
+    if (code === 'USD') return '$'
+    if (code === 'GBP') return '£'
+    if (code === 'XOF') return 'CFA'
+    return code || '€'
+  }, [currencyCode])
 
-  const statsCards = [
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        setError('')
+        setLoading(true)
+        const data = await dashboardService.getSummary()
+        if (!mounted) return
+        setSummary(data || {})
+      } catch (e) {
+        if (!mounted) return
+        setError(e?.message || 'Erreur de chargement du tableau de bord')
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const lastThreeMonthsData = useMemo(() => {
+    const data = Array.isArray(summary.revenueData) ? summary.revenueData : []
+    // Build a set of the last 3 months in YYYY-MM
+    const now = new Date()
+    const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const months = [0, 1, 2].map((i) => {
+      const dt = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      return ym(dt)
+    })
+    const last3 = new Set(months)
+    // Filter, sort ascending by month, and add a pretty label
+    const filtered = data
+      .filter((d) => d && typeof d.month === 'string' && last3.has(d.month))
+      .sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0))
+      .map((d) => {
+        const [yearStr, monthStr] = d.month.split('-')
+        const m = Number(monthStr) - 1
+        const y = Number(yearStr)
+        const label = new Date(y, m, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+        return { ...d, label }
+      })
+    return filtered
+  }, [summary.revenueData])
+
+  // Charger la devise utilisateur depuis localStorage (même logique que d'autres pages)
+  useEffect(() => {
+    try {
+      const rawUser = localStorage.getItem('user')
+      if (rawUser) {
+        try {
+          const user = JSON.parse(rawUser)
+          const code = (user?.devise || '').toString().trim().toUpperCase()
+          if (code) {
+            setCurrencyCode(code)
+            return
+          }
+        } catch {}
+      }
+      const stored = localStorage.getItem('devise') || localStorage.getItem('currency') || localStorage.getItem('currencyCode')
+      if (stored && typeof stored === 'string') {
+        setCurrencyCode(stored.toUpperCase())
+      }
+    } catch {}
+  }, [])
+
+  const statsCards = useMemo(() => ([
     {
       title: 'Solde Total',
-      value: '25,430 €',
-      change: '+12.5%',
+      value: `${Number(summary.totalBalance || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
+      change: '',
       changeType: 'positive',
       icon: DollarSign,
       color: 'from-blue-500 to-blue-600'
     },
     {
       title: 'Revenus du mois',
-      value: '3,200 €',
-      change: '+8.2%',
+      value: `${Number(summary.monthlyIncome || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
+      change: '',
       changeType: 'positive',
       icon: TrendingUp,
       color: 'from-green-500 to-green-600'
     },
     {
       title: 'Dépenses du mois',
-      value: '1,850 €',
-      change: '-5.1%',
+      value: `${Number(summary.monthlyExpenses || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
+      change: '',
       changeType: 'negative',
       icon: TrendingDown,
       color: 'from-red-500 to-red-600'
     },
     {
       title: 'Objectifs atteints',
-      value: '3/5',
-      change: '+2 ce mois',
+      value: `${Number(summary.goalsAchieved || 0)}`,
+      change: '',
       changeType: 'positive',
       icon: Target,
       color: 'from-purple-500 to-purple-600'
     }
-  ]
+  ]), [summary])
+
+  const expenseCategoryLegend = useMemo(() => {
+    const items = Array.isArray(summary.expenseCategories) ? summary.expenseCategories : []
+    const total = items.reduce((acc, it) => acc + Number(it?.value || 0), 0)
+    return items.map((it) => {
+      const value = Number(it?.value || 0)
+      const pct = total > 0 ? Math.round((value / total) * 100) : 0
+      return {
+        name: it?.name || 'Autres',
+        color: it?.color || '#999',
+        value,
+        percent: pct
+      }
+    })
+  }, [summary.expenseCategories])
 
   return (
     <div className="p-6">
@@ -89,6 +174,12 @@ export default function Dashboard({ params }) {
       </div>
 
       {/* Cartes de statistiques */}
+      {loading && (
+        <div className="mb-4 text-gray-600">Chargement des données...</div>
+      )}
+      {error && (
+        <div className="mb-4 text-red-600">{error}</div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statsCards.map((card, index) => {
           const Icon = card.icon
@@ -133,9 +224,9 @@ export default function Dashboard({ params }) {
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData}>
+              <LineChart data={lastThreeMonthsData}>
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
+                <XAxis dataKey="label" />
                 <YAxis />
                 <Tooltip />
                 <Line 
@@ -160,7 +251,7 @@ export default function Dashboard({ params }) {
         {/* Graphique des catégories de dépenses */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Dépenses par catégorie</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Dépenses par catégorie — {currentMonthLabel}</h3>
             <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <MoreHorizontal className="w-5 h-5 text-gray-500" />
             </button>
@@ -169,7 +260,7 @@ export default function Dashboard({ params }) {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={expenseCategories}
+                  data={summary.expenseCategories || []}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -178,13 +269,25 @@ export default function Dashboard({ params }) {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {expenseCategories.map((entry, index) => (
+                  {(summary.expenseCategories || []).map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+          {/* Légende personnalisée pour afficher aussi les catégories à 0% */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {expenseCategoryLegend.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between text-sm">
+                <div className="flex items-center space-x-2">
+                  <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: item.color }}></span>
+                  <span className="text-gray-700">{item.name}</span>
+                </div>
+                <span className="text-gray-500">{item.percent}%</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -199,13 +302,15 @@ export default function Dashboard({ params }) {
             </button>
           </div>
           <div className="space-y-4">
-            {monthlyBudget.map((item, index) => {
-              const percentage = (item.spent / item.budget) * 100
+            {(summary.expenseCategories || []).slice(0,4).map((item, index) => {
+              const budget = 100
+              const spent = item.value || 0
+              const percentage = (spent / budget) * 100
               return (
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">{item.category}</span>
-                    <span className="text-sm text-gray-500">{item.spent}€ / {item.budget}€</span>
+                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
+                    <span className="text-sm text-gray-500">{spent.toLocaleString('fr-FR')}{` ${currencySymbol}`} / {budget}{` ${currencySymbol}`}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -225,12 +330,7 @@ export default function Dashboard({ params }) {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Transactions récentes</h3>
           <div className="space-y-3">
-            {[
-              { name: 'Salaire', amount: '+2,500 €', type: 'income', date: 'Aujourd\'hui' },
-              { name: 'Courses', amount: '-85 €', type: 'expense', date: 'Hier' },
-              { name: 'Restaurant', amount: '-45 €', type: 'expense', date: 'Hier' },
-              { name: 'Transport', amount: '-25 €', type: 'expense', date: 'Il y a 2 jours' }
-            ].map((transaction, index) => (
+            {(summary.recentTransactions || []).map((transaction, index) => (
               <div key={index} className="flex items-center justify-between py-2">
                 <div className="flex items-center space-x-3">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -244,13 +344,13 @@ export default function Dashboard({ params }) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">{transaction.name}</p>
-                    <p className="text-xs text-gray-500">{transaction.date}</p>
+                    <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>
                 <span className={`text-sm font-medium ${
                   transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
                 }`}>
-                  {transaction.amount}
+                  {`${transaction.type === 'income' ? '+' : '-'}${Number(transaction.amount || 0).toLocaleString('fr-FR')} ${currencySymbol}`}
                 </span>
               </div>
             ))}
