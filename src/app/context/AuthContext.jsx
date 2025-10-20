@@ -73,13 +73,20 @@ export const AuthProvider = ({ children }) => {
     return user !== null && apiService.isAuthenticated()
   }
 
+  const getCurrentUser = async () => {
+    const resp = await apiService.getCurrentUser()
+    if (resp?.user) setUser(resp.user)
+    return resp
+  }
+
   const value = {
     user,
     isLoading,
     login,
     register,
     logout,
-    isAuthenticated
+    isAuthenticated,
+    getCurrentUser
   }
 
   return (

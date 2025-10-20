@@ -45,6 +45,17 @@ class ApiService {
         // attach extra context for debugging
         error.status = response.status
         error.payload = data ?? rawText
+        
+        // Gestion spéciale des erreurs d'authentification
+        if (response.status === 401 || response.status === 403) {
+          // Token invalide ou accès refusé - déconnecter l'utilisateur
+          this.logout()
+          // Rediriger vers la page de connexion si on est dans le navigateur
+          if (typeof window !== 'undefined') {
+            window.location.href = '/connexion'
+          }
+        }
+        
         if (process.env.NEXT_PUBLIC_DEBUG_API === '1') {
           // eslint-disable-next-line no-console
           console.warn('[API ERROR]', { url, status: response.status, message, payload: error.payload })

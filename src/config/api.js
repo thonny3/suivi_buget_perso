@@ -8,7 +8,10 @@ export const API_CONFIG = {
       FORGOT_PASSWORD: '/users/forgot-password',
       RESET_PASSWORD: '/users/reset-password',
       FORGOT_PASSWORD_OTP: '/users/forgot-password-otp',
-      RESET_PASSWORD_OTP: '/users/reset-password-otp'
+      RESET_PASSWORD_OTP: '/users/reset-password-otp',
+      LIST: '/users',
+      UPDATE: (id) => `/users/${id}`,
+      DELETE: (id) => `/users/${id}`
     },
     ACCOUNTS: {
       LIST: '/comptes',

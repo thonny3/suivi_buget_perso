@@ -19,9 +19,11 @@ import {
   ArrowLeftRight
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
+import { useAuth } from '@/app/context/AuthContext'
 
 const Sidebar = () => {
   const { isOpen } = useSidebar()
+  const { user } = useAuth()
   const pathname = usePathname()
 
   // Préfixe locale à partir de l'URL (ex: /fr/...)
@@ -32,7 +34,7 @@ const Sidebar = () => {
 
   const withLocale = (path) => `${currentLocale}${path}`
 
-  const menuItems = [
+  const baseMenu = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -40,6 +42,33 @@ const Sidebar = () => {
       description: 'Accueil',
       href: withLocale('/dashboard')
     },
+  ]
+
+  const adminMenu = [
+    {
+      id: 'categories-revenus',
+      label: 'Catégories revenus',
+      icon: TrendingUp,
+      description: 'Gestion des catégories revenus',
+      href: withLocale('/dashboard/admin/categories/revenus')
+    },
+    {
+      id: 'categories-depenses',
+      label: 'Catégories dépenses',
+      icon: CreditCard,
+      description: 'Gestion des catégories dépenses',
+      href: withLocale('/dashboard/admin/categories/depenses')
+    },
+    {
+      id: 'admin-users',
+      label: 'Utilisateurs',
+      icon: User,
+      description: 'Gestion des utilisateurs',
+      href: withLocale('/dashboard/admin/users')
+    }
+  ]
+
+  const userMenu = [
     {
       id: 'dettes',
       label: 'Dettes',
@@ -125,6 +154,8 @@ const Sidebar = () => {
       href: withLocale('/dashboard/ia')
     }
   ]
+
+  const menuItems = user?.role === 'admin' ? [...baseMenu, ...adminMenu] : [...baseMenu, ...userMenu]
 
   const handleLogout = () => {
     console.log('Déconnexion...')
