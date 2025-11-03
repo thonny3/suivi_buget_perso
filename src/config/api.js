@@ -1,5 +1,5 @@
 export const API_CONFIG = {
-  BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
+  BASE_URL: 'http://192.168.1.28:3002/api',
   ENDPOINTS: {
     USERS: {
       REGISTER: '/users/register',
@@ -67,7 +67,8 @@ export const API_CONFIG = {
     AI: {
       INSIGHTS: '/ai/insights',
       PREDICT: '/ai/predict',
-      RECOMMENDATIONS: '/ai/recommendations'
+      RECOMMENDATIONS: '/ai/recommendations',
+      CHAT: '/ai/chat'
     },
     ALERT_THRESHOLDS: {
       LIST_BY_USER: (userId) => `/alert-thresholds/${userId}`,

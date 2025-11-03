@@ -24,6 +24,7 @@ import { colors } from '@/styles/colors'
 import dashboardService from '@/services/dashboardService'
 import adminStatsService from '@/services/adminStatsService'
 import { useAuth } from '@/app/context/AuthContext'
+import AssistantChat from '@/components/AssistantChat'
 
 export default function Dashboard({ params }) {
   const { locale } = params
@@ -692,6 +693,7 @@ export default function Dashboard({ params }) {
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  innerRadius={50}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -718,6 +720,13 @@ export default function Dashboard({ params }) {
           </div>
         </div>
       </div>
+      )}
+
+      {/* Assistant IA - Masqué pour les admins */}
+      {userRole !== 'admin' && (
+        <div className="mb-8">
+          <AssistantChat />
+        </div>
       )}
 
       {/* Budget mensuel - Masqué pour les admins */}

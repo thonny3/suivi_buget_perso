@@ -202,6 +202,9 @@ export default function DettesPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [userId, setUserId] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
@@ -223,13 +226,56 @@ export default function DettesPage() {
 
   useEffect(() => { load() }, [])
 
+  // Réinitialiser/clamp la page quand la liste change
+  useEffect(() => {
+    const total = Math.max(1, Math.ceil(items.length / itemsPerPage))
+    if (currentPage > total) setCurrentPage(total)
+    if (currentPage < 1) setCurrentPage(1)
+  }, [items.length, itemsPerPage])
+
+  // Charger id_user depuis localStorage ou API
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('user')
+      if (stored) {
+        const u = JSON.parse(stored)
+        if (u?.id_user) setUserId(u.id_user)
+      }
+    } catch (_) {}
+    // Fallback via API si non trouvé
+    if (!userId) {
+      (async () => {
+        try {
+          const res = await dettesService?.getDettes?.() // noop call to ensure token/session; ignore result
+        } catch (_) {}
+        try {
+          const resp = await (await import('@/services/apiService')).default.getCurrentUser()
+          if (resp?.user?.id_user) setUserId(resp.user.id_user)
+        } catch (_) {}
+      })()
+    }
+  }, [])
+
   const handleSave = async (payload) => {
     try {
       setError('')
+      // Déduire automatiquement le statut côté UI pour cohérence
+      const remaining = Number(payload?.montant_restant ?? payload?.montant_initial ?? 0)
+      const initial = Number(payload?.montant_initial ?? 0)
+      const deadline = payload?.date_fin_prevue ? new Date(payload.date_fin_prevue) : null
+      const today = new Date()
+      let derived = 'en cours'
+      if (deadline && !isNaN(deadline) && deadline < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        derived = 'en retard'
+      }
+      if (!Number.isNaN(remaining) && !Number.isNaN(initial) && remaining === initial) {
+        derived = 'terminé'
+      }
+      const withStatus = { ...payload, statut: derived }
       if (editing) {
-        await dettesService.updateDette(editing.id_dette, payload)
+        await dettesService.updateDette(editing.id_dette, withStatus)
       } else {
-        await dettesService.createDette(payload)
+        await dettesService.createDette(withStatus)
       }
       await load()
     } catch (e) {
@@ -254,7 +300,12 @@ export default function DettesPage() {
     if (!target) return
     try {
       setError('')
-      await dettesService.addRemboursement(target.id_dette, payment)
+      const payload = {
+        ...payment,
+        id_user: userId,
+        id_dette: target.id_dette
+      }
+      await dettesService.addRemboursement(target.id_dette, payload)
       await load()
     } catch (e) {
       setError(e.message || 'Erreur lors de l\'ajout du paiement')
@@ -265,6 +316,41 @@ export default function DettesPage() {
 
   const totalRestant = items.reduce((s, d) => s + Number(d.montant_restant || 0), 0)
   const totalInitial = items.reduce((s, d) => s + Number(d.montant_initial || 0), 0)
+
+  // Statut dérivé pour affichage
+  const deriveStatus = (d) => {
+    const remaining = Number(d?.montant_restant ?? 0)
+    const initial = Number(d?.montant_initial ?? 0)
+    const deadline = d?.date_fin_prevue ? new Date(d.date_fin_prevue) : null
+    const today = new Date()
+    if (deadline && !isNaN(deadline) && deadline < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+      return 'en retard'
+    }
+    if (!Number.isNaN(remaining) && !Number.isNaN(initial) && remaining === initial) return 'terminé'
+    return 'en cours'
+  }
+
+  const renderStatusBadge = (status) => {
+    const map = {
+      'terminé': { bg: 'bg-green-100', text: 'text-green-700', label: 'Terminé' },
+      'en retard': { bg: 'bg-red-100', text: 'text-red-700', label: 'En retard' },
+      'en cours': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'En cours' }
+    }
+    const s = map[status] || map['en cours']
+    return (
+      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.text}`}>
+        {s.label}
+      </span>
+    )
+  }
+
+  // Pagination
+  const totalPages = Math.ceil(items.length / itemsPerPage) || 1
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage)
+  const goPrev = () => setCurrentPage((p) => Math.max(1, p - 1))
+  const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1))
+  const goTo = (n) => setCurrentPage(n)
 
   return (
     <div className="min-h-screen p-6">
@@ -308,13 +394,14 @@ export default function DettesPage() {
                   <th className="text-right py-4 px-6 text-gray-600 font-medium">Montant initial</th>
                   <th className="text-right py-4 px-6 text-gray-600 font-medium">Restant</th>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Dates</th>
+                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Statut</th>
                   <th className="text-center py-4 px-6 text-gray-600 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="py-10 text-center text-gray-500">Chargement...</td></tr>
-                ) : items.map((d) => (
+                  <tr><td colSpan={7} className="py-10 text-center text-gray-500">Chargement...</td></tr>
+                ) : paginatedItems.map((d) => (
                   <tr key={d.id_dette} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-3">
@@ -333,6 +420,9 @@ export default function DettesPage() {
                       <div className="flex items-center space-x-2 mt-1"><Calendar className="w-4 h-4 text-gray-400" /><span>Fin prévue: {d.date_fin_prevue ? new Date(d.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}</span></div>
                     </td>
                     <td className="py-4 px-6">
+                      {renderStatusBadge(deriveStatus(d))}
+                    </td>
+                    <td className="py-4 px-6">
                       <div className="flex items-center justify-center space-x-2">
                         <button onClick={() => { setEditing(d); setIsFormOpen(true) }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Modifier"><Edit2 className="w-4 h-4" /></button>
                         <button onClick={() => handleDelete(d)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
@@ -342,9 +432,36 @@ export default function DettesPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot></tfoot>
             </table>
           </div>
         </div>
+
+        {/* Pagination alignée sur Dépenses */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <p className="text-gray-600 text-sm">
+              Affichage de {startIndex + 1} à {Math.min(startIndex + itemsPerPage, items.length)} sur {items.length} résultats
+            </p>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={goPrev}
+                disabled={currentPage === 1}
+                className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Précédent
+              </button>
+              <span className="text-sm text-gray-500">Page {currentPage} / {totalPages}</span>
+              <button
+                onClick={goNext}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Suivant
+              </button>
+            </div>
+          </div>
+        )}
 
         <DetteForm isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setEditing(null) }} onSave={handleSave} item={editing} />
         <PaiementForm isOpen={isPaymentOpen} onClose={() => { setIsPaymentOpen(false); setTarget(null) }} onSave={savePayment} dette={target} />

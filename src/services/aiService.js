@@ -13,6 +13,12 @@ class AiService {
   async getRecommendations() {
     return Api.request(AI.RECOMMENDATIONS, { method: 'GET' })
   }
+  async chat(message, context = '') {
+    return Api.request(AI.CHAT, {
+      method: 'POST',
+      body: JSON.stringify({ message, context })
+    })
+  }
 }
 
 export default new AiService()
