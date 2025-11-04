@@ -30,6 +30,7 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
     date_fin_prevue: item?.date_fin_prevue ? new Date(item.date_fin_prevue).toISOString().slice(0,10) : '',
     paiement_mensuel: item?.paiement_mensuel ?? 0,
     creancier: item?.creancier || '',
+    sens: item?.sens || 'moi',
     statut: item?.statut || 'en cours',
     type: item?.type || 'personne'
   })
@@ -45,6 +46,7 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
       date_fin_prevue: item?.date_fin_prevue ? new Date(item.date_fin_prevue).toISOString().slice(0,10) : '',
       paiement_mensuel: item?.paiement_mensuel ?? 0,
       creancier: item?.creancier || '',
+      sens: item?.sens || 'moi',
       statut: item?.statut || 'en cours',
       type: item?.type || 'personne'
     })
@@ -53,7 +55,7 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
   const validate = () => {
     const e = {}
     if (!formData.nom.trim()) e.nom = 'Nom requis'
-    if (!formData.montant_initial || Number(formData.montant_initial) <= 0) e.montant_initial = 'Montant initial > 0'
+    if (!formData.montant_initial || Number(formData.montant_initial) <= 0) e.montant_initial = 'Montant > 0'
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -63,12 +65,12 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
     onSave({
       nom: formData.nom,
       montant_initial: Number(formData.montant_initial),
-      montant_restant: formData.montant_restant === '' ? undefined : Number(formData.montant_restant),
       taux_interet: Number(formData.taux_interet || 0),
       date_debut: formData.date_debut,
       date_fin_prevue: formData.date_fin_prevue || null,
       paiement_mensuel: Number(formData.paiement_mensuel || 0),
       creancier: formData.creancier,
+      sens: formData.sens,
       statut: formData.statut,
       type: formData.type
     })
@@ -87,13 +89,22 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Montant initial</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Montant</label>
             <input type="number" step="0.01" value={formData.montant_initial} onChange={(e)=>setFormData(v=>({ ...v, montant_initial: e.target.value }))} className={inputClass(!!errors.montant_initial)} placeholder="0.00" />
             {errors.montant_initial && <p className="text-red-500 text-sm mt-1">{errors.montant_initial}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Montant restant</label>
-            <input type="number" step="0.01" value={formData.montant_restant} onChange={(e)=>setFormData(v=>({ ...v, montant_restant: e.target.value }))} className={inputClass(false)} placeholder="Laisser vide pour égal au montant initial" />
+            <label className="block text-sm font-medium text-gray-700 mb-2">Sens du prêt</label>
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-2">
+                <input type="radio" name="sens" value="moi" checked={formData.sens === 'moi'} onChange={(e)=>setFormData(v=>({ ...v, sens: e.target.value }))} />
+                <span>Moi-même (j’ai prêté de l’argent)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input type="radio" name="sens" value="autre" checked={formData.sens === 'autre'} onChange={(e)=>setFormData(v=>({ ...v, sens: e.target.value }))} />
+                <span>Autre personne (on m’a prêté)</span>
+              </label>
+            </div>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -172,6 +183,13 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette }) => {
     <Modal isOpen={isOpen} onClose={onClose} title={`Ajouter un paiement — ${dette?.nom || ''}`} size="md">
       {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded">{error}</div>}
       <div className="space-y-4">
+        {dette?.sens && (
+          <div className="text-sm text-gray-600">
+            {dette.sens === 'moi'
+              ? 'Ce paiement sera enregistré comme une sortie d’argent depuis votre compte.'
+              : 'Ce paiement sera enregistré comme une entrée d’argent sur votre compte.'}
+          </div>
+        )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Montant</label>
           <input type="number" step="0.01" value={formData.montant} onChange={(e)=>setFormData(v=>({ ...v, montant: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" placeholder="0.00" />
@@ -203,6 +221,7 @@ export default function DettesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [userId, setUserId] = useState(null)
+  const [currency, setCurrency] = useState('MGA')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(10)
 
@@ -210,6 +229,12 @@ export default function DettesPage() {
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [target, setTarget] = useState(null)
+
+  // Filtres
+  const [statusFilter, setStatusFilter] = useState('') // '', 'en cours', 'en retard', 'terminé'
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   const load = async () => {
     try {
@@ -246,6 +271,7 @@ export default function DettesPage() {
         try {
           const resp = await (await import('@/services/apiService')).default.getCurrentUser()
           if (resp?.user?.id_user) setUserId(resp.user.id_user)
+          if (resp?.user?.devise) setCurrency(resp.user.devise)
         } catch (_) {}
       })()
     }
@@ -311,6 +337,10 @@ export default function DettesPage() {
 
   const totalRestant = items.reduce((s, d) => s + Number(d.montant_restant || 0), 0)
   const totalInitial = items.reduce((s, d) => s + Number(d.montant_initial || 0), 0)
+  const countTotal = items.length
+
+  const displayUnit = (cur) => (cur === 'MGA' ? 'Ar' : cur || '')
+  const formatMoney = (amount) => `${Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(amount || 0))} ${displayUnit(currency)}`
 
   // Statut dérivé pour affichage
   const deriveStatus = (d) => {
@@ -325,10 +355,32 @@ export default function DettesPage() {
     return 'en cours'
   }
 
+  // Appliquer filtres
+  const filteredItems = items.filter((d) => {
+    const statusOk = !statusFilter || deriveStatus(d) === statusFilter
+    const date = d?.date_debut ? new Date(d.date_debut) : null
+    let dateOk = true
+    if (dateFrom) {
+      const from = new Date(dateFrom)
+      dateOk = dateOk && date && date >= from
+    }
+    if (dateTo) {
+      const to = new Date(dateTo)
+      // inclure la dateTo entière
+      const endDay = new Date(to.getFullYear(), to.getMonth(), to.getDate(), 23, 59, 59, 999)
+      dateOk = dateOk && date && date <= endDay
+    }
+    return statusOk && dateOk
+  })
+
+  const countEnRetard = filteredItems.reduce((c, d) => c + (deriveStatus(d) === 'en retard' ? 1 : 0), 0)
+  const countEnCours = filteredItems.reduce((c, d) => c + (deriveStatus(d) === 'en cours' ? 1 : 0), 0)
+  const countTermine = filteredItems.reduce((c, d) => c + (deriveStatus(d) === 'terminé' ? 1 : 0), 0)
+
   // Pagination
-  const totalPages = Math.ceil(items.length / itemsPerPage) || 1
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1
   const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedItems = items.slice(startIndex, startIndex + itemsPerPage)
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage)
   const goPrev = () => setCurrentPage((p) => Math.max(1, p - 1))
   const goNext = () => setCurrentPage((p) => Math.min(totalPages, p + 1))
   const goTo = (n) => setCurrentPage(n)
@@ -357,25 +409,105 @@ export default function DettesPage() {
             <h1 className="text-3xl font-bold text-gray-900">Mes Dettes</h1>
             <p className="text-gray-600 mt-1">Suivez vos dettes et remboursements</p>
           </div>
-          <div className="flex space-x-3 mt-4 md:mt-0">
+          <div className="flex flex-col md:flex-row md:items-center gap-3 mt-4 md:mt-0">
+            <button onClick={() => setFiltersOpen((v)=>!v)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+              {filtersOpen ? 'Masquer les filtres' : 'Afficher les filtres'}
+            </button>
             <button onClick={() => { setEditing(null); setIsFormOpen(true) }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 shadow-lg">
               <Plus className="w-5 h-5" /><span>Nouvelle dette</span>
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {filtersOpen && (
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 mt-4">
+            <div className="flex flex-col gap-4">
+              <div>
+                <div className="text-sm font-medium text-gray-700 mb-2">Statut</div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: '', label: 'Tous' },
+                    { key: 'en cours', label: 'En cours' },
+                    { key: 'en retard', label: 'En retard' },
+                    { key: 'terminé', label: 'Terminé' }
+                  ].map(s => (
+                    <button
+                      key={s.key || 'all'}
+                      onClick={() => { setStatusFilter(s.key); setCurrentPage(1) }}
+                      className={`${(statusFilter === s.key) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-full text-sm`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="md:col-span-1">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Période (date de début)</div>
+                  <div className="flex items-center gap-2">
+                    <input type="date" value={dateFrom} onChange={(e)=>{ setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 w-full" />
+                    <span className="text-gray-500">→</span>
+                    <input type="date" value={dateTo} onChange={(e)=>{ setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 w-full" />
+                  </div>
+                </div>
+                <div className="md:col-span-2 flex items-end gap-2">
+                  <button onClick={()=>{ setCurrentPage(1) }} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black/90">Appliquer</button>
+                  {(statusFilter || dateFrom || dateTo) && (
+                    <button onClick={()=>{ setStatusFilter(''); setDateFrom(''); setDateTo(''); setCurrentPage(1) }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Réinitialiser</button>
+                  )}
+                </div>
+              </div>
+              {(statusFilter || dateFrom || dateTo) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-gray-600 mr-1">Filtres actifs:</span>
+                  {statusFilter && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-sm">
+                      Statut: {statusFilter}
+                      <button onClick={()=>{ setStatusFilter(''); setCurrentPage(1) }} className="text-emerald-700 hover:text-emerald-900">×</button>
+                    </span>
+                  )}
+                  {dateFrom && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-800 border border-gray-300 rounded-full text-sm">
+                      Du: {dateFrom}
+                      <button onClick={()=>{ setDateFrom(''); setCurrentPage(1) }} className="text-gray-700 hover:text-gray-900">×</button>
+                    </span>
+                  )}
+                  {dateTo && (
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-800 border border-gray-300 rounded-full text-sm">
+                      Au: {dateTo}
+                      <button onClick={()=>{ setDateTo(''); setCurrentPage(1) }} className="text-gray-700 hover:text-gray-900">×</button>
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-6">
           <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Montant initial total</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900">{totalInitial.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-gray-400" />{formatMoney(totalInitial)}</p>
           </div>
           <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Montant restant total</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900">{totalRestant.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+            <p className="text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-gray-400" />{formatMoney(totalRestant)}</p>
           </div>
           <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Nombre de dettes</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900">{items.length}</p>
+            <p className="text-2xl font-bold mt-2 text-gray-900">{countTotal}</p>
+          </div>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">En retard</h3>
+            <p className="text-2xl font-bold mt-2 text-red-700">{countEnRetard}</p>
+          </div>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">En cours</h3>
+            <p className="text-2xl font-bold mt-2 text-blue-700">{countEnCours}</p>
+          </div>
+          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-sm font-medium text-gray-600">Terminé</h3>
+            <p className="text-2xl font-bold mt-2 text-green-700">{countTermine}</p>
           </div>
         </div>
 
@@ -408,8 +540,12 @@ export default function DettesPage() {
                       </div>
                     </td>
                     <td className="py-4 px-6 text-gray-700">{d.creancier || '-'}</td>
-                    <td className="py-4 px-6 text-right">{Number(d.montant_initial || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    <td className="py-4 px-6 text-right">{Number(d.montant_restant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td className="py-4 px-6 text-right">
+                      <span className="inline-flex items-center gap-1"><DollarSign className="w-4 h-4 text-gray-400" />{formatMoney(d.montant_initial)}</span>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <span className="inline-flex items-center gap-1"><DollarSign className="w-4 h-4 text-gray-400" />{formatMoney(d.montant_restant)}</span>
+                    </td>
                     <td className="py-4 px-6 text-gray-700">
                       <div className="flex items-center space-x-2"><Calendar className="w-4 h-4 text-gray-400" /><span>Début: {d.date_debut ? new Date(d.date_debut).toLocaleDateString('fr-FR') : '-'}</span></div>
                       <div className="flex items-center space-x-2 mt-1"><Calendar className="w-4 h-4 text-gray-400" /><span>Fin prévue: {d.date_fin_prevue ? new Date(d.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}</span></div>
