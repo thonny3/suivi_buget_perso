@@ -32,6 +32,10 @@ class DettesService {
   async addRemboursement(id_dette, payload) {
     return Api.request(`${BASE}/${id_dette}/remboursements`, { method: 'POST', body: JSON.stringify(payload) })
   }
+
+  async listRemboursements(id_dette) {
+    return Api.request(`${BASE}/${id_dette}/remboursements`, { method: 'GET' })
+  }
 }
 
 export default new DettesService()

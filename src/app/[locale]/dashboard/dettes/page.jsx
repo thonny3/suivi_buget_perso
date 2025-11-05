@@ -1,15 +1,20 @@
 "use client"
 import React, { useEffect, useState } from 'react'
-import { Plus, Edit2, Trash2, Wallet, Calendar, Save, X, DollarSign } from 'lucide-react'
+import { Plus, Edit2, Trash2, Wallet, Calendar, Save, X, DollarSign, ArrowUpRight, ArrowDownLeft, MoreVertical, Eye, Inbox } from 'lucide-react'
 import dettesService from '@/services/dettesService'
+import useToast from '@/hooks/useToast'
 import depensesService from '@/services/depensesService'
 
-const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+const Modal = ({ isOpen, onClose, title, children, size = 'md', fullScreen = false }) => {
   if (!isOpen) return null
   const sizeClasses = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' }
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`bg-white rounded-2xl shadow-2xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-y-auto`}>
+      <div className={
+        fullScreen
+          ? 'bg-white w-screen h-screen rounded-none shadow-none overflow-y-auto'
+          : `bg-white rounded-2xl shadow-2xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-y-auto`
+      }>
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
@@ -32,9 +37,12 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
     creancier: item?.creancier || '',
     sens: item?.sens || 'moi',
     statut: item?.statut || 'en cours',
-    type: item?.type || 'personne'
+    type: item?.type || 'personne',
+    id_compte: item?.id_compte || ''
   })
   const [errors, setErrors] = useState({})
+  const [comptes, setComptes] = useState([])
+  const [loadAccError, setLoadAccError] = useState('')
 
   useEffect(() => {
     setFormData({
@@ -48,9 +56,44 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
       creancier: item?.creancier || '',
       sens: item?.sens || 'moi',
       statut: item?.statut || 'en cours',
-      type: item?.type || 'personne'
+      type: item?.type || 'personne',
+      id_compte: item?.id_compte || ''
     })
   }, [item])
+
+  // Reset du formulaire à l'ouverture en mode "Nouvelle dette"
+  useEffect(() => {
+    if (isOpen && !item) {
+      setFormData({
+        nom: '',
+        montant_initial: '',
+        montant_restant: '',
+        taux_interet: 0,
+        date_debut: new Date().toISOString().slice(0,10),
+        date_fin_prevue: '',
+        paiement_mensuel: 0,
+        creancier: '',
+        sens: 'moi',
+        statut: 'en cours',
+        type: 'personne',
+        id_compte: ''
+      })
+    }
+  }, [isOpen, item])
+
+  // Charger la liste des comptes pour sélectionner le compte associé
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        setLoadAccError('')
+        const accs = await depensesService.getMyComptes()
+        setComptes(Array.isArray(accs) ? accs : [])
+      } catch (e) {
+        setLoadAccError(e?.message || 'Erreur chargement des comptes')
+      }
+    }
+    if (isOpen) loadAccounts()
+  }, [isOpen])
 
   const validate = () => {
     const e = {}
@@ -72,7 +115,8 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
       creancier: formData.creancier,
       sens: formData.sens,
       statut: formData.statut,
-      type: formData.type
+      type: formData.type,
+      id_compte: formData.id_compte ? Number(formData.id_compte) : null
     })
     onClose()
   }
@@ -105,6 +149,11 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
                 <span>Autre personne (on m’a prêté)</span>
               </label>
             </div>
+            <p className="mt-2 text-xs text-gray-600">
+              {formData.sens === 'moi'
+                ? "L’argent sort de votre compte. Vous avez un crédit envers quelqu’un."
+                : "L’argent entre dans votre compte. Vous avez une dette envers quelqu’un."}
+            </p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -141,6 +190,25 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
             </select>
           </div>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Compte associé</label>
+          {loadAccError && <div className="mb-2 text-xs text-red-600">{loadAccError}</div>}
+          <select
+            value={formData.id_compte}
+            onChange={(e)=>setFormData(v=>({ ...v, id_compte: e.target.value }))}
+            className={inputClass(false)}
+          >
+            <option value="">Sélectionner un compte</option>
+            {comptes.map((c) => (
+              <option key={(c.id_compte ?? c.id)} value={(c.id_compte ?? c.id)}>
+                {c.nom} ({c.type})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-gray-600">
+            {formData.sens === 'moi' ? 'Sortie d’argent depuis ce compte lors du prêt.' : 'Entrée d’argent sur ce compte lors du prêt.'}
+          </p>
+        </div>
         <div className="flex justify-end space-x-3 pt-4">
           <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Annuler</button>
           <button type="button" onClick={handleSubmit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>{item ? 'Mettre à jour' : 'Ajouter'}</span></button>
@@ -150,7 +218,8 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
   )
 }
 
-const PaiementForm = ({ isOpen, onClose, onSave, dette }) => {
+const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
+  const { showError } = useToast()
   const [formData, setFormData] = useState({ montant: '', date_paiement: new Date().toISOString().slice(0,10), id_compte: '' })
   const [comptes, setComptes] = useState([])
   const [error, setError] = useState('')
@@ -171,16 +240,25 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette }) => {
   const submit = () => {
     if (!formData.montant || Number(formData.montant) <= 0) { setError('Montant invalide'); return }
     if (!formData.date_paiement) { setError('Date requise'); return }
+    if (!formData.id_compte) { setError('Compte requis'); return }
+    if (Number(formData.montant) > montantRestant) {
+      showError('Le montant saisi dépasse le montant restant de la dette')
+      return
+    }
     onSave({
       montant: Number(formData.montant),
       date_paiement: formData.date_paiement,
-      id_compte: formData.id_compte ? Number(formData.id_compte) : undefined
+      id_compte: Number(formData.id_compte)
     })
     onClose()
   }
 
+  const montantInitial = Number(dette?.montant_initial || 0)
+  const montantRestant = Number(dette?.montant_restant || 0)
+  const formatLocal = (amount) => `${Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(amount || 0))} ${currency === 'MGA' ? 'Ar' : (currency || '')}`
+
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Ajouter un paiement — ${dette?.nom || ''}`} size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Ajouter un remboursement — ${dette?.nom || ''}`} size="md">
       {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded">{error}</div>}
       <div className="space-y-4">
         {dette?.sens && (
@@ -190,6 +268,16 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette }) => {
               : 'Ce paiement sera enregistré comme une entrée d’argent sur votre compte.'}
           </div>
         )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            <div className="text-gray-600">Montant de la dette</div>
+            <div className="font-semibold text-gray-900">{formatLocal(montantInitial)}</div>
+          </div>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            <div className="text-gray-600">Montant restant</div>
+            <div className="font-semibold text-gray-900">{formatLocal(montantRestant)}</div>
+          </div>
+        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Montant</label>
           <input type="number" step="0.01" value={formData.montant} onChange={(e)=>setFormData(v=>({ ...v, montant: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" placeholder="0.00" />
@@ -199,7 +287,7 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette }) => {
           <input type="date" value={formData.date_paiement} onChange={(e)=>setFormData(v=>({ ...v, date_paiement: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Compte (optionnel)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Compte</label>
           <select value={formData.id_compte} onChange={(e)=>setFormData(v=>({ ...v, id_compte: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
             <option value="">Sélectionner un compte</option>
             {comptes.map((c) => (
@@ -209,7 +297,7 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette }) => {
         </div>
         <div className="flex justify-end space-x-3 pt-2">
           <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Annuler</button>
-          <button type="button" onClick={submit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>Enregistrer</span></button>
+          <button type="button" onClick={submit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>Ajouter le remboursement</span></button>
         </div>
       </div>
     </Modal>
@@ -227,8 +315,17 @@ export default function DettesPage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isPaymentOpen, setIsPaymentOpen] = useState(false)
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [target, setTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [openMenuId, setOpenMenuId] = useState(null)
+  const [menuRow, setMenuRow] = useState(null)
+  const [menuCoords, setMenuCoords] = useState({ top: 0, left: 0 })
+  const menuRef = React.useRef(null)
+  const { showSuccess, showError } = useToast()
+  const [comptes, setComptes] = useState([])
 
   // Filtres
   const [statusFilter, setStatusFilter] = useState('') // '', 'en cours', 'en retard', 'terminé'
@@ -257,6 +354,22 @@ export default function DettesPage() {
     if (currentPage < 1) setCurrentPage(1)
   }, [items.length, itemsPerPage])
 
+  // Fermer le menu si clic à l'extérieur
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (!openMenuId) return
+      const target = e.target
+      const isTrigger = target?.closest?.('.action-trigger')
+      const isInsideMenu = menuRef.current && menuRef.current.contains(target)
+      if (!isTrigger && !isInsideMenu) {
+        setOpenMenuId(null)
+        setMenuRow(null)
+      }
+    }
+    document.addEventListener('mousedown', onDocClick)
+    return () => document.removeEventListener('mousedown', onDocClick)
+  }, [openMenuId])
+
   // Charger id_user depuis localStorage ou API
   useEffect(() => {
     try {
@@ -277,6 +390,23 @@ export default function DettesPage() {
     }
   }, [])
 
+  // Charger les comptes pour afficher le nom du compte associé
+  useEffect(() => {
+    const loadAccounts = async () => {
+      try {
+        const accs = await depensesService.getMyComptes()
+        setComptes(Array.isArray(accs) ? accs : [])
+      } catch (_) {}
+    }
+    loadAccounts()
+  }, [])
+
+  const getCompteLabel = (id_compte) => {
+    if (!id_compte) return ''
+    const c = comptes.find((x) => String(x.id_compte ?? x.id) === String(id_compte))
+    return c ? `${c.nom} (${c.type})` : ''
+  }
+
   const handleSave = async (payload) => {
     try {
       setError('')
@@ -286,21 +416,23 @@ export default function DettesPage() {
       const deadline = payload?.date_fin_prevue ? new Date(payload.date_fin_prevue) : null
       const today = new Date()
       let derived = 'en cours'
-      if (deadline && !isNaN(deadline) && deadline < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
-        derived = 'en retard'
-      }
-      if (!Number.isNaN(remaining) && !Number.isNaN(initial) && remaining === initial) {
+      if (!Number.isNaN(remaining) && remaining <= 0) {
         derived = 'terminé'
+      } else if (deadline && !isNaN(deadline) && deadline < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
+        derived = 'en retard'
       }
       const withStatus = { ...payload, statut: derived }
       if (editing) {
         await dettesService.updateDette(editing.id_dette, withStatus)
+        showSuccess('Dette mise à jour avec succès')
       } else {
         await dettesService.createDette(withStatus)
+        showSuccess('Dette ajoutée avec succès')
       }
       await load()
     } catch (e) {
       setError(e.message || 'Erreur lors de l\'enregistrement')
+      showError(e.message || 'Erreur lors de l\'enregistrement')
     } finally {
       setEditing(null)
     }
@@ -311,9 +443,11 @@ export default function DettesPage() {
     try {
       setError('')
       await dettesService.deleteDette(dette.id_dette)
+      showSuccess('Dette supprimée')
       await load()
     } catch (e) {
       setError(e.message || 'Erreur lors de la suppression')
+      showError(e.message || 'Erreur lors de la suppression')
     }
   }
 
@@ -327,9 +461,11 @@ export default function DettesPage() {
         id_dette: target.id_dette
       }
       await dettesService.addRemboursement(target.id_dette, payload)
+      showSuccess('Remboursement ajouté')
       await load()
     } catch (e) {
       setError(e.message || 'Erreur lors de l\'ajout du paiement')
+      showError(e.message || 'Erreur lors de l\'ajout du paiement')
     } finally {
       setTarget(null)
     }
@@ -348,10 +484,10 @@ export default function DettesPage() {
     const initial = Number(d?.montant_initial ?? 0)
     const deadline = d?.date_fin_prevue ? new Date(d.date_fin_prevue) : null
     const today = new Date()
+    if (!Number.isNaN(remaining) && remaining <= 0) return 'terminé'
     if (deadline && !isNaN(deadline) && deadline < new Date(today.getFullYear(), today.getMonth(), today.getDate())) {
       return 'en retard'
     }
-    if (!Number.isNaN(remaining) && !Number.isNaN(initial) && remaining === initial) return 'terminé'
     return 'en cours'
   }
 
@@ -393,9 +529,162 @@ export default function DettesPage() {
     }
     const s = map[status] || map['en cours']
     return (
-      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.text}`}>
+      <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium text-center whitespace-normal break-words ${s.bg} ${s.text}`}>
         {s.label}
       </span>
+    )
+  }
+
+  const DetailsModal = ({ isOpen, onClose, dette }) => {
+    const [payments, setPayments] = useState([])
+    const [loadingPayments, setLoadingPayments] = useState(false)
+    const [err, setErr] = useState('')
+
+    useEffect(() => {
+      const load = async () => {
+        if (!dette?.id_dette) return
+        try {
+          setErr('')
+          setLoadingPayments(true)
+          const res = await dettesService.listRemboursements(dette.id_dette)
+          setPayments(Array.isArray(res) ? res : [])
+        } catch (e) {
+          setErr(e.message || 'Erreur chargement remboursements')
+        } finally {
+          setLoadingPayments(false)
+        }
+      }
+      if (isOpen) load()
+    }, [isOpen, dette?.id_dette])
+
+    const paymentsSorted = [...payments].sort((a, b) => {
+      const da = a?.date_paiement ? new Date(a.date_paiement) : new Date(0)
+      const db = b?.date_paiement ? new Date(b.date_paiement) : new Date(0)
+      return db - da
+    })
+    const totalPaid = payments.reduce((s, p) => s + Number(p.montant || 0), 0)
+    const remainingToReach = Math.max(0, Number(dette?.montant_initial || 0) - Number(dette?.montant_restant || 0))
+
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title={`Détails — ${dette?.nom || ''}`} size="lg">
+        {err && <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded">{err}</div>}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="text-sm text-gray-500">Créancier</div>
+              <div className="font-medium text-gray-900">{dette?.creancier || '-'}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Sens</div>
+              <div className="font-medium text-gray-900">{dette?.sens === 'moi' ? 'Moi-même (j’ai prêté)' : 'Autre personne (on m’a prêté)'}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Montant</div>
+              <div className="font-medium text-gray-900">{formatMoney(dette?.montant_initial)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Restant</div>
+              <div className="font-medium text-gray-900">{formatMoney(dette?.montant_restant)}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Date début</div>
+              <div className="font-medium text-gray-900">{dette?.date_debut ? new Date(dette.date_debut).toLocaleDateString('fr-FR') : '-'}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Fin prévue</div>
+              <div className="font-medium text-gray-900">{dette?.date_fin_prevue ? new Date(dette.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}</div>
+            </div>
+            <div>
+              <div className="text-sm text-gray-500">Statut</div>
+              <div className="font-medium">{renderStatusBadge(deriveStatus(dette))}</div>
+            </div>
+          </div>
+
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-sm font-medium text-gray-700">Remboursements</div>
+              <div className="text-sm text-gray-600">
+                Total remboursé: <span className="font-semibold text-gray-900">{formatMoney(totalPaid)}</span>
+                <span className="mx-2">•</span>
+                Restant à atteindre: <span className="font-semibold text-gray-900">{formatMoney(remainingToReach)}</span>
+                <span className="mx-2">•</span>
+                {payments.length} ligne{payments.length > 1 ? 's' : ''}
+              </div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              {loadingPayments ? (
+                <div className="p-4 text-gray-500">Chargement...</div>
+              ) : paymentsSorted.length === 0 ? (
+                <div className="p-4 text-gray-500">Aucun remboursement</div>
+              ) : (
+                <div className="max-h-80 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 sticky top-0 z-[1]">
+                      <tr>
+                        <th className="text-left py-2 px-3 text-gray-600">Date</th>
+                        <th className="text-right py-2 px-3 text-gray-600">Montant</th>
+                        <th className="text-left py-2 px-3 text-gray-600">Mouvement</th>
+                        <th className="text-left py-2 px-3 text-gray-600">Compte</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paymentsSorted.map((p) => {
+                        const mouvement = (dette?.sens === 'moi') ? 'Sortie' : 'Entrée'
+                        const color = (dette?.sens === 'moi') ? 'text-red-700' : 'text-green-700'
+                        return (
+                          <tr key={p.id_remboursement} className="border-t border-gray-100 hover:bg-gray-50">
+                            <td className="py-2 px-3">{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR') : '-'}</td>
+                            <td className={`py-2 px-3 text-right font-medium ${color}`}>{formatMoney(p.montant)}</td>
+                            <td className="py-2 px-3">{mouvement}</td>
+                            <td className="py-2 px-3">{p.id_compte ? (getCompteLabel(p.id_compte) || `#${p.id_compte}`) : '-'}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    <tfoot className="bg-gray-50 border-t border-gray-200">
+                      <tr>
+                        <td className="py-2 px-3 text-gray-600">Total</td>
+                        <td className="py-2 px-3 text-right font-semibold">{formatMoney(totalPaid)}</td>
+                        <td className="py-2 px-3"></td>
+                        <td className="py-2 px-3"></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Fermer</button>
+          </div>
+        </div>
+      </Modal>
+    )
+  }
+
+  const ConfirmDeleteModal = ({ isOpen, onClose, dette }) => {
+    if (!isOpen) return null
+    return (
+      <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <p className="text-gray-700 text-sm">Voulez-vous vraiment supprimer la dette “{dette?.nom}” ? Cette action est irréversible.</p>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600">Montant</span>
+              <span className="font-medium">{formatMoney(dette?.montant_initial)}</span>
+            </div>
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-gray-600">Restant</span>
+              <span className="font-medium">{formatMoney(dette?.montant_restant)}</span>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
+            <button onClick={async () => { if (dette) { await handleDelete(dette) }; onClose(); }} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Supprimer</button>
+          </div>
+        </div>
+      </Modal>
     )
   }
 
@@ -518,16 +807,28 @@ export default function DettesPage() {
                 <tr>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Nom</th>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Créancier</th>
-                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Montant initial</th>
+                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Sens</th>
+                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Montant </th>
+                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Taux</th>
                   <th className="text-right py-4 px-6 text-gray-600 font-medium">Restant</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Dates</th>
+                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Date début</th>
+                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Fin prévue</th>
                   <th className="text-left py-4 px-6 text-gray-600 font-medium">Statut</th>
                   <th className="text-center py-4 px-6 text-gray-600 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="py-10 text-center text-gray-500">Chargement...</td></tr>
+                  <tr><td colSpan={9} className="py-10 text-center text-gray-500">Chargement...</td></tr>
+                ) : filteredItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="py-12 text-center text-gray-500">
+                      <div className="flex flex-col items-center gap-2">
+                        <Inbox className="w-8 h-8 text-gray-300" />
+                        <div className="text-sm">Tableau vide - aucun élément à afficher</div>
+                      </div>
+                    </td>
+                  </tr>
                 ) : paginatedItems.map((d) => (
                   <tr key={d.id_dette} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6">
@@ -535,29 +836,50 @@ export default function DettesPage() {
                         <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700"><Wallet className="w-4 h-4" /></div>
                         <div>
                           <p className="font-medium text-gray-900">{d.nom}</p>
-                          <p className="text-sm text-gray-500">{d.type}</p>
+                          <p className="text-xs text-gray-500">{getCompteLabel(d.id_compte) || '-'}</p>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-6 text-gray-700">{d.creancier || '-'}</td>
-                    <td className="py-4 px-6 text-right">
-                      <span className="inline-flex items-center gap-1"><DollarSign className="w-4 h-4 text-gray-400" />{formatMoney(d.montant_initial)}</span>
+                    <td className="py-4 px-6 text-gray-700">
+                      {d.sens === 'moi' ? (
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Sortie</span>
+                      ) : (
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Entrée</span>
+                      )}
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <span className="inline-flex items-center gap-1"><DollarSign className="w-4 h-4 text-gray-400" />{formatMoney(d.montant_restant)}</span>
+                      <span className="inline-flex items-center gap-1">{formatMoney(d.montant_initial)}</span>
+                    </td>
+                    <td className="py-4 px-6 text-right text-gray-700">
+                      {Number(d.taux_interet || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 })}%
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <span className="inline-flex items-center gap-1">{formatMoney(d.montant_restant)}</span>
                     </td>
                     <td className="py-4 px-6 text-gray-700">
-                      <div className="flex items-center space-x-2"><Calendar className="w-4 h-4 text-gray-400" /><span>Début: {d.date_debut ? new Date(d.date_debut).toLocaleDateString('fr-FR') : '-'}</span></div>
-                      <div className="flex items-center space-x-2 mt-1"><Calendar className="w-4 h-4 text-gray-400" /><span>Fin prévue: {d.date_fin_prevue ? new Date(d.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}</span></div>
+                      {d.date_debut ? new Date(d.date_debut).toLocaleDateString('fr-FR') : '-'}
+                    </td>
+                    <td className="py-4 px-6 text-gray-700">
+                      {d.date_fin_prevue ? new Date(d.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}
                     </td>
                     <td className="py-4 px-6">
                       {renderStatusBadge(deriveStatus(d))}
                     </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button onClick={() => { setEditing(d); setIsFormOpen(true) }} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Modifier"><Edit2 className="w-4 h-4" /></button>
-                        <button onClick={() => handleDelete(d)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
-                        <button onClick={() => { setTarget(d); setIsPaymentOpen(true) }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Ajouter un paiement"><DollarSign className="w-4 h-4" /></button>
+                    <td className="py-4 px-6 relative">
+                      <div className="flex items-center justify-center">
+                        <button
+                          onClick={(e) => {
+                            const r = e.currentTarget.getBoundingClientRect()
+                            setMenuCoords({ top: r.bottom + window.scrollY, left: r.right + window.scrollX - 192 })
+                            setMenuRow(d)
+                            setOpenMenuId(openMenuId === d.id_dette ? null : d.id_dette)
+                          }}
+                          className="action-trigger p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="Actions"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -568,25 +890,70 @@ export default function DettesPage() {
           </div>
         </div>
 
-        {/* Pagination alignée sur Dépenses */}
-        {!loading && totalPages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
-            <p className="text-gray-600 text-sm">
-              Affichage de {startIndex + 1} à {Math.min(startIndex + itemsPerPage, items.length)} sur {items.length} résultats
-            </p>
-            <div className="flex items-center space-x-3">
+        {openMenuId && menuRow && (
+          <div ref={menuRef} className="fixed z-50 w-48 bg-white border border-gray-200 rounded-lg shadow-lg" style={{ top: menuCoords.top, left: menuCoords.left }}>
+            <ul className="py-1 text-sm text-gray-700">
+              {deriveStatus(menuRow) !== 'terminé' && (
+                <li>
+                  <button onClick={() => { setTarget(menuRow); setIsPaymentOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-blue-600" /> Ajouter paiement
+                  </button>
+                </li>
+              )}
+              <li>
+                <button onClick={() => { setTarget(menuRow); setIsDetailsOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-gray-600" /> Voir détails
+                </button>
+              </li>
+              <li>
+                <button onClick={() => { setEditing(menuRow); setIsFormOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-emerald-600" /> Modifier
+                </button>
+              </li>
+              <li>
+                <button onClick={() => { setDeleteTarget(menuRow); setIsDeleteOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-red-600" /> Supprimer
+                </button>
+              </li>
+            </ul>
+          </div>
+        )}
+
+        {/* Pagination (même design que transactions) */}
+        {!loading && (
+          <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="text-sm text-gray-600">
+              {filteredItems.length === 0 ? '0 résultat' : (
+                <>Affichage {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredItems.length)} sur {filteredItems.length}</>
+              )}
+            </div>
+            <div className="inline-flex items-center gap-2">
               <button
+                className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 disabled:opacity-50"
                 onClick={goPrev}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPage <= 1}
               >
                 Précédent
               </button>
-              <span className="text-sm text-gray-500">Page {currentPage} / {totalPages}</span>
+              {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
+                const p = i + 1
+                return (
+                  <button
+                    key={p}
+                    onClick={() => goTo(p)}
+                    className={`px-3 py-2 rounded-lg border ${currentPage === p ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 text-gray-700'}`}
+                  >
+                    {p}
+                  </button>
+                )
+              })}
+              {totalPages > 5 && (
+                <span className="px-2 text-gray-500">…</span>
+              )}
               <button
+                className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 disabled:opacity-50"
                 onClick={goNext}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentPage >= totalPages}
               >
                 Suivant
               </button>
@@ -595,7 +962,9 @@ export default function DettesPage() {
         )}
 
         <DetteForm isOpen={isFormOpen} onClose={() => { setIsFormOpen(false); setEditing(null) }} onSave={handleSave} item={editing} />
-        <PaiementForm isOpen={isPaymentOpen} onClose={() => { setIsPaymentOpen(false); setTarget(null) }} onSave={savePayment} dette={target} />
+        <PaiementForm isOpen={isPaymentOpen} onClose={() => { setIsPaymentOpen(false); setTarget(null) }} onSave={savePayment} dette={target} currency={currency} />
+        <DetailsModal isOpen={isDetailsOpen} onClose={() => { setIsDetailsOpen(false); setTarget(null) }} dette={target} />
+        <ConfirmDeleteModal isOpen={isDeleteOpen} onClose={() => { setIsDeleteOpen(false); setDeleteTarget(null) }} dette={deleteTarget} />
       </div>
     </div>
   )
