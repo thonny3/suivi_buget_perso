@@ -23,8 +23,10 @@ import { colors } from '@/styles/colors'
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line } from 'recharts'
 import budgetsService from '@/services/budgetsService'
 import depensesService from '@/services/depensesService'
+import { useToast } from '@/hooks/useToast'
 
 export default function BudgetPage() {
+  const { showSuccess, showError } = useToast()
   const [budgets, setBudgets] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -43,6 +45,7 @@ export default function BudgetPage() {
     montant_max: '',
     id_categories_depenses: ''
   })
+  const [errors, setErrors] = useState({})
 
   // Charger depuis l'API
   const loadBudgets = async () => {
@@ -52,7 +55,9 @@ export default function BudgetPage() {
       const res = await budgetsService.getBudgets()
       setBudgets(Array.isArray(res) ? res : [])
     } catch (e) {
-      setError(e?.message || 'Erreur lors du chargement des budgets')
+      const errorMessage = e?.message || 'Erreur lors du chargement des budgets'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -66,8 +71,9 @@ export default function BudgetPage() {
         nom: c.nom || c.name || c.libelle || c.label || 'Catégorie'
       })) : []
       setCategories(normalized)
-    } catch (_e) {
+    } catch (e) {
       setCategories([])
+      showError('Erreur lors du chargement des catégories')
     }
   }
 
@@ -83,7 +89,48 @@ export default function BudgetPage() {
   const budgetsAlertes = budgets.filter(b => (Number(b.pourcentage_utilise) || 0) >= 80).length
   const moyenneUtilisation = budgets.length > 0 ? (budgets.reduce((sum, b) => sum + (Number(b.pourcentage_utilise) || 0), 0) / budgets.length) : 0
 
-  
+  // --- Devise & formatage ---
+  const getLocalStorageDevise = () => {
+    try {
+      const val = (typeof window !== 'undefined') ? (localStorage.getItem('devise') || localStorage.getItem('currency') || localStorage.getItem('currencyCode')) : ''
+      return (val || '').toString().toUpperCase()
+    } catch {
+      return ''
+    }
+  }
+
+  const getDefaultCurrencySymbol = () => {
+    const lsCode = getLocalStorageDevise()
+    if (lsCode === 'MGA') return 'Ar'
+    if (lsCode) return lsCode
+    try {
+      const user = localStorage.getItem('user')
+      const userDevise = user ? (JSON.parse(user)?.devise || '').toString().toUpperCase() : ''
+      if (userDevise === 'MGA') return 'Ar'
+      return userDevise || '€'
+    } catch {
+      return '€'
+    }
+  }
+
+  const formatAmountDefault = (amount) => {
+    const lsCode = getLocalStorageDevise()
+    const num = Number(amount || 0)
+    if (lsCode === 'MGA') {
+      const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+      return `${intStr} Ar`
+    }
+    try {
+      const user = localStorage.getItem('user')
+      const userDevise = user ? (JSON.parse(user)?.devise || '').toString().toUpperCase() : ''
+      if (userDevise === 'MGA') {
+        const intStr = Math.round(num).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
+        return `${intStr} Ar`
+      }
+    } catch {}
+    const symbol = getDefaultCurrencySymbol()
+    return `${num.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${symbol}`
+  }
 
   // Helper pour YYYY-MM
   const toYearMonth = (val) => {
@@ -124,13 +171,25 @@ export default function BudgetPage() {
   // Palette de couleurs pour différencier les catégories dans le camembert
   const PIE_COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4', '#F43F5E', '#84CC16', '#A855F7', '#14B8A6']
 
-  // Courbe d'évolution: revenir à l'ancien graphe (multi-mois + point courant)
-  const evolutionData = [
-    { mois: 'Oct', budget: 4500, depense: 3800 },
-    { mois: 'Nov', budget: 4200, depense: 4100 },
-    { mois: 'Déc', budget: 4800, depense: 4200 },
-    { mois: 'Mois actuel', budget: totalBudgetMax, depense: totalDepense }
-  ]
+  // Données pour l'évolution mensuelle (comme dans revenus)
+  const monthLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+  const monthlyTotals = Array.from({ length: 12 }, () => 0)
+  budgets.forEach((budget) => {
+    try {
+      const moisValue = budget.mois || budget.month
+      if (moisValue) {
+        // Extraire le mois depuis YYYY-MM
+        const parts = moisValue.toString().split('-')
+        if (parts.length >= 2) {
+          const monthIndex = parseInt(parts[1]) - 1 // Mois 1-12 -> index 0-11
+          if (monthIndex >= 0 && monthIndex < 12) {
+            monthlyTotals[monthIndex] += Number(budget.montant_max) || 0
+          }
+        }
+      }
+    } catch {}
+  })
+  const evolutionData = monthLabels.map((label, idx) => ({ month: label, montant: monthlyTotals[idx] }))
 
   const repartitionData = filteredBudgets.map((budget, idx) => ({
     name: budget.categorie,
@@ -138,9 +197,32 @@ export default function BudgetPage() {
     color: PIE_COLORS[idx % PIE_COLORS.length]
   }))
 
+  const validateForm = () => {
+    const newErrors = {}
+    
+    if (!formData.mois || formData.mois.trim() === '') {
+      newErrors.mois = 'La période/mois est requise'
+    }
+    
+    if (!formData.montant_max || formData.montant_max.trim() === '') {
+      newErrors.montant_max = 'Le montant maximum est requis'
+    } else {
+      const montant = parseFloat(formData.montant_max)
+      if (isNaN(montant) || montant <= 0) {
+        newErrors.montant_max = 'Le montant doit être un nombre positif'
+      }
+    }
+    
+    if (!formData.id_categories_depenses || formData.id_categories_depenses === '') {
+      newErrors.id_categories_depenses = 'Veuillez sélectionner une catégorie'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async () => {
-    if (!formData.montant_max || !formData.id_categories_depenses || !formData.mois) {
-      alert('Veuillez remplir tous les champs')
+    if (!validateForm()) {
       return
     }
 
@@ -156,14 +238,17 @@ export default function BudgetPage() {
 
       if (editingBudget) {
         await budgetsService.updateBudget(editingBudget.id_budget, payload)
+        showSuccess('Budget mis à jour avec succès')
       } else {
         await budgetsService.createBudget(payload)
+        showSuccess('Budget créé avec succès')
       }
 
       await loadBudgets()
       resetForm()
     } catch (e) {
-      alert(e?.message || 'Erreur lors de l’enregistrement du budget')
+      const errorMessage = e?.message || 'Erreur lors de l\'enregistrement du budget'
+      showError(errorMessage)
     }
   }
 
@@ -173,6 +258,7 @@ export default function BudgetPage() {
       montant_max: '',
       id_categories_depenses: ''
     })
+    setErrors({})
     setEditingBudget(null)
     setIsModalOpen(false)
   }
@@ -184,6 +270,7 @@ export default function BudgetPage() {
       montant_max: budget.montant_max.toString(),
       id_categories_depenses: (budget.id_categorie_depense ?? budget.id_categories_depenses).toString()
     })
+    setErrors({})
     setIsModalOpen(true)
   }
 
@@ -197,9 +284,11 @@ export default function BudgetPage() {
     try {
       if (!selectedBudget) return
       await budgetsService.deleteBudget(selectedBudget.id_budget)
+      showSuccess('Budget supprimé avec succès')
       await loadBudgets()
     } catch (e) {
-      alert(e?.message || 'Erreur lors de la suppression du budget')
+      const errorMessage = e?.message || 'Erreur lors de la suppression du budget'
+      showError(errorMessage)
     } finally {
       setIsDeleteOpen(false)
       setSelectedBudget(null)
@@ -255,7 +344,7 @@ export default function BudgetPage() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="categorie" />
               <YAxis />
-              <Tooltip formatter={(value) => [`${value}€`, '']} />
+              <Tooltip formatter={(value) => [formatAmountDefault(value), '']} />
               <Legend />
               <Bar dataKey="budget" fill="#3B82F6" name="Budget" />
               <Bar dataKey="depense" fill="#EF4444" name="Dépensé" />
@@ -273,7 +362,8 @@ export default function BudgetPage() {
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
+                outerRadius={100}
+                innerRadius={50}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -281,7 +371,7 @@ export default function BudgetPage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [`${value}€`, 'Dépensé']} />
+              <Tooltip formatter={(value) => [formatAmountDefault(value), 'Dépensé']} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -289,16 +379,14 @@ export default function BudgetPage() {
 
       {/* Évolution Budget */}
       <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
-        <h3 className="text-lg font-semibold mb-4">Évolution Budget vs Dépenses</h3>
-        <ResponsiveContainer width="100%" height={250}>
+        <h3 className="text-lg font-semibold mb-4">Évolution Mensuelle</h3>
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={evolutionData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="mois" />
+            <XAxis dataKey="month" />
             <YAxis />
-            <Tooltip formatter={(value) => [`${value}€`, '']} />
-            <Legend />
-            <Line type="monotone" dataKey="budget" stroke="#3B82F6" strokeWidth={3} name="Budget" />
-            <Line type="monotone" dataKey="depense" stroke="#EF4444" strokeWidth={3} name="Dépenses" />
+            <Tooltip formatter={(value) => [formatAmountDefault(value), 'Budget']} />
+            <Line type="monotone" dataKey="montant" stroke="#3B82F6" strokeWidth={3} />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -427,25 +515,49 @@ export default function BudgetPage() {
                 <input
                   type="month"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.mois 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-blue-500'
+                  }`}
                   value={formData.mois}
-                  onChange={(e) => setFormData({...formData, mois: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, mois: e.target.value})
+                    if (errors.mois) {
+                      setErrors({...errors, mois: ''})
+                    }
+                  }}
                   placeholder="YYYY-MM"
                 />
+                {errors.mois && (
+                  <p className="text-red-500 text-sm mt-1">{errors.mois}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant Maximum (€)
+                  Montant Maximum 
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.montant_max 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-blue-500'
+                  }`}
                   value={formData.montant_max}
-                  onChange={(e) => setFormData({...formData, montant_max: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, montant_max: e.target.value})
+                    if (errors.montant_max) {
+                      setErrors({...errors, montant_max: ''})
+                    }
+                  }}
                 />
+                {errors.montant_max && (
+                  <p className="text-red-500 text-sm mt-1">{errors.montant_max}</p>
+                )}
               </div>
 
               <div>
@@ -454,15 +566,27 @@ export default function BudgetPage() {
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.id_categories_depenses 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-blue-500'
+                  }`}
                   value={formData.id_categories_depenses}
-                  onChange={(e) => setFormData({...formData, id_categories_depenses: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, id_categories_depenses: e.target.value})
+                    if (errors.id_categories_depenses) {
+                      setErrors({...errors, id_categories_depenses: ''})
+                    }
+                  }}
                 >
                   <option value="">Sélectionner une catégorie</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.nom}</option>
                   ))}
                 </select>
+                {errors.id_categories_depenses && (
+                  <p className="text-red-500 text-sm mt-1">{errors.id_categories_depenses}</p>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4">

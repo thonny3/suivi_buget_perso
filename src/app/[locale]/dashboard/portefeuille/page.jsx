@@ -1,6 +1,6 @@
 "use client"
 import { API_CONFIG } from '@/config/api'
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   Plus,
   Edit2,
@@ -20,6 +20,7 @@ import {
 import { colors } from '@/styles/colors'
 import accountsService from '@/services/accountsService'
 import sharedAccountsService from '@/services/sharedAccountsService'
+import apiService from '@/services/apiService'
 import { useToast } from '@/hooks/useToast'
 
 // Composant Modal de base
@@ -140,11 +141,11 @@ const AccountForm = ({ isOpen, onClose, onSave, item = null }) => {
             onChange={(e) => handleChange('type', e.target.value)}
             className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
           >
-            <option value="courant">Compte Courant</option>
-            <option value="epargne">Épargne</option>
-            <option value="investissement">Investissement</option>
-            <option value="trading">Trading</option>
-            <option value="crypto">Crypto</option>
+            {accountsService.getAvailableTypes().map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -194,6 +195,12 @@ const ShareAccountModal = ({ isOpen, onClose, account, onShareSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [error, setError] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimeoutRef = useRef(null);
+  const inputRef = useRef(null);
+  const suggestionsRef = useRef(null);
 
   const { showSuccess, showError } = useToast();
 
@@ -201,8 +208,78 @@ const ShareAccountModal = ({ isOpen, onClose, account, onShareSuccess }) => {
   useEffect(() => {
     if (isOpen && account) {
       loadSharedUsers();
+    } else if (!isOpen) {
+      // Réinitialiser les états quand le modal se ferme
+      setEmail('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setError('');
     }
   }, [isOpen, account]);
+
+  // Recherche d'utilisateurs pour autocomplétion
+  useEffect(() => {
+    // Nettoyer le timeout précédent
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Si l'email est vide ou trop court, ne pas chercher
+    if (!email || email.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    // Délai de 300ms avant de lancer la recherche (debounce)
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+        const users = await apiService.searchUsers(email);
+        setSuggestions(users || []);
+        setShowSuggestions(true);
+      } catch (err) {
+        console.error('Erreur lors de la recherche d\'utilisateurs:', err);
+        setSuggestions([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+
+    // Nettoyage
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [email]);
+
+  // Fermer les suggestions quand on clique ailleurs
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target) &&
+        inputRef.current &&
+        !inputRef.current.contains(event.target)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    if (showSuggestions) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showSuggestions]);
+
+  const selectSuggestion = (user) => {
+    setEmail(user.email);
+    setShowSuggestions(false);
+    setSuggestions([]);
+  };
 
   const loadSharedUsers = async () => {
     if (!account?.id_compte) return;
@@ -251,8 +328,10 @@ const ShareAccountModal = ({ isOpen, onClose, account, onShareSuccess }) => {
 
       if (result.success) {
         showSuccess('Compte partagé avec succès');
-      setEmail('');
-      setRole('lecteur');
+        setEmail('');
+        setRole('lecteur');
+        setSuggestions([]);
+        setShowSuggestions(false);
         // Recharger la liste des utilisateurs partagés
         await loadSharedUsers();
         // Notifier le parent pour recharger les données
@@ -350,18 +429,67 @@ const ShareAccountModal = ({ isOpen, onClose, account, onShareSuccess }) => {
         {/* Ajouter un utilisateur */}
         <div className="bg-gray-50 rounded-lg p-4">
           <h3 className="font-medium text-gray-900 mb-3">Inviter un utilisateur</h3>
-          <div className="flex space-x-3">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setError('');
-              }}
-              placeholder="email@exemple.com"
-              className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              disabled={loading}
-            />
+          <div className="flex space-x-3 relative">
+            <div className="flex-1 relative">
+              <input
+                ref={inputRef}
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError('');
+                }}
+                onFocus={() => {
+                  if (suggestions.length > 0) {
+                    setShowSuggestions(true);
+                  }
+                }}
+                placeholder="email@exemple.com"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                disabled={loading}
+              />
+              {/* Liste de suggestions */}
+              {showSuggestions && suggestions.length > 0 && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                >
+                  {searchLoading && (
+                    <div className="px-4 py-2 text-sm text-gray-500 flex items-center space-x-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Recherche...</span>
+                    </div>
+                  )}
+                  {!searchLoading && suggestions.map((user) => (
+                    <button
+                      key={user.id_user}
+                      type="button"
+                      onClick={() => selectSuggestion(user)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-emerald-600 font-medium text-sm">
+                            {user.prenom ? user.prenom.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {user.prenom && user.nom ? `${user.prenom} ${user.nom}` : user.email}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {showSuggestions && !searchLoading && suggestions.length === 0 && email.length >= 2 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg px-4 py-3">
+                  <p className="text-sm text-gray-500">Aucun utilisateur trouvé</p>
+                </div>
+              )}
+            </div>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -370,7 +498,6 @@ const ShareAccountModal = ({ isOpen, onClose, account, onShareSuccess }) => {
             >
               <option value="lecteur">Lecteur</option>
               <option value="contributeur">Contributeur</option>
-              <option value="proprietaire">Propriétaire</option>
             </select>
             <button
               onClick={handleShare}
@@ -576,10 +703,12 @@ export default function GestionnaireComptes() {
     loadUserInfo();
   }, []);
 
-  // Charger les comptes depuis l'API
+  // Charger les comptes depuis l'API (après que userInfo soit chargé)
   useEffect(() => {
-    loadAccounts();
-  }, []);
+    if (userInfo.id_user) {
+      loadAccounts();
+    }
+  }, [userInfo.id_user]);
 
   // Charger les comptes partagés quand userInfo est disponible
   useEffect(() => {
@@ -598,7 +727,40 @@ export default function GestionnaireComptes() {
       if (result.success) {
         // Formater les comptes pour l'affichage
         const formattedAccounts = result.data.map(account => accountsService.formatAccount(account));
-        setAccounts(formattedAccounts);
+        
+        // Charger les informations de partage pour chaque compte
+        const accountsWithShareInfo = await Promise.all(
+          formattedAccounts.map(async (account) => {
+            try {
+              const shareResult = await sharedAccountsService.getSharedUsersByAccount(account.id_compte);
+              if (shareResult.success && shareResult.data) {
+                // Compter les utilisateurs partagés (en excluant le propriétaire)
+                // Un compte est considéré comme partagé s'il y a au moins un utilisateur autre que le propriétaire
+                const sharedUsers = shareResult.data.filter(user => user.id_user !== userInfo.id_user);
+                const sharedCount = sharedUsers.length;
+                return {
+                  ...account,
+                  isShared: sharedCount > 0,
+                  sharedUsersCount: sharedCount
+                };
+              }
+              return {
+                ...account,
+                isShared: false,
+                sharedUsersCount: 0
+              };
+            } catch (err) {
+              console.error(`Erreur lors du chargement des utilisateurs partagés pour le compte ${account.id_compte}:`, err);
+              return {
+                ...account,
+                isShared: false,
+                sharedUsersCount: 0
+              };
+            }
+          })
+        );
+        
+        setAccounts(accountsWithShareInfo);
       } else {
         setError(result.error);
         showError(result.error);
@@ -625,9 +787,40 @@ export default function GestionnaireComptes() {
       const result = await sharedAccountsService.getSharedAccountsByUser(userInfo.id_user);
       
       if (result.success) {
-        // Formater les comptes partagés pour l'affichage
-        const formattedSharedAccounts = result.data.map(account => sharedAccountsService.formatSharedAccount(account));
-        console.log('Comptes partagés chargés:', formattedSharedAccounts);
+        // Formater les comptes partagés pour l'affichage en préservant les données du propriétaire
+        const formattedSharedAccounts = result.data.map(account => {
+          console.log('=== Compte partagé brut (avant formatage) ===');
+          console.log('Données complètes:', account);
+          console.log('Nom du compte:', account.nom);
+          console.log('Propriétaire - Nom:', account.proprietaire_nom);
+          console.log('Propriétaire - Prénom:', account.proprietaire_prenom);
+          console.log('Propriétaire - Email:', account.proprietaire_email);
+          console.log('Propriétaire - Image:', account.proprietaire_image);
+          console.log('ID utilisateur propriétaire:', account.id_user_proprietaire);
+          console.log('Rôle:', account.role);
+          console.log('==========================================');
+          
+          const formatted = sharedAccountsService.formatSharedAccount(account);
+          // Préserver explicitement les données du propriétaire
+          const finalAccount = {
+            ...formatted,
+            proprietaire_nom: account.proprietaire_nom,
+            proprietaire_prenom: account.proprietaire_prenom,
+            proprietaire_email: account.proprietaire_email,
+            proprietaire_image: account.proprietaire_image,
+            id_user_proprietaire: account.id_user_proprietaire
+          };
+          
+          console.log('=== Compte partagé formaté (après formatage) ===');
+          console.log('Données complètes formatées:', finalAccount);
+          console.log('==========================================');
+          
+          return finalAccount;
+        });
+        console.log('=== LISTE COMPLÈTE DES COMPTES PARTAGÉS ===');
+        console.log('Nombre de comptes:', formattedSharedAccounts.length);
+        console.log('Liste complète:', formattedSharedAccounts);
+        console.log('==========================================');
         setSharedAccounts(formattedSharedAccounts);
       } else {
         setSharedError(result.error);
@@ -863,12 +1056,19 @@ export default function GestionnaireComptes() {
                     style={{ backgroundColor: colors.white, borderColor: colors.light }}
                   >
                     <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <div className={`p-3 rounded-lg ${getTypeColor(account.type)}`}>
                           {getAccountTypeIcon(account.type)}
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 text-lg">{account.nom}</h3>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 flex-wrap">
+                            <h3 className="font-semibold text-gray-900 text-lg truncate">{account.nom}</h3>
+                            {account.isShared && (
+                              <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full whitespace-nowrap">
+                                (partagé)
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500 capitalize">{account.typeFormatted || account.type}</p>
                         </div>
                       </div>
@@ -1002,63 +1202,46 @@ export default function GestionnaireComptes() {
 
                     <div className="pt-4 border-t border-gray-200">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-500">Partagé avec vous</span>
+                        <span className="text-gray-500">Partagé par</span>
                         <div className="flex items-center space-x-2">
                           {(() => {
-                            const firstName = (
-                              account.proprietaire_prenom ||
-                              account.ownerFirstName ||
-                              account.prenom_utilisateur ||
-                              account.prenom ||
-                              account.owner_prenom ||
-                              account.utilisateur_prenom ||
-                              ''
-                            )
-                            const lastName = (
-                              account.proprietaire_nom ||
-                              account.ownerLastName ||
-                              account.nom_utilisateur ||
-                              account.nom ||
-                              account.owner_nom ||
-                              account.utilisateur_nom ||
-                              ''
-                            )
-                            let sharedByName = `${firstName} ${lastName}`.trim()
-                            if (!sharedByName) {
-                              sharedByName = (
-                                account.ownerName ||
-                                account.sharedByName ||
-                                account.nom_proprietaire ||
-                                account.proprietaire ||
-                                account.shared_by_name ||
-                                account.username ||
-                                ''
-                              )
-                            }
-                            if (!sharedByName && account.email) {
-                              sharedByName = String(account.email).split('@')[0]
-                            }
+                            // Récupérer UNIQUEMENT les données du propriétaire (pas le nom du compte)
+                            const firstName = account.proprietaire_prenom || ''
+                            const lastName = account.proprietaire_nom || ''
+                            const email = account.proprietaire_email || ''
+                            const fullName = `${firstName} ${lastName}`.trim()
+                            // Ne pas utiliser account.nom car c'est le nom du compte, pas de l'utilisateur
+                            const displayName = fullName || (email ? email.split('@')[0] : '') || 'Utilisateur'
                             const API_ORIGIN = API_CONFIG.BASE_URL.replace(/\/api$/, '')
-                            const sharedImage = account.image_utilisateur || account.ownerImage || account.image || null
-                            const imageUrl = sharedImage ? `${API_ORIGIN}/uploads/${sharedImage}` : null
-                            const initialSource = firstName || sharedByName || account.email || 'U'
-                            const initial = String(initialSource).trim().charAt(0).toUpperCase() || 'U'
+                            const imageUrl = account.proprietaire_image ? `${API_ORIGIN}/uploads/${account.proprietaire_image}` : null
+                            const initial = (firstName || lastName || email || 'U').charAt(0).toUpperCase()
 
-                            // Always show the sharer (owner) avatar/name only
+                            // Debug: afficher les données disponibles
+                            if (!fullName && !email) {
+                              console.warn('Données propriétaire manquantes pour le compte:', account.id_compte, {
+                                proprietaire_nom: account.proprietaire_nom,
+                                proprietaire_prenom: account.proprietaire_prenom,
+                                proprietaire_email: account.proprietaire_email,
+                                account_nom: account.nom // nom du compte (à ne pas utiliser)
+                              });
+                            }
+
                             return (
                               <>
                                 {imageUrl ? (
                                   <img
                                     src={imageUrl}
-                                    alt={sharedByName || 'Utilisateur'}
+                                    alt={displayName}
                                     className="w-6 h-6 rounded-full object-cover border-2 border-white"
                                   />
                                 ) : (
-                          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center border-2 border-white">
+                                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center border-2 border-white">
                                     <span className="text-blue-600 text-xs font-medium">{initial}</span>
-                          </div>
+                                  </div>
                                 )}
-                                <span className="text-blue-600 text-xs font-medium">{`${firstName} ${lastName}`.trim() || sharedByName || 'Partagé'}</span>
+                                <span className="text-blue-600 text-xs font-medium" title={email || displayName}>
+                                  {displayName}
+                                </span>
                               </>
                             )
                           })()}
@@ -1094,6 +1277,8 @@ export default function GestionnaireComptes() {
         onShareSuccess={() => {
           // Recharger les comptes partagés après un changement
           loadSharedAccounts();
+          // Recharger aussi les comptes pour mettre à jour l'indicateur "(partagé)"
+          loadAccounts();
         }}
       />
 

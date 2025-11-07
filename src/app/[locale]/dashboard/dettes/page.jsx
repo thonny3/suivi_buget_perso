@@ -237,6 +237,17 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
     if (isOpen) load()
   }, [isOpen])
 
+  const montantInitial = Number(dette?.montant_initial || 0)
+  const montantRestant = Number(dette?.montant_restant || 0)
+  const formatLocal = (amount) => `${Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(amount || 0))} ${currency === 'MGA' ? 'Ar' : (currency || '')}`
+
+  const computeRemainingWithInterestLocal = () => {
+    const base = montantRestant
+    const rate = Number(dette?.taux_interet || 0) / 100
+    if (!(rate > 0)) return base
+    return base * (1 + rate)
+  }
+
   const submit = () => {
     if (!formData.montant || Number(formData.montant) <= 0) { setError('Montant invalide'); return }
     if (!formData.date_paiement) { setError('Date requise'); return }
@@ -252,10 +263,6 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
     })
     onClose()
   }
-
-  const montantInitial = Number(dette?.montant_initial || 0)
-  const montantRestant = Number(dette?.montant_restant || 0)
-  const formatLocal = (amount) => `${Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(amount || 0))} ${currency === 'MGA' ? 'Ar' : (currency || '')}`
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`Ajouter un remboursement — ${dette?.nom || ''}`} size="md">
@@ -439,7 +446,6 @@ export default function DettesPage() {
   }
 
   const handleDelete = async (dette) => {
-    if (!confirm(`Supprimer la dette "${dette.nom}" ?`)) return
     try {
       setError('')
       await dettesService.deleteDette(dette.id_dette)
@@ -489,6 +495,15 @@ export default function DettesPage() {
       return 'en retard'
     }
     return 'en cours'
+  }
+
+  const computeRemainingWithInterest = (d) => {
+    const base = Number(d?.montant_restant ?? 0)
+    const rate = Number(d?.taux_interet ?? 0) / 100
+    if (!(rate > 0)) return base
+    // intérêt simple unique: base * (1 + rate)
+    const accrued = base * (1 + rate)
+    return Math.max(0, accrued)
   }
 
   // Appliquer filtres
@@ -584,7 +599,15 @@ export default function DettesPage() {
             </div>
             <div>
               <div className="text-sm text-gray-500">Restant</div>
-              <div className="font-medium text-gray-900">{formatMoney(dette?.montant_restant)}</div>
+              <div className="font-medium text-gray-900">{Number(dette?.taux_interet || 0) > 0 ? (
+                <>
+                  {formatMoney(computeRemainingWithInterest(dette))}
+                  <span className="ml-2 text-xs text-gray-500">incl. intérêts</span>
+                </>
+              ) : (
+                formatMoney(dette?.montant_restant)
+              )}
+              </div>
             </div>
             <div>
               <div className="text-sm text-gray-500">Date début</div>

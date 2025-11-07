@@ -643,37 +643,43 @@ export default function Dashboard({ params }) {
       {userRole !== 'admin' && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Graphique des revenus et dépenses */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Revenus vs Dépenses</h3>
             <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <MoreHorizontal className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lastThreeMonthsData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="label" />
-                <YAxis />
-                <Tooltip />
-                <Line 
-                  type="monotone" 
-                  dataKey="revenue" 
-                  stroke="#10B981" 
-                  strokeWidth={2}
-                  name="Revenus"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="expenses" 
-                  stroke="#EF4444" 
-                  strokeWidth={2}
-                  name="Dépenses"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={lastThreeMonthsData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <Tooltip 
+                formatter={(value, name) => {
+                  const formattedValue = Number(value || 0).toLocaleString('fr-FR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })
+                  return [`${formattedValue} ${currencySymbol}`, name === 'revenue' ? 'Revenus' : 'Dépenses']
+                }}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="revenue" 
+                stroke="#10B981" 
+                strokeWidth={3}
+                name="Revenus"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="expenses" 
+                stroke="#EF4444" 
+                strokeWidth={3}
+                name="Dépenses"
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
 
         {/* Graphique des catégories de dépenses */}

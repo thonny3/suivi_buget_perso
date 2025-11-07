@@ -24,8 +24,10 @@ import revenuesService from '@/services/revenuesService'
 import sharedAccountsService from '@/services/sharedAccountsService'
 import apiService from '@/services/apiService'
 import { API_CONFIG } from '@/config/api'
+import { useToast } from '@/hooks/useToast'
 
 export default function RevenuePage() {
+  const { showSuccess, showError } = useToast()
   const [revenues, setRevenues] = useState([])
   const [categories, setCategories] = useState([])
   const [comptes, setComptes] = useState([])
@@ -53,49 +55,62 @@ export default function RevenuePage() {
         await Promise.all([fetchCategories(), fetchComptes(), fetchRevenues()])
       } catch (e) {
         console.error('Erreur lors du chargement initial des données revenus:', e)
+        showError('Erreur lors du chargement des données')
       }
     }
     loadInitialData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchRevenues = async () => {
-    const data = await revenuesService.getRevenues()
-    // Mapper les champs backend vers ceux utilisés par l'UI
-    const mapped = (Array.isArray(data) ? data : []).map((r) => ({
-      id_revenu: r.id_revenu,
-      id_user: r.id_user,
-      montant: Number(r.montant),
-      date_revenu: r.date_revenu,
-      source: r.source,
-      id_categorie_revenu: r.id_categorie_revenu,
-      id_compte: r.id_compte,
-      categorie: r.categorie_nom || r.categorie || '',
-      compte: r.compte_nom || r.compte || '',
-      user_prenom: r.user_prenom,
-      user_nom: r.user_nom,
-      user_email: r.user_email,
-      user_image: r.user_image,
-    }))
-    setRevenues(mapped)
+    try {
+      const data = await revenuesService.getRevenues()
+      // Mapper les champs backend vers ceux utilisés par l'UI
+      const mapped = (Array.isArray(data) ? data : []).map((r) => ({
+        id_revenu: r.id_revenu,
+        id_user: r.id_user,
+        montant: Number(r.montant),
+        date_revenu: r.date_revenu,
+        source: r.source,
+        id_categorie_revenu: r.id_categorie_revenu,
+        id_compte: r.id_compte,
+        categorie: r.categorie_nom || r.categorie || '',
+        compte: r.compte_nom || r.compte || '',
+        user_prenom: r.user_prenom,
+        user_nom: r.user_nom,
+        user_email: r.user_email,
+        user_image: r.user_image,
+      }))
+      setRevenues(mapped)
+    } catch (err) {
+      console.error('Erreur lors du chargement des revenus:', err)
+      showError('Erreur lors du chargement des revenus')
+    }
   }
 
   const fetchCategories = async () => {
-    const data = await revenuesService.getRevenueCategories()
-    const mapped = (Array.isArray(data) ? data : []).map((c) => ({ id: c.id, nom: c.nom }))
-    setCategories(mapped)
+    try {
+      const data = await revenuesService.getRevenueCategories()
+      const mapped = (Array.isArray(data) ? data : []).map((c) => ({ id: c.id, nom: c.nom }))
+      setCategories(mapped)
+    } catch (err) {
+      console.error('Erreur lors du chargement des catégories:', err)
+      showError('Erreur lors du chargement des catégories')
+    }
   }
 
   const fetchComptes = async () => {
-    const my = await revenuesService.getMyComptes()
-    const own = (Array.isArray(my) ? my : []).map((a) => ({
-      id: a.id_compte ?? a.id,
-      nom: a.nom,
-      type: a.type,
-      solde: a.solde,
-      devise: a.devise || a.currency,
-      currency: a.currency,
-      currencySymbol: a.currencySymbol
-    }))
+    try {
+      const my = await revenuesService.getMyComptes()
+      const own = (Array.isArray(my) ? my : []).map((a) => ({
+        id: a.id_compte ?? a.id,
+        nom: a.nom,
+        type: a.type,
+        solde: a.solde,
+        devise: a.devise || a.currency,
+        currency: a.currency,
+        currencySymbol: a.currencySymbol
+      }))
 
     // Shared contributor accounts
     let sharedContrib = []
@@ -155,6 +170,10 @@ export default function RevenuePage() {
       })
     } catch {}
     setUsersById(userMap)
+    } catch (err) {
+      console.error('Erreur lors du chargement des comptes:', err)
+      showError('Erreur lors du chargement des comptes')
+    }
   }
 
   const formatDateForInput = (value) => {
@@ -334,13 +353,17 @@ export default function RevenuePage() {
     try {
       if (editingRevenue) {
         await revenuesService.updateRevenue(editingRevenue.id_revenu, payload)
+        showSuccess('Revenu mis à jour avec succès')
       } else {
         await revenuesService.createRevenue(payload)
+        showSuccess('Revenu créé avec succès')
       }
       await fetchRevenues()
       resetForm()
     } catch (err) {
       console.error('Erreur lors de la sauvegarde du revenu:', err)
+      const errorMessage = err?.message || 'Erreur lors de l\'enregistrement du revenu'
+      showError(errorMessage)
     }
   }
 
@@ -371,9 +394,12 @@ export default function RevenuePage() {
   const handleDelete = async (id) => {
     try {
       await revenuesService.deleteRevenue(id)
+      showSuccess('Revenu supprimé avec succès')
       await fetchRevenues()
     } catch (err) {
       console.error('Erreur lors de la suppression du revenu:', err)
+      const errorMessage = err?.message || 'Erreur lors de la suppression du revenu'
+      showError(errorMessage)
     }
   }
 
@@ -491,7 +517,8 @@ export default function RevenuePage() {
                 cy="50%"
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
+                outerRadius={100}
+                innerRadius={50}
                 fill="#8884d8"
                 dataKey="value"
               >
@@ -565,11 +592,11 @@ export default function RevenuePage() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="text-left p-4 font-medium text-gray-700">Date</th>
-                <th className="text-left p-4 font-medium text-gray-700">Source</th>
+                <th className="text-left p-4 font-medium text-gray-700">Source/Description</th>
                 <th className="text-left p-4 font-medium text-gray-700">Catégorie</th>
                 <th className="text-left p-4 font-medium text-gray-700">Compte</th>
                 <th className="text-left p-4 font-medium text-gray-700">Utilisateur</th>
+                <th className="text-left p-4 font-medium text-gray-700">Date</th>
                 <th className="text-right p-4 font-medium text-gray-700">Montant</th>
                 <th className="text-center p-4 font-medium text-gray-700">Actions</th>
               </tr>
@@ -577,12 +604,6 @@ export default function RevenuePage() {
             <tbody>
               {filteredRevenues.map((revenue, index) => (
                 <tr key={revenue.id_revenu} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="p-4">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      {new Date(revenue.date_revenu).toLocaleDateString('fr-FR')}
-                    </div>
-                  </td>
                   <td className="p-4">
                     <div className="font-medium text-gray-900">{revenue.source}</div>
                   </td>
@@ -620,6 +641,12 @@ export default function RevenuePage() {
                         </div>
                       )
                     })()}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-400" />
+                      {new Date(revenue.date_revenu).toLocaleDateString('fr-FR')}
+                    </div>
                   </td>
                   <td className="p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -666,15 +693,22 @@ export default function RevenuePage() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Source/Description
+                </label>
+                <input
+                  type="text"
+                  required
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  value={formData.source}
+                  onChange={(e) => setFormData({...formData, source: e.target.value})}
+                  placeholder="Ex: Salaire janvier, Freelance projet X..."
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant ({(() => {
-                    const selected = getAccountById(parseInt(formData.id_compte))
-                    const lsCode = getLocalStorageDevise()
-                    const code = (lsCode || selected?.devise || selected?.currency || '').toString().toUpperCase()
-                    if (code === 'MGA') return 'Ar'
-                    return selected?.currencySymbol || selected?.devise || selected?.currency || lsCode || '€'
-                  })()})
+                  Montant
                 </label>
                 <input
                   type="number"
@@ -699,19 +733,7 @@ export default function RevenuePage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Source/Description
-                </label>
-                <input
-                  type="text"
-                  required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  value={formData.source}
-                  onChange={(e) => setFormData({...formData, source: e.target.value})}
-                  placeholder="Ex: Salaire janvier, Freelance projet X..."
-                />
-              </div>
+              
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

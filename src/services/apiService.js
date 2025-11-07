@@ -172,6 +172,13 @@ class ApiService {
     })
   }
 
+  // Rechercher des utilisateurs par email (pour autocomplétion)
+  async searchUsers(emailQuery) {
+    return this.request(`/users/search?email=${encodeURIComponent(emailQuery)}`, {
+      method: 'GET',
+    })
+  }
+
   // Gestion des tokens
   setToken(token) {
     localStorage.setItem('authToken', token)

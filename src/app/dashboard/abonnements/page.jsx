@@ -29,10 +29,11 @@ import { colors } from '@/styles/colors'
 import abonnementsService from '@/services/abonnementsService'
 import { useAuth } from '@/app/context/AuthContext'
 import accountsService from '@/services/accountsService'
- 
+import { useToast } from '@/hooks/useToast'
 
 export default function AbonnementsPage() {
   const { user } = useAuth()
+  const { showSuccess, showError } = useToast()
   const [abonnements, setAbonnements] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -63,6 +64,7 @@ export default function AbonnementsPage() {
     id_compte: '',
     auto_renouvellement: false
   })
+  const [errors, setErrors] = useState({})
 
   const iconOptions = [
     { name: 'RefreshCw', component: RefreshCw, label: 'Général' },
@@ -140,7 +142,9 @@ export default function AbonnementsPage() {
           if (res.success) setComptes(Array.isArray(res.data) ? res.data : [])
         } catch (_e) {}
       } catch (e) {
-        setError(e?.message || 'Erreur lors du chargement')
+        const errorMessage = e?.message || 'Erreur lors du chargement'
+        setError(errorMessage)
+        showError(errorMessage)
       } finally {
         setLoading(false)
       }
@@ -203,11 +207,43 @@ export default function AbonnementsPage() {
     return matchesSearch && matchesFrequence && matchesStatut
   })
 
+  const validateForm = () => {
+    const newErrors = {}
+    
+    if (!formData.nom || formData.nom.trim() === '') {
+      newErrors.nom = 'Le nom est requis'
+    }
+    
+    if (!formData.montant || formData.montant.trim() === '') {
+      newErrors.montant = 'Le montant est requis'
+    } else {
+      const montant = parseFloat(formData.montant)
+      if (isNaN(montant) || montant <= 0) {
+        newErrors.montant = 'Le montant doit être un nombre positif'
+      }
+    }
+    
+    if (!formData.prochaine_echeance || formData.prochaine_echeance.trim() === '') {
+      newErrors.prochaine_echeance = 'La date d\'échéance est requise'
+    }
+    
+    if (!formData.frequence || formData.frequence.trim() === '') {
+      newErrors.frequence = 'La fréquence est requise'
+    }
+    
+    if (!formData.id_compte || formData.id_compte.trim() === '') {
+      newErrors.id_compte = 'Le compte à débiter est requis'
+    }
+    
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async () => {
-    if (!formData.nom || !formData.montant || !formData.prochaine_echeance) {
-      alert('Veuillez remplir tous les champs')
+    if (!validateForm()) {
       return
     }
+    
     try {
       if (editingAbonnement) {
         await abonnementsService.update(editingAbonnement.id_abonnement, {
@@ -221,6 +257,7 @@ export default function AbonnementsPage() {
           id_compte: formData.id_compte || null,
           auto_renouvellement: !!formData.auto_renouvellement
         })
+        showSuccess('Abonnement mis à jour avec succès')
       } else {
         await abonnementsService.create({
           id_user: user.id_user,
@@ -234,6 +271,7 @@ export default function AbonnementsPage() {
           id_compte: formData.id_compte || null,
           auto_renouvellement: !!formData.auto_renouvellement
         })
+        showSuccess('Abonnement créé avec succès')
       }
       const data = await abonnementsService.listByUser(user.id_user, { includeInactive: false })
       const normalized = Array.isArray(data) ? data.map(row => ({
@@ -253,7 +291,8 @@ export default function AbonnementsPage() {
       setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
       resetForm()
     } catch (e) {
-      alert(e?.message || 'Erreur lors de l\'enregistrement')
+      const errorMessage = e?.message || 'Erreur lors de l\'enregistrement'
+      showError(errorMessage)
     }
   }
 
@@ -269,12 +308,14 @@ export default function AbonnementsPage() {
       id_compte: '',
       auto_renouvellement: false
     })
+    setErrors({})
     setEditingAbonnement(null)
     setIsModalOpen(false)
   }
 
   const handleEdit = (abonnement) => {
     setEditingAbonnement(abonnement)
+    setErrors({})
     setFormData({
       nom: abonnement.nom,
       montant: abonnement.montant.toString(),
@@ -292,9 +333,11 @@ export default function AbonnementsPage() {
   const handleDelete = async (id) => {
     try {
       await abonnementsService.remove(id)
+      showSuccess('Abonnement supprimé avec succès')
       setAbonnements(abonnements.filter(ab => ab.id_abonnement !== id))
     } catch (e) {
-      alert(e?.message || 'Erreur lors de la suppression')
+      const errorMessage = e?.message || 'Erreur lors de la suppression'
+      showError(errorMessage)
     }
   }
 
@@ -805,11 +848,13 @@ export default function AbonnementsPage() {
                       couleur: row.couleur || '#3B82F6'
                     })) : []
                     setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
+                    showSuccess(`Abonnement renouvelé avec succès${selectedPeriods > 1 ? ` (${selectedPeriods} périodes)` : ''}`)
                     setIsRenewModalOpen(false)
                     setRenewTarget(null)
                     setSelectedPeriods(1)
                   } catch (e) {
-                    alert(e?.message || 'Erreur lors du renouvellement')
+                    const errorMessage = e?.message || 'Erreur lors du renouvellement'
+                    showError(errorMessage)
                   }
                 }}
                 className={`flex-1 px-4 py-2 text-white rounded-lg hover:shadow-lg transition-all duration-200 ${!selectedCompteId ? 'opacity-60 cursor-not-allowed' : ''}`}
@@ -840,11 +885,23 @@ export default function AbonnementsPage() {
                 <input
                   type="text"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.nom 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-purple-500'
+                  }`}
                   value={formData.nom}
-                  onChange={(e) => setFormData({...formData, nom: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, nom: e.target.value})
+                    if (errors.nom) {
+                      setErrors({...errors, nom: ''})
+                    }
+                  }}
                   placeholder="Ex: Netflix, Spotify..."
                 />
+                {errors.nom && (
+                  <p className="text-red-500 text-sm mt-1">{errors.nom}</p>
+                )}
               </div>
 
               <div>
@@ -855,11 +912,23 @@ export default function AbonnementsPage() {
                   type="number"
                   step="0.01"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.montant 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-purple-500'
+                  }`}
                   value={formData.montant}
-                  onChange={(e) => setFormData({...formData, montant: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, montant: e.target.value})
+                    if (errors.montant) {
+                      setErrors({...errors, montant: ''})
+                    }
+                  }}
                   placeholder="0.00"
                 />
+                {errors.montant && (
+                  <p className="text-red-500 text-sm mt-1">{errors.montant}</p>
+                )}
               </div>
 
               <div>
@@ -868,14 +937,26 @@ export default function AbonnementsPage() {
                 </label>
                 <select
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.frequence 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-purple-500'
+                  }`}
                   value={formData.frequence}
-                  onChange={(e) => setFormData({...formData, frequence: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, frequence: e.target.value})
+                    if (errors.frequence) {
+                      setErrors({...errors, frequence: ''})
+                    }
+                  }}
                 >
                   {frequenceOptions.map(freq => (
                     <option key={freq} value={freq}>{freq}</option>
                   ))}
                 </select>
+                {errors.frequence && (
+                  <p className="text-red-500 text-sm mt-1">{errors.frequence}</p>
+                )}
               </div>
 
               <div>
@@ -885,21 +966,43 @@ export default function AbonnementsPage() {
                 <input
                   type="date"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.prochaine_echeance 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-purple-500'
+                  }`}
                   value={formData.prochaine_echeance}
-                  onChange={(e) => setFormData({...formData, prochaine_echeance: e.target.value})}
+                  onChange={(e) => {
+                    setFormData({...formData, prochaine_echeance: e.target.value})
+                    if (errors.prochaine_echeance) {
+                      setErrors({...errors, prochaine_echeance: ''})
+                    }
+                  }}
                 />
+                {errors.prochaine_echeance && (
+                  <p className="text-red-500 text-sm mt-1">{errors.prochaine_echeance}</p>
+                )}
               </div>
 
               {/* Compte lié pour le prélèvement */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Compte à débiter (optionnel)
+                  Compte à débiter
                 </label>
                 <select
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    errors.id_compte 
+                      ? 'border-red-500 focus:ring-red-500' 
+                      : 'border-gray-200 focus:ring-purple-500'
+                  }`}
                   value={formData.id_compte}
-                  onChange={(e) => setFormData({ ...formData, id_compte: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, id_compte: e.target.value })
+                    if (errors.id_compte) {
+                      setErrors({...errors, id_compte: ''})
+                    }
+                  }}
                   onFocus={async () => {
                     if (!Array.isArray(comptes) || comptes.length === 0) {
                       try {
@@ -921,6 +1024,9 @@ export default function AbonnementsPage() {
                     </option>
                   ))}
                 </select>
+                {errors.id_compte && (
+                  <p className="text-red-500 text-sm mt-1">{errors.id_compte}</p>
+                )}
                 {loadingComptes && (
                   <div className="text-xs text-gray-500 mt-1">Chargement des comptes...</div>
                 )}
@@ -956,53 +1062,6 @@ export default function AbonnementsPage() {
                 <p className="text-xs text-gray-500 mt-1">
                   Si activé, le système renouvellera automatiquement en débitant le compte choisi lorsque la date d'échéance arrive.
                 </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Icône
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {iconOptions.map((option) => {
-                    const IconComp = option.component
-                    return (
-                      <button
-                        key={option.name}
-                        type="button"
-                        onClick={() => setFormData({...formData, icone: option.name})}
-                        className={`p-3 rounded-lg border-2 transition-all ${
-                          formData.icone === option.name 
-                            ? 'border-purple-500 bg-purple-50' 
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <IconComp className="w-5 h-5 mx-auto" />
-                        <span className="text-xs mt-1 block">{option.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Couleur
-                </label>
-                <div className="flex gap-2 flex-wrap">
-                  {colorOptions.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setFormData({...formData, couleur: color})}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        formData.couleur === color 
-                          ? 'border-gray-400 scale-110' 
-                          : 'border-gray-200'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    ></button>
-                  ))}
-                </div>
               </div>
 
               <div className="flex gap-3 pt-4">

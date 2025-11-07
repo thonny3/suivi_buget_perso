@@ -33,6 +33,7 @@ import sharedAccountsService from '@/services/sharedAccountsService'
 import apiService from '@/services/apiService'
 import { API_CONFIG } from '@/config/api'
 import logo from '@/image/logo.png'
+import { useToast } from '@/hooks/useToast'
 
 // Composant Modal de base
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
@@ -65,12 +66,36 @@ const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
   );
 };
 
+// Fonction pour normaliser une date au format YYYY-MM-DD
+const normalizeDateForInput = (dateValue) => {
+  if (!dateValue) return new Date().toISOString().split('T')[0];
+  
+  // Si c'est déjà au format YYYY-MM-DD, l'utiliser directement
+  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+  
+  // Sinon, essayer de parser la date en évitant les problèmes de fuseau horaire
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) return new Date().toISOString().split('T')[0];
+    
+    // Utiliser les composants locaux pour éviter les problèmes de fuseau horaire
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  } catch {
+    return new Date().toISOString().split('T')[0];
+  }
+};
+
 // Composant Formulaire Dépense
 const ExpenseForm = ({ isOpen, onClose, onSave, item = null, categories = [], comptes = [] }) => {
   const [formData, setFormData] = useState({
     description: item?.description || '',
     montant: item?.montant || '',
-    date_depense: (item?.date_depense ? (new Date(item.date_depense).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0]),
+    date_depense: normalizeDateForInput(item?.date_depense),
     id_categorie_depense: item?.id_categorie_depense || '',
     id_compte: item?.id_compte || ''
   });
@@ -79,7 +104,7 @@ const ExpenseForm = ({ isOpen, onClose, onSave, item = null, categories = [], co
     setFormData({
       description: item?.description || '',
       montant: item?.montant || '',
-      date_depense: (item?.date_depense ? (new Date(item.date_depense).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0]),
+      date_depense: normalizeDateForInput(item?.date_depense),
       id_categorie_depense: item?.id_categorie_depense || '',
       id_compte: item?.id_compte || ''
     })
@@ -378,6 +403,8 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, expense }) => {
 
 // Composant Principal
 export default function GestionDepenses() {
+  const { showSuccess, showError } = useToast();
+  
   const normalizeDate = (value) => {
     if (!value) return new Date().toISOString().slice(0, 10)
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value
@@ -488,12 +515,15 @@ export default function GestionDepenses() {
         } catch {}
         setUsersById(userMap)
       } catch (e) {
-        setError(e.message || 'Erreur lors du chargement des dépenses')
+        const errorMessage = e.message || 'Erreur lors du chargement des dépenses'
+        setError(errorMessage)
+        showError(errorMessage)
       } finally {
         setIsLoading(false)
       }
     }
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -583,13 +613,17 @@ export default function GestionDepenses() {
       }
       if (selectedExpense) {
         await depensesService.updateDepense(selectedExpense.id_depense, payload)
+        showSuccess('Dépense mise à jour avec succès')
       } else {
         await depensesService.createDepense(payload)
+        showSuccess('Dépense créée avec succès')
       }
       const fresh = await depensesService.getDepenses()
       setExpenses(Array.isArray(fresh) ? fresh : [])
     } catch (e) {
-      setError(e.message || 'Erreur lors de l\'enregistrement')
+      const errorMessage = e.message || 'Erreur lors de l\'enregistrement'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setSelectedExpense(null)
     }
@@ -609,10 +643,13 @@ export default function GestionDepenses() {
     try {
       if (!selectedExpense) return
       await depensesService.deleteDepense(selectedExpense.id_depense)
+      showSuccess('Dépense supprimée avec succès')
       const fresh = await depensesService.getDepenses()
       setExpenses(Array.isArray(fresh) ? fresh : [])
     } catch (e) {
-      setError(e.message || 'Erreur lors de la suppression')
+      const errorMessage = e.message || 'Erreur lors de la suppression'
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setIsDeleteOpen(false)
       setSelectedExpense(null)
@@ -860,14 +897,10 @@ export default function GestionDepenses() {
           <div className="space-y-3">
             {categoryStats.slice(0, 5).map((stat, index) => {
               const percentage = totalExpenses > 0 ? ((stat.total / totalExpenses) * 100).toFixed(1) : 0;
-              const IconComponent = stat.icon || Coffee;
               return (
                 <div key={stat.id} className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2 flex-1">
                     <span className="text-sm font-medium text-gray-500 w-4">#{index + 1}</span>
-                    <div className={`p-2 rounded-lg ${stat.couleur || 'bg-gray-500'} text-white`}>
-                      <IconComponent className="w-4 h-4" />
-                    </div>
                     <span className="font-medium text-gray-900">{stat.nom}</span>
                   </div>
                   <div className="text-right">
@@ -1028,14 +1061,9 @@ export default function GestionDepenses() {
                         </div>
                       </td>
                       <td className="py-4 px-6">
-                        <div className="flex items-center space-x-2">
-                          <div className={`p-2 rounded-lg ${getCategoryColor(expense.id_categorie_depense)} text-white`}>
-                            <IconComponent className="w-4 h-4" />
-                          </div>
-                          <span className="text-sm text-gray-700">
-                            {getCategoryName(expense.id_categorie_depense)}
-                          </span>
-                        </div>
+                        <span className="text-sm text-gray-700">
+                          {getCategoryName(expense.id_categorie_depense)}
+                        </span>
                       </td>
                       <td className="py-4 px-6">
                         <span className="text-sm text-gray-600">
@@ -1055,7 +1083,7 @@ export default function GestionDepenses() {
                         </div>
                       </td>
                       <td className="py-4 px-6 text-right">
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-red-600">
                           {formatAmountForAccount(expense.montant, expense.id_compte)}
                         </span>
                       </td>
