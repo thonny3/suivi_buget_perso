@@ -728,13 +728,7 @@ export default function Dashboard({ params }) {
       </div>
       )}
 
-      {/* Assistant IA - Masqué pour les admins */}
-      {userRole !== 'admin' && (
-        <div className="mb-8">
-          <AssistantChat />
-        </div>
-      )}
-
+ 
       {/* Budget mensuel - Masqué pour les admins */}
       {userRole !== 'admin' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
