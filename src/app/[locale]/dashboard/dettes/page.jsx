@@ -4,6 +4,8 @@ import { Plus, Edit2, Trash2, Wallet, Calendar, Save, X, DollarSign, ArrowUpRigh
 import dettesService from '@/services/dettesService'
 import useToast from '@/hooks/useToast'
 import depensesService from '@/services/depensesService'
+import { useLanguage } from '@/context/LanguageContext'
+import { useParams } from 'next/navigation'
 
 const Modal = ({ isOpen, onClose, title, children, size = 'md', fullScreen = false }) => {
   if (!isOpen) return null
@@ -12,12 +14,12 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md', fullScreen = fal
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className={
         fullScreen
-          ? 'bg-white w-screen h-screen rounded-none shadow-none overflow-y-auto'
-          : `bg-white rounded-2xl shadow-2xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-y-auto`
+          ? 'bg-white dark:bg-gray-800 w-screen h-screen rounded-none shadow-none overflow-y-auto custom-scrollbar scroll-smooth'
+          : `bg-white dark:bg-gray-800 rounded-2xl shadow-2xl ${sizeClasses[size]} w-full mx-4 max-h-[90vh] overflow-y-auto custom-scrollbar scroll-smooth`
       }>
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"><X className="w-5 h-5 text-gray-500 dark:text-gray-300" /></button>
         </div>
         <div className="p-6">{children}</div>
       </div>
@@ -26,6 +28,7 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md', fullScreen = fal
 }
 
 const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
+  const { t } = useLanguage()
   const [formData, setFormData] = useState({
     nom: item?.nom || '',
     montant_initial: item?.montant_initial || '',
@@ -97,8 +100,8 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
 
   const validate = () => {
     const e = {}
-    if (!formData.nom.trim()) e.nom = 'Nom requis'
-    if (!formData.montant_initial || Number(formData.montant_initial) <= 0) e.montant_initial = 'Montant > 0'
+    if (!formData.nom.trim()) e.nom = t('dettes.errors.nameRequired')
+    if (!formData.montant_initial || Number(formData.montant_initial) <= 0) e.montant_initial = t('dettes.errors.amountRequired')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -121,97 +124,95 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
     onClose()
   }
 
-  const inputClass = (hasError) => `w-full px-4 py-2 bg-gray-50 border rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${hasError ? 'border-red-500' : 'border-gray-300'}`
+  const inputClass = (hasError) => `w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${hasError ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={item ? 'Modifier la dette' : 'Nouvelle dette'} size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={item ? t('dettes.editDebt') : t('dettes.newDebt')} size="lg">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Nom</label>
-          <input type="text" value={formData.nom} onChange={(e)=>setFormData(v=>({ ...v, nom: e.target.value }))} className={inputClass(!!errors.nom)} placeholder="Ex: Prêt bancaire" />
-          {errors.nom && <p className="text-red-500 text-sm mt-1">{errors.nom}</p>}
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.name')}</label>
+          <input type="text" value={formData.nom} onChange={(e)=>setFormData(v=>({ ...v, nom: e.target.value }))} className={inputClass(!!errors.nom)} placeholder={t('dettes.namePlaceholder')} />
+          {errors.nom && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.nom}</p>}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Montant</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.amount')}</label>
             <input type="number" step="0.01" value={formData.montant_initial} onChange={(e)=>setFormData(v=>({ ...v, montant_initial: e.target.value }))} className={inputClass(!!errors.montant_initial)} placeholder="0.00" />
-            {errors.montant_initial && <p className="text-red-500 text-sm mt-1">{errors.montant_initial}</p>}
+            {errors.montant_initial && <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.montant_initial}</p>}
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Sens du prêt</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.loanDirection')}</label>
             <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2">
+              <label className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
                 <input type="radio" name="sens" value="moi" checked={formData.sens === 'moi'} onChange={(e)=>setFormData(v=>({ ...v, sens: e.target.value }))} />
-                <span>Moi-même (j’ai prêté de l’argent)</span>
+                <span>{t('dettes.iLent')}</span>
               </label>
-              <label className="flex items-center space-x-2">
+              <label className="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
                 <input type="radio" name="sens" value="autre" checked={formData.sens === 'autre'} onChange={(e)=>setFormData(v=>({ ...v, sens: e.target.value }))} />
-                <span>Autre personne (on m’a prêté)</span>
+                <span>{t('dettes.iBorrowed')}</span>
               </label>
             </div>
-            <p className="mt-2 text-xs text-gray-600">
-              {formData.sens === 'moi'
-                ? "L’argent sort de votre compte. Vous avez un crédit envers quelqu’un."
-                : "L’argent entre dans votre compte. Vous avez une dette envers quelqu’un."}
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+              {formData.sens === 'moi' ? t('dettes.iLentDescription') : t('dettes.iBorrowedDescription')}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Taux d'intérêt (%)</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.interestRate')}</label>
             <input type="number" step="0.01" value={formData.taux_interet} onChange={(e)=>setFormData(v=>({ ...v, taux_interet: e.target.value }))} className={inputClass(false)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Paiement mensuel</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.monthlyPayment')}</label>
             <input type="number" step="0.01" value={formData.paiement_mensuel} onChange={(e)=>setFormData(v=>({ ...v, paiement_mensuel: e.target.value }))} className={inputClass(false)} />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.startDate')}</label>
             <input type="date" value={formData.date_debut} onChange={(e)=>setFormData(v=>({ ...v, date_debut: e.target.value }))} className={inputClass(false)} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Date fin prévue</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.expectedEndDate')}</label>
             <input type="date" value={formData.date_fin_prevue} onChange={(e)=>setFormData(v=>({ ...v, date_fin_prevue: e.target.value }))} className={inputClass(false)} />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Créancier</label>
-            <input type="text" value={formData.creancier} onChange={(e)=>setFormData(v=>({ ...v, creancier: e.target.value }))} className={inputClass(false)} placeholder="Banque, personne..." />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.creditor')}</label>
+            <input type="text" value={formData.creancier} onChange={(e)=>setFormData(v=>({ ...v, creancier: e.target.value }))} className={inputClass(false)} placeholder={t('dettes.creditorPlaceholder')} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.type')}</label>
             <select value={formData.type} onChange={(e)=>setFormData(v=>({ ...v, type: e.target.value }))} className={inputClass(false)}>
-              <option value="personne">Personne</option>
-              <option value="banque">Banque</option>
-              <option value="autre">Autre</option>
+              <option value="personne">{t('dettes.typePerson')}</option>
+              <option value="banque">{t('dettes.typeBank')}</option>
+              <option value="autre">{t('dettes.typeOther')}</option>
             </select>
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Compte associé</label>
-          {loadAccError && <div className="mb-2 text-xs text-red-600">{loadAccError}</div>}
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.associatedAccount')}</label>
+          {loadAccError && <div className="mb-2 text-xs text-red-600 dark:text-red-400">{loadAccError}</div>}
           <select
             value={formData.id_compte}
             onChange={(e)=>setFormData(v=>({ ...v, id_compte: e.target.value }))}
             className={inputClass(false)}
           >
-            <option value="">Sélectionner un compte</option>
+            <option value="">{t('dettes.selectAccount')}</option>
             {comptes.map((c) => (
               <option key={(c.id_compte ?? c.id)} value={(c.id_compte ?? c.id)}>
                 {c.nom} ({c.type})
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-gray-600">
-            {formData.sens === 'moi' ? 'Sortie d’argent depuis ce compte lors du prêt.' : 'Entrée d’argent sur ce compte lors du prêt.'}
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+            {formData.sens === 'moi' ? t('dettes.accountOutflow') : t('dettes.accountInflow')}
           </p>
         </div>
         <div className="flex justify-end space-x-3 pt-4">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Annuler</button>
-          <button type="button" onClick={handleSubmit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>{item ? 'Mettre à jour' : 'Ajouter'}</span></button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">{t('common.cancel')}</button>
+          <button type="button" onClick={handleSubmit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>{item ? t('dettes.update') : t('dettes.add')}</span></button>
         </div>
       </div>
     </Modal>
@@ -219,6 +220,7 @@ const DetteForm = ({ isOpen, onClose, onSave, item = null }) => {
 }
 
 const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
+  const { t } = useLanguage()
   const { showError } = useToast()
   const [formData, setFormData] = useState({ montant: '', date_paiement: new Date().toISOString().slice(0,10), id_compte: '' })
   const [comptes, setComptes] = useState([])
@@ -249,11 +251,11 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
   }
 
   const submit = () => {
-    if (!formData.montant || Number(formData.montant) <= 0) { setError('Montant invalide'); return }
-    if (!formData.date_paiement) { setError('Date requise'); return }
-    if (!formData.id_compte) { setError('Compte requis'); return }
+    if (!formData.montant || Number(formData.montant) <= 0) { setError(t('dettes.errors.invalidAmount')); return }
+    if (!formData.date_paiement) { setError(t('dettes.errors.dateRequired')); return }
+    if (!formData.id_compte) { setError(t('dettes.errors.accountRequired')); return }
     if (Number(formData.montant) > montantRestant) {
-      showError('Le montant saisi dépasse le montant restant de la dette')
+      showError(t('dettes.errors.amountExceedsRemaining'))
       return
     }
     onSave({
@@ -265,46 +267,44 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Ajouter un remboursement — ${dette?.nom || ''}`} size="md">
-      {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded">{error}</div>}
+    <Modal isOpen={isOpen} onClose={onClose} title={`${t('dettes.addPayment')} — ${dette?.nom || ''}`} size="md">
+      {error && <div className="mb-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-2 rounded">{error}</div>}
       <div className="space-y-4">
         {dette?.sens && (
-          <div className="text-sm text-gray-600">
-            {dette.sens === 'moi'
-              ? 'Ce paiement sera enregistré comme une sortie d’argent depuis votre compte.'
-              : 'Ce paiement sera enregistré comme une entrée d’argent sur votre compte.'}
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {dette.sens === 'moi' ? t('dettes.paymentOutflow') : t('dettes.paymentInflow')}
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-            <div className="text-gray-600">Montant de la dette</div>
-            <div className="font-semibold text-gray-900">{formatLocal(montantInitial)}</div>
+          <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2">
+            <div className="text-gray-600 dark:text-gray-400">{t('dettes.debtAmount')}</div>
+            <div className="font-semibold text-gray-900 dark:text-white">{formatLocal(montantInitial)}</div>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-            <div className="text-gray-600">Montant restant</div>
-            <div className="font-semibold text-gray-900">{formatLocal(montantRestant)}</div>
+          <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2">
+            <div className="text-gray-600 dark:text-gray-400">{t('dettes.remainingAmount')}</div>
+            <div className="font-semibold text-gray-900 dark:text-white">{formatLocal(montantRestant)}</div>
           </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Montant</label>
-          <input type="number" step="0.01" value={formData.montant} onChange={(e)=>setFormData(v=>({ ...v, montant: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" placeholder="0.00" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.amount')}</label>
+          <input type="number" step="0.01" value={formData.montant} onChange={(e)=>setFormData(v=>({ ...v, montant: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 dark:text-white" placeholder="0.00" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Date de paiement</label>
-          <input type="date" value={formData.date_paiement} onChange={(e)=>setFormData(v=>({ ...v, date_paiement: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500" />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.paymentDate')}</label>
+          <input type="date" value={formData.date_paiement} onChange={(e)=>setFormData(v=>({ ...v, date_paiement: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 dark:text-white" />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Compte</label>
-          <select value={formData.id_compte} onChange={(e)=>setFormData(v=>({ ...v, id_compte: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-            <option value="">Sélectionner un compte</option>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.account')}</label>
+          <select value={formData.id_compte} onChange={(e)=>setFormData(v=>({ ...v, id_compte: e.target.value }))} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 dark:text-white">
+            <option value="">{t('dettes.selectAccount')}</option>
             {comptes.map((c) => (
               <option key={(c.id_compte ?? c.id)} value={(c.id_compte ?? c.id)}>{c.nom} ({c.type})</option>
             ))}
           </select>
         </div>
         <div className="flex justify-end space-x-3 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Annuler</button>
-          <button type="button" onClick={submit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>Ajouter le remboursement</span></button>
+          <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">{t('common.cancel')}</button>
+          <button type="button" onClick={submit} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors flex items-center space-x-2"><Save className="w-4 h-4" /><span>{t('dettes.addPayment')}</span></button>
         </div>
       </div>
     </Modal>
@@ -312,6 +312,8 @@ const PaiementForm = ({ isOpen, onClose, onSave, dette, currency = 'MGA' }) => {
 }
 
 export default function DettesPage() {
+  const { t } = useLanguage()
+  const params = useParams()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -347,7 +349,7 @@ export default function DettesPage() {
       const res = await dettesService.getDettes()
       setItems(Array.isArray(res) ? res : [])
     } catch (e) {
-      setError(e.message || 'Erreur lors du chargement des dettes')
+      setError(e.message || t('dettes.errors.loadError'))
     } finally {
       setLoading(false)
     }
@@ -431,15 +433,15 @@ export default function DettesPage() {
       const withStatus = { ...payload, statut: derived }
       if (editing) {
         await dettesService.updateDette(editing.id_dette, withStatus)
-        showSuccess('Dette mise à jour avec succès')
+        showSuccess(t('dettes.success.update'))
       } else {
         await dettesService.createDette(withStatus)
-        showSuccess('Dette ajoutée avec succès')
+        showSuccess(t('dettes.success.create'))
       }
       await load()
     } catch (e) {
-      setError(e.message || 'Erreur lors de l\'enregistrement')
-      showError(e.message || 'Erreur lors de l\'enregistrement')
+      setError(e.message || t('dettes.errors.saveError'))
+      showError(e.message || t('dettes.errors.saveError'))
     } finally {
       setEditing(null)
     }
@@ -449,11 +451,11 @@ export default function DettesPage() {
     try {
       setError('')
       await dettesService.deleteDette(dette.id_dette)
-      showSuccess('Dette supprimée')
+      showSuccess(t('dettes.success.delete'))
       await load()
     } catch (e) {
-      setError(e.message || 'Erreur lors de la suppression')
-      showError(e.message || 'Erreur lors de la suppression')
+      setError(e.message || t('dettes.errors.deleteError'))
+      showError(e.message || t('dettes.errors.deleteError'))
     }
   }
 
@@ -467,11 +469,11 @@ export default function DettesPage() {
         id_dette: target.id_dette
       }
       await dettesService.addRemboursement(target.id_dette, payload)
-      showSuccess('Remboursement ajouté')
+      showSuccess(t('dettes.success.paymentAdded'))
       await load()
     } catch (e) {
-      setError(e.message || 'Erreur lors de l\'ajout du paiement')
-      showError(e.message || 'Erreur lors de l\'ajout du paiement')
+      setError(e.message || t('dettes.errors.paymentError'))
+      showError(e.message || t('dettes.errors.paymentError'))
     } finally {
       setTarget(null)
     }
@@ -538,9 +540,9 @@ export default function DettesPage() {
 
   const renderStatusBadge = (status) => {
     const map = {
-      'terminé': { bg: 'bg-green-100', text: 'text-green-700', label: 'Terminé' },
-      'en retard': { bg: 'bg-red-100', text: 'text-red-700', label: 'En retard' },
-      'en cours': { bg: 'bg-blue-100', text: 'text-blue-700', label: 'En cours' }
+      'terminé': { bg: 'bg-green-100 dark:bg-green-900', text: 'text-green-700 dark:text-green-300', label: t('dettes.status.completed') },
+      'en retard': { bg: 'bg-red-100 dark:bg-red-900', text: 'text-red-700 dark:text-red-300', label: t('dettes.status.overdue') },
+      'en cours': { bg: 'bg-blue-100 dark:bg-blue-900', text: 'text-blue-700 dark:text-blue-300', label: t('dettes.status.inProgress') }
     }
     const s = map[status] || map['en cours']
     return (
@@ -551,6 +553,7 @@ export default function DettesPage() {
   }
 
   const DetailsModal = ({ isOpen, onClose, dette }) => {
+    const { t: tDetails } = useLanguage()
     const [payments, setPayments] = useState([])
     const [loadingPayments, setLoadingPayments] = useState(false)
     const [err, setErr] = useState('')
@@ -564,7 +567,7 @@ export default function DettesPage() {
           const res = await dettesService.listRemboursements(dette.id_dette)
           setPayments(Array.isArray(res) ? res : [])
         } catch (e) {
-          setErr(e.message || 'Erreur chargement remboursements')
+          setErr(e.message || tDetails('dettes.errors.loadPaymentsError'))
         } finally {
           setLoadingPayments(false)
         }
@@ -581,28 +584,28 @@ export default function DettesPage() {
     const remainingToReach = Math.max(0, Number(dette?.montant_initial || 0) - Number(dette?.montant_restant || 0))
 
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title={`Détails — ${dette?.nom || ''}`} size="lg">
-        {err && <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-2 rounded">{err}</div>}
+      <Modal isOpen={isOpen} onClose={onClose} title={`${tDetails('dettes.details')} — ${dette?.nom || ''}`} size="lg">
+        {err && <div className="mb-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-2 rounded">{err}</div>}
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <div className="text-sm text-gray-500">Créancier</div>
-              <div className="font-medium text-gray-900">{dette?.creancier || '-'}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.creditor')}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{dette?.creancier || '-'}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">Sens</div>
-              <div className="font-medium text-gray-900">{dette?.sens === 'moi' ? 'Moi-même (j’ai prêté)' : 'Autre personne (on m’a prêté)'}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.direction')}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{dette?.sens === 'moi' ? tDetails('dettes.iLent') : tDetails('dettes.iBorrowed')}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">Montant</div>
-              <div className="font-medium text-gray-900">{formatMoney(dette?.montant_initial)}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.amount')}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{formatMoney(dette?.montant_initial)}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">Restant</div>
-              <div className="font-medium text-gray-900">{Number(dette?.taux_interet || 0) > 0 ? (
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.remaining')}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{Number(dette?.taux_interet || 0) > 0 ? (
                 <>
                   {formatMoney(computeRemainingWithInterest(dette))}
-                  <span className="ml-2 text-xs text-gray-500">incl. intérêts</span>
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{tDetails('dettes.includingInterest')}</span>
                 </>
               ) : (
                 formatMoney(dette?.montant_restant)
@@ -610,64 +613,64 @@ export default function DettesPage() {
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">Date début</div>
-              <div className="font-medium text-gray-900">{dette?.date_debut ? new Date(dette.date_debut).toLocaleDateString('fr-FR') : '-'}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.startDate')}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{dette?.date_debut ? new Date(dette.date_debut).toLocaleDateString('fr-FR') : '-'}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">Fin prévue</div>
-              <div className="font-medium text-gray-900">{dette?.date_fin_prevue ? new Date(dette.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.expectedEndDate')}</div>
+              <div className="font-medium text-gray-900 dark:text-white">{dette?.date_fin_prevue ? new Date(dette.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}</div>
             </div>
             <div>
-              <div className="text-sm text-gray-500">Statut</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{tDetails('dettes.status.label')}</div>
               <div className="font-medium">{renderStatusBadge(deriveStatus(dette))}</div>
             </div>
           </div>
 
           <div className="pt-2">
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm font-medium text-gray-700">Remboursements</div>
-              <div className="text-sm text-gray-600">
-                Total remboursé: <span className="font-semibold text-gray-900">{formatMoney(totalPaid)}</span>
+              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{tDetails('dettes.payments')}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {tDetails('dettes.totalPaid')}: <span className="font-semibold text-gray-900 dark:text-white">{formatMoney(totalPaid)}</span>
                 <span className="mx-2">•</span>
-                Restant à atteindre: <span className="font-semibold text-gray-900">{formatMoney(remainingToReach)}</span>
+                {tDetails('dettes.remainingToReach')}: <span className="font-semibold text-gray-900 dark:text-white">{formatMoney(remainingToReach)}</span>
                 <span className="mx-2">•</span>
-                {payments.length} ligne{payments.length > 1 ? 's' : ''}
+                {payments.length} {tDetails('dettes.line')}{payments.length > 1 ? 's' : ''}
               </div>
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
               {loadingPayments ? (
-                <div className="p-4 text-gray-500">Chargement...</div>
+                <div className="p-4 text-gray-500 dark:text-gray-400">{tDetails('common.loading')}</div>
               ) : paymentsSorted.length === 0 ? (
-                <div className="p-4 text-gray-500">Aucun remboursement</div>
+                <div className="p-4 text-gray-500 dark:text-gray-400">{tDetails('dettes.noPayments')}</div>
               ) : (
-                <div className="max-h-80 overflow-auto">
+                <div className="max-h-80 overflow-auto custom-scrollbar scroll-smooth">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 sticky top-0 z-[1]">
+                    <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-[1]">
                       <tr>
-                        <th className="text-left py-2 px-3 text-gray-600">Date</th>
-                        <th className="text-right py-2 px-3 text-gray-600">Montant</th>
-                        <th className="text-left py-2 px-3 text-gray-600">Mouvement</th>
-                        <th className="text-left py-2 px-3 text-gray-600">Compte</th>
+                        <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300">{tDetails('dettes.date')}</th>
+                        <th className="text-right py-2 px-3 text-gray-600 dark:text-gray-300">{tDetails('dettes.amount')}</th>
+                        <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300">{tDetails('dettes.movement')}</th>
+                        <th className="text-left py-2 px-3 text-gray-600 dark:text-gray-300">{tDetails('dettes.account')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paymentsSorted.map((p) => {
-                        const mouvement = (dette?.sens === 'moi') ? 'Sortie' : 'Entrée'
-                        const color = (dette?.sens === 'moi') ? 'text-red-700' : 'text-green-700'
+                        const mouvement = (dette?.sens === 'moi') ? tDetails('dettes.outflow') : tDetails('dettes.inflow')
+                        const color = (dette?.sens === 'moi') ? 'text-red-700 dark:text-red-400' : 'text-green-700 dark:text-green-400'
                         return (
-                          <tr key={p.id_remboursement} className="border-t border-gray-100 hover:bg-gray-50">
-                            <td className="py-2 px-3">{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR') : '-'}</td>
+                          <tr key={p.id_remboursement} className="border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td className="py-2 px-3 text-gray-900 dark:text-white">{p.date_paiement ? new Date(p.date_paiement).toLocaleDateString('fr-FR') : '-'}</td>
                             <td className={`py-2 px-3 text-right font-medium ${color}`}>{formatMoney(p.montant)}</td>
-                            <td className="py-2 px-3">{mouvement}</td>
-                            <td className="py-2 px-3">{p.id_compte ? (getCompteLabel(p.id_compte) || `#${p.id_compte}`) : '-'}</td>
+                            <td className="py-2 px-3 text-gray-900 dark:text-white">{mouvement}</td>
+                            <td className="py-2 px-3 text-gray-900 dark:text-white">{p.id_compte ? (getCompteLabel(p.id_compte) || `#${p.id_compte}`) : '-'}</td>
                           </tr>
                         )
                       })}
                     </tbody>
-                    <tfoot className="bg-gray-50 border-t border-gray-200">
+                    <tfoot className="bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
                       <tr>
-                        <td className="py-2 px-3 text-gray-600">Total</td>
-                        <td className="py-2 px-3 text-right font-semibold">{formatMoney(totalPaid)}</td>
+                        <td className="py-2 px-3 text-gray-600 dark:text-gray-300">{tDetails('dettes.total')}</td>
+                        <td className="py-2 px-3 text-right font-semibold text-gray-900 dark:text-white">{formatMoney(totalPaid)}</td>
                         <td className="py-2 px-3"></td>
                         <td className="py-2 px-3"></td>
                       </tr>
@@ -679,7 +682,7 @@ export default function DettesPage() {
           </div>
 
           <div className="flex justify-end pt-2">
-            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Fermer</button>
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{tDetails('common.close')}</button>
           </div>
         </div>
       </Modal>
@@ -687,24 +690,25 @@ export default function DettesPage() {
   }
 
   const ConfirmDeleteModal = ({ isOpen, onClose, dette }) => {
+    const { t: tDelete } = useLanguage()
     if (!isOpen) return null
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="Confirmer la suppression" size="sm">
+      <Modal isOpen={isOpen} onClose={onClose} title={tDelete('dettes.confirmDelete')} size="sm">
         <div className="space-y-4">
-          <p className="text-gray-700 text-sm">Voulez-vous vraiment supprimer la dette “{dette?.nom}” ? Cette action est irréversible.</p>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm">
+          <p className="text-gray-700 dark:text-gray-300 text-sm">{tDelete('dettes.deleteMessage').replace('{name}', dette?.nom || '')}</p>
+          <div className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 text-sm">
             <div className="flex items-center justify-between">
-              <span className="text-gray-600">Montant</span>
-              <span className="font-medium">{formatMoney(dette?.montant_initial)}</span>
+              <span className="text-gray-600 dark:text-gray-400">{tDelete('dettes.amount')}</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatMoney(dette?.montant_initial)}</span>
             </div>
             <div className="flex items-center justify-between mt-1">
-              <span className="text-gray-600">Restant</span>
-              <span className="font-medium">{formatMoney(dette?.montant_restant)}</span>
+              <span className="text-gray-600 dark:text-gray-400">{tDelete('dettes.remaining')}</span>
+              <span className="font-medium text-gray-900 dark:text-white">{formatMoney(dette?.montant_restant)}</span>
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Annuler</button>
-            <button onClick={async () => { if (dette) { await handleDelete(dette) }; onClose(); }} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Supprimer</button>
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{tDelete('common.cancel')}</button>
+            <button onClick={async () => { if (dette) { await handleDelete(dette) }; onClose(); }} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">{tDelete('dettes.delete')}</button>
           </div>
         </div>
       </Modal>
@@ -714,39 +718,39 @@ export default function DettesPage() {
   return (
     <div className="min-h-screen p-4 sm:p-6">
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
-        {error && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">{error}</div>}
+        {error && <div className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm">{error}</div>}
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes Dettes</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">Suivez vos dettes et remboursements</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('dettes.title')}</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{t('dettes.subtitle')}</p>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <button onClick={() => setFiltersOpen((v)=>!v)} className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm sm:text-base">
-              {filtersOpen ? 'Masquer les filtres' : 'Afficher les filtres'}
+            <button onClick={() => setFiltersOpen((v)=>!v)} className="px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm sm:text-base">
+              {filtersOpen ? t('dettes.hideFilters') : t('dettes.showFilters')}
             </button>
             <button onClick={() => { setEditing(null); setIsFormOpen(true) }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 shadow-lg text-sm sm:text-base">
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5" /><span>Nouvelle dette</span>
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" /><span>{t('dettes.newDebt')}</span>
             </button>
           </div>
         </div>
 
         {filtersOpen && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 mt-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 p-4 mt-4">
             <div className="flex flex-col gap-4">
               <div>
-                <div className="text-sm font-medium text-gray-700 mb-2">Statut</div>
+                <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.status.label')}</div>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { key: '', label: 'Tous' },
-                    { key: 'en cours', label: 'En cours' },
-                    { key: 'en retard', label: 'En retard' },
-                    { key: 'terminé', label: 'Terminé' }
+                    { key: '', label: t('dettes.all') },
+                    { key: 'en cours', label: t('dettes.status.inProgress') },
+                    { key: 'en retard', label: t('dettes.status.overdue') },
+                    { key: 'terminé', label: t('dettes.status.completed') }
                   ].map(s => (
                     <button
                       key={s.key || 'all'}
                       onClick={() => { setStatusFilter(s.key); setCurrentPage(1) }}
-                      className={`${(statusFilter === s.key) ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'} px-3 py-1.5 rounded-full text-sm`}
+                      className={`${(statusFilter === s.key) ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'} px-3 py-1.5 rounded-full text-sm`}
                     >
                       {s.label}
                     </button>
@@ -755,39 +759,39 @@ export default function DettesPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div className="md:col-span-1">
-                  <div className="text-sm font-medium text-gray-700 mb-2">Période (date de début)</div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('dettes.period')}</div>
                   <div className="flex items-center gap-2">
-                    <input type="date" value={dateFrom} onChange={(e)=>{ setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 w-full" />
-                    <span className="text-gray-500">→</span>
-                    <input type="date" value={dateTo} onChange={(e)=>{ setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 w-full" />
+                    <input type="date" value={dateFrom} onChange={(e)=>{ setDateFrom(e.target.value); setCurrentPage(1) }} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-white w-full" />
+                    <span className="text-gray-500 dark:text-gray-400">→</span>
+                    <input type="date" value={dateTo} onChange={(e)=>{ setDateTo(e.target.value); setCurrentPage(1) }} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-700 dark:text-white w-full" />
                   </div>
                 </div>
                 <div className="md:col-span-2 flex items-end gap-2">
-                  <button onClick={()=>{ setCurrentPage(1) }} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-black/90">Appliquer</button>
+                  <button onClick={()=>{ setCurrentPage(1) }} className="px-4 py-2 bg-gray-900 dark:bg-gray-700 text-white rounded-lg hover:bg-black/90 dark:hover:bg-gray-600">{t('dettes.apply')}</button>
                   {(statusFilter || dateFrom || dateTo) && (
-                    <button onClick={()=>{ setStatusFilter(''); setDateFrom(''); setDateTo(''); setCurrentPage(1) }} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Réinitialiser</button>
+                    <button onClick={()=>{ setStatusFilter(''); setDateFrom(''); setDateTo(''); setCurrentPage(1) }} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">{t('dettes.reset')}</button>
                   )}
                 </div>
               </div>
               {(statusFilter || dateFrom || dateTo) && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-gray-600 mr-1">Filtres actifs:</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 mr-1">{t('dettes.activeFilters')}:</span>
                   {statusFilter && (
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-sm">
-                      Statut: {statusFilter}
-                      <button onClick={()=>{ setStatusFilter(''); setCurrentPage(1) }} className="text-emerald-700 hover:text-emerald-900">×</button>
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700 rounded-full text-sm">
+                      {t('dettes.status.label')}: {statusFilter}
+                      <button onClick={()=>{ setStatusFilter(''); setCurrentPage(1) }} className="text-emerald-700 dark:text-emerald-300 hover:text-emerald-900">×</button>
                     </span>
                   )}
                   {dateFrom && (
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-800 border border-gray-300 rounded-full text-sm">
-                      Du: {dateFrom}
-                      <button onClick={()=>{ setDateFrom(''); setCurrentPage(1) }} className="text-gray-700 hover:text-gray-900">×</button>
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-full text-sm">
+                      {t('dettes.from')}: {dateFrom}
+                      <button onClick={()=>{ setDateFrom(''); setCurrentPage(1) }} className="text-gray-700 dark:text-gray-300 hover:text-gray-900">×</button>
                     </span>
                   )}
                   {dateTo && (
-                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-800 border border-gray-300 rounded-full text-sm">
-                      Au: {dateTo}
-                      <button onClick={()=>{ setDateTo(''); setCurrentPage(1) }} className="text-gray-700 hover:text-gray-900">×</button>
+                    <span className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-full text-sm">
+                      {t('dettes.to')}: {dateTo}
+                      <button onClick={()=>{ setDateTo(''); setCurrentPage(1) }} className="text-gray-700 dark:text-gray-300 hover:text-gray-900">×</button>
                     </span>
                   )}
                 </div>
@@ -797,93 +801,93 @@ export default function DettesPage() {
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4 sm:gap-6">
-          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Montant initial total</h3>
-            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2 break-words break-all"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" /><span className="leading-tight">{formatMoney(totalInitial)}</span></p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dettes.totalInitialAmount')}</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 dark:text-white flex items-center gap-2 break-words break-all"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" /><span className="leading-tight">{formatMoney(totalInitial)}</span></p>
           </div>
-          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Montant restant total</h3>
-            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2 break-words break-all"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" /><span className="leading-tight">{formatMoney(totalRestant)}</span></p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dettes.totalRemainingAmount')}</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 dark:text-white flex items-center gap-2 break-words break-all"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" /><span className="leading-tight">{formatMoney(totalRestant)}</span></p>
           </div>
-          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Nombre de dettes</h3>
-            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 break-words break-all leading-tight">{countTotal}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dettes.debtCount')}</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 dark:text-white break-words break-all leading-tight">{countTotal}</p>
           </div>
-          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600">En retard</h3>
-            <p className="text-xl sm:text-2xl font-bold mt-2 text-red-700 break-words break-all leading-tight">{countEnRetard}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dettes.status.overdue')}</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-red-700 dark:text-red-400 break-words break-all leading-tight">{countEnRetard}</p>
           </div>
-          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600">En cours</h3>
-            <p className="text-xl sm:text-2xl font-bold mt-2 text-blue-700 break-words break-all leading-tight">{countEnCours}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dettes.status.inProgress')}</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-blue-700 dark:text-blue-400 break-words break-all leading-tight">{countEnCours}</p>
           </div>
-          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Terminé</h3>
-            <p className="text-xl sm:text-2xl font-bold mt-2 text-green-700 break-words break-all leading-tight">{countTermine}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">{t('dettes.status.completed')}</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-green-700 dark:text-green-400 break-words break-all leading-tight">{countTermine}</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto custom-scrollbar scroll-smooth">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Nom</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Créancier</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Sens</th>
-                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Montant </th>
-                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Taux</th>
-                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Restant</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Date début</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Fin prévue</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Statut</th>
-                  <th className="text-center py-4 px-6 text-gray-600 font-medium">Actions</th>
+                  <th className="text-left py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.name')}</th>
+                  <th className="text-left py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.creditor')}</th>
+                  <th className="text-left py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.direction')}</th>
+                  <th className="text-right py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.amount')}</th>
+                  <th className="text-right py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.rate')}</th>
+                  <th className="text-right py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.remaining')}</th>
+                  <th className="text-left py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.startDate')}</th>
+                  <th className="text-left py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.expectedEndDate')}</th>
+                  <th className="text-left py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.status.label')}</th>
+                  <th className="text-center py-4 px-6 text-gray-600 dark:text-gray-300 font-medium">{t('dettes.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={9} className="py-10 text-center text-gray-500">Chargement...</td></tr>
+                  <tr><td colSpan={10} className="py-10 text-center text-gray-500 dark:text-gray-400">{t('common.loading')}</td></tr>
                 ) : filteredItems.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-gray-500">
+                    <td colSpan={10} className="py-12 text-center text-gray-500 dark:text-gray-400">
                       <div className="flex flex-col items-center gap-2">
-                        <Inbox className="w-8 h-8 text-gray-300" />
-                        <div className="text-sm">Tableau vide - aucun élément à afficher</div>
+                        <Inbox className="w-8 h-8 text-gray-300 dark:text-gray-600" />
+                        <div className="text-sm">{t('dettes.emptyTable')}</div>
                       </div>
                     </td>
                   </tr>
                 ) : paginatedItems.map((d) => (
-                  <tr key={d.id_dette} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                  <tr key={d.id_dette} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-3">
-                        <div className="p-2 rounded-lg bg-emerald-50 text-emerald-700"><Wallet className="w-4 h-4" /></div>
+                        <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300"><Wallet className="w-4 h-4" /></div>
                         <div>
-                          <p className="font-medium text-gray-900">{d.nom}</p>
-                          <p className="text-xs text-gray-500">{getCompteLabel(d.id_compte) || '-'}</p>
+                          <p className="font-medium text-gray-900 dark:text-white">{d.nom}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{getCompteLabel(d.id_compte) || '-'}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-6 text-gray-700">{d.creancier || '-'}</td>
-                    <td className="py-4 px-6 text-gray-700">
+                    <td className="py-4 px-6 text-gray-700 dark:text-gray-300">{d.creancier || '-'}</td>
+                    <td className="py-4 px-6 text-gray-700 dark:text-gray-300">
                       {d.sens === 'moi' ? (
-                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">Sortie</span>
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300">{t('dettes.outflow')}</span>
                       ) : (
-                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">Entrée</span>
+                        <span className="inline-block px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300">{t('dettes.inflow')}</span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right text-gray-900 dark:text-white">
                       <span className="inline-flex items-center gap-1">{formatMoney(d.montant_initial)}</span>
                     </td>
-                    <td className="py-4 px-6 text-right text-gray-700">
+                    <td className="py-4 px-6 text-right text-gray-700 dark:text-gray-300">
                       {Number(d.taux_interet || 0).toLocaleString('fr-FR', { maximumFractionDigits: 2 })}%
                     </td>
-                    <td className="py-4 px-6 text-right">
+                    <td className="py-4 px-6 text-right text-gray-900 dark:text-white">
                       <span className="inline-flex items-center gap-1">{formatMoney(d.montant_restant)}</span>
                     </td>
-                    <td className="py-4 px-6 text-gray-700">
+                    <td className="py-4 px-6 text-gray-700 dark:text-gray-300">
                       {d.date_debut ? new Date(d.date_debut).toLocaleDateString('fr-FR') : '-'}
                     </td>
-                    <td className="py-4 px-6 text-gray-700">
+                    <td className="py-4 px-6 text-gray-700 dark:text-gray-300">
                       {d.date_fin_prevue ? new Date(d.date_fin_prevue).toLocaleDateString('fr-FR') : '-'}
                     </td>
                     <td className="py-4 px-6">
@@ -898,8 +902,8 @@ export default function DettesPage() {
                             setMenuRow(d)
                             setOpenMenuId(openMenuId === d.id_dette ? null : d.id_dette)
                           }}
-                          className="action-trigger p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                          title="Actions"
+                          className="action-trigger p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                          title={t('dettes.actions')}
                         >
                           <MoreVertical className="w-4 h-4" />
                         </button>
@@ -914,49 +918,49 @@ export default function DettesPage() {
         </div>
 
         {openMenuId && menuRow && (
-          <div ref={menuRef} className="fixed z-50 w-48 bg-white border border-gray-200 rounded-lg shadow-lg" style={{ top: menuCoords.top, left: menuCoords.left }}>
-            <ul className="py-1 text-sm text-gray-700">
+          <div ref={menuRef} className="fixed z-50 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg" style={{ top: menuCoords.top, left: menuCoords.left }}>
+            <ul className="py-1 text-sm text-gray-700 dark:text-gray-300">
               {deriveStatus(menuRow) !== 'terminé' && (
                 <li>
-                  <button onClick={() => { setTarget(menuRow); setIsPaymentOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-blue-600" /> Ajouter paiement
+                  <button onClick={() => { setTarget(menuRow); setIsPaymentOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-blue-600" /> {t('dettes.addPayment')}
                   </button>
                 </li>
               )}
               <li>
-                <button onClick={() => { setTarget(menuRow); setIsDetailsOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-gray-600" /> Voir détails
+                <button onClick={() => { setTarget(menuRow); setIsDetailsOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" /> {t('dettes.viewDetails')}
                 </button>
               </li>
               <li>
-                <button onClick={() => { setEditing(menuRow); setIsFormOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                  <Edit2 className="w-4 h-4 text-emerald-600" /> Modifier
+                <button onClick={() => { setEditing(menuRow); setIsFormOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                  <Edit2 className="w-4 h-4 text-emerald-600" /> {t('dettes.edit')}
                 </button>
               </li>
               <li>
-                <button onClick={() => { setDeleteTarget(menuRow); setIsDeleteOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 flex items-center gap-2">
-                  <Trash2 className="w-4 h-4 text-red-600" /> Supprimer
+                <button onClick={() => { setDeleteTarget(menuRow); setIsDeleteOpen(true); setOpenMenuId(null); setMenuRow(null) }} className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-red-600" /> {t('dettes.delete')}
                 </button>
               </li>
             </ul>
           </div>
         )}
 
-        {/* Pagination (même design que transactions) */}
+        {/* Pagination */}
         {!loading && (
           <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="text-sm text-gray-600">
-              {filteredItems.length === 0 ? '0 résultat' : (
-                <>Affichage {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredItems.length)} sur {filteredItems.length}</>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {filteredItems.length === 0 ? `0 ${t('dettes.result')}` : (
+                <>{t('dettes.displaying')} {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredItems.length)} {t('dettes.of')} {filteredItems.length}</>
               )}
             </div>
             <div className="inline-flex items-center gap-2">
               <button
-                className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 disabled:opacity-50"
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
                 onClick={goPrev}
                 disabled={currentPage <= 1}
               >
-                Précédent
+                {t('dettes.previous')}
               </button>
               {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
                 const p = i + 1
@@ -964,21 +968,21 @@ export default function DettesPage() {
                   <button
                     key={p}
                     onClick={() => goTo(p)}
-                    className={`px-3 py-2 rounded-lg border ${currentPage === p ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 text-gray-700'}`}
+                    className={`px-3 py-2 rounded-lg border ${currentPage === p ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                   >
                     {p}
                   </button>
                 )
               })}
               {totalPages > 5 && (
-                <span className="px-2 text-gray-500">…</span>
+                <span className="px-2 text-gray-500 dark:text-gray-400">…</span>
               )}
               <button
-                className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 disabled:opacity-50"
+                className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
                 onClick={goNext}
                 disabled={currentPage >= totalPages}
               >
-                Suivant
+                {t('dettes.next')}
               </button>
             </div>
           </div>

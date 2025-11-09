@@ -7,8 +7,10 @@ import apiService from '@/services/apiService'
 import { API_CONFIG } from '@/config/api'
 import objectifsService from '@/services/objectifsService'
 import { colors } from '@/styles/colors'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function TransfertsPage() {
+  const { t } = useLanguage()
   const [comptes, setComptes] = useState([])
   const [objectifs, setObjectifs] = useState([])
   const [type, setType] = useState('compte_to_compte')
@@ -38,11 +40,11 @@ export default function TransfertsPage() {
     return acc?.currencySymbol || resolveCurrencySymbol(acc?.devise || acc?.currency) || userSymbol || ''
   }
 
-  const getTypeLabel = (t) => {
-    if (t === 'compte_to_compte') return 'Compte ➜ Compte'
-    if (t === 'compte_to_objectif') return 'Compte ➜ Objectif'
-    if (t === 'objectif_to_compte') return 'Objectif ➜ Compte'
-    return t
+  const getTypeLabel = (type) => {
+    if (type === 'compte_to_compte') return t('transferts.accountToAccount')
+    if (type === 'compte_to_objectif') return t('transferts.accountToGoal')
+    if (type === 'objectif_to_compte') return t('transferts.goalToAccount')
+    return type
   }
 
   const getDisplayUser = (h) => {
@@ -150,13 +152,13 @@ export default function TransfertsPage() {
           setComptes(mergedAccounts)
         } else {
           setComptes([])
-          setLoadError(accRes?.error || 'Impossible de charger vos comptes')
+          setLoadError(accRes?.error || t('transferts.errors.loadAccountsError'))
         }
         setHistorique(Array.isArray(hist) ? hist : [])
         const objs = await objectifsService.list()
         setObjectifs(Array.isArray(objs) ? objs : (Array.isArray(objs?.data) ? objs.data : []))
       } catch (e) {
-        setLoadError(e?.message || 'Erreur de chargement')
+        setLoadError(e?.message || t('transferts.errors.loadError'))
       }
     }
     load()
@@ -174,7 +176,7 @@ export default function TransfertsPage() {
       setLoading(true)
       setMessage('')
       const m = parseFloat(montant)
-      if (!m || m <= 0) throw new Error('Montant invalide')
+      if (!m || m <= 0) throw new Error(t('transferts.errors.invalidAmount'))
       if (type === 'compte_to_compte') {
         await transfertsService.compteVersCompte({ id_compte_source: Number(source), id_compte_cible: Number(cible), montant: m })
       } else if (type === 'compte_to_objectif') {
@@ -182,7 +184,7 @@ export default function TransfertsPage() {
       } else if (type === 'objectif_to_compte') {
         await transfertsService.objectifVersCompte({ id_compte: Number(cible), id_objectif: Number(source), montant: m })
       }
-      setMessage('Transfert effectué')
+      setMessage(t('transferts.transferSuccess'))
       setMontant('')
       setSource('')
       setCible('')
@@ -225,7 +227,7 @@ export default function TransfertsPage() {
       }
       setObjectifs(Array.isArray(objs) ? objs : (Array.isArray(objs?.data) ? objs.data : []))
     } catch (e) {
-      setMessage(e?.message || 'Erreur transfert')
+      setMessage(e?.message || t('transferts.errors.transferError'))
     } finally {
       setLoading(false)
     }
@@ -248,13 +250,13 @@ export default function TransfertsPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">Transferts</h1>
+      <h1 className="text-2xl font-semibold mb-6 text-gray-900 dark:text-white">{t('transferts.title')}</h1>
 
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-8">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Effectuer un transfert</h2>
-            <p className="text-sm text-gray-500">Déplacer des fonds entre vos comptes et objectifs</p>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{t('transferts.performTransfer')}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{t('transferts.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -263,32 +265,32 @@ export default function TransfertsPage() {
             onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
             onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
-            Nouveau transfert
+            {t('transferts.newTransfer')}
           </button>
         </div>
-        {message && <div className="mt-3 text-sm text-gray-700">{message}</div>}
-        {loadError && <div className="mt-2 text-xs text-red-600">{loadError}</div>}
+        {message && <div className="mt-3 text-sm text-gray-700 dark:text-gray-300">{message}</div>}
+        {loadError && <div className="mt-2 text-xs text-red-600 dark:text-red-400">{loadError}</div>}
       </div>
 
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Historique</h2>
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('transferts.history')}</h2>
+        <div className="overflow-x-auto custom-scrollbar scroll-smooth">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-gray-600">
-                <th className="py-2">Date</th>
-                <th className="py-2">Type</th>
-                <th className="py-2">Utilisateur</th>
-                <th className="py-2">Source</th>
-                <th className="py-2">Cible</th>
-                <th className="py-2 text-right">Montant</th>
+              <tr className="text-left text-gray-600 dark:text-gray-400">
+                <th className="py-2">{t('transferts.date')}</th>
+                <th className="py-2">{t('transferts.type')}</th>
+                <th className="py-2">{t('transferts.user')}</th>
+                <th className="py-2">{t('transferts.source')}</th>
+                <th className="py-2">{t('transferts.target')}</th>
+                <th className="py-2 text-right">{t('transferts.amount')}</th>
               </tr>
             </thead>
             <tbody>
               {pageItems.map((h) => (
-                <tr key={h.id || `${h.type}-${h.date_transfert}-${Math.random()}`} className="border-t border-gray-100">
-                  <td className="py-2">{new Date(h.date_transfert).toLocaleString('fr-FR')}</td>
-                  <td className="py-2">{getTypeLabel(h.type)}</td>
+                <tr key={h.id || `${h.type}-${h.date_transfert}-${Math.random()}`} className="border-t border-gray-100 dark:border-gray-700">
+                  <td className="py-2 text-gray-700 dark:text-gray-300">{new Date(h.date_transfert).toLocaleString('fr-FR')}</td>
+                  <td className="py-2 text-gray-700 dark:text-gray-300">{getTypeLabel(h.type)}</td>
                   <td className="py-2">
                     {(() => {
                       const u = getUserVisual(h)
@@ -296,25 +298,25 @@ export default function TransfertsPage() {
                       return (
                         <div className="flex items-center gap-2">
                           {u.image ? (
-                            <img src={u.image} alt={nameOrEmail} className="w-6 h-6 rounded-full object-cover" />
+                            <img src={u.image} alt={nameOrEmail} className="w-6 h-6 rounded-full object-cover border border-gray-300 dark:border-gray-600" />
                           ) : (
-                            <div className="w-6 h-6 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-xs font-semibold">
+                            <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-center text-xs font-semibold">
                               {u.initials}
                             </div>
                           )}
-                          <span>{nameOrEmail}</span>
+                          <span className="text-gray-700 dark:text-gray-300">{nameOrEmail}</span>
                         </div>
                       )
                     })()}
                   </td>
-                  <td className="py-2">{h.source_nom || '-'}</td>
-                  <td className="py-2">{h.cible_nom || '-'}</td>
-                  <td className="py-2 text-right">{Number(h.montant).toFixed(2)}{userSymbol}</td>
+                  <td className="py-2 text-gray-700 dark:text-gray-300">{h.source_nom || '-'}</td>
+                  <td className="py-2 text-gray-700 dark:text-gray-300">{h.cible_nom || '-'}</td>
+                  <td className="py-2 text-right text-gray-700 dark:text-gray-300">{Number(h.montant).toFixed(2)}{userSymbol}</td>
                 </tr>
               ))}
               {(!historique || historique.length === 0) && (
                 <tr>
-                  <td colSpan={5} className="py-4 text-center text-gray-500">Aucun transfert</td>
+                  <td colSpan={6} className="py-4 text-center text-gray-500 dark:text-gray-400">{t('transferts.noTransfers')}</td>
                 </tr>
               )}
             </tbody>
@@ -322,13 +324,13 @@ export default function TransfertsPage() {
         </div>
         {historique && historique.length > 0 && (
           <div className="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="text-sm text-gray-600">
-              Affichage {totalItems === 0 ? 0 : startIndex + 1}–{Math.min(endIndex, totalItems)} sur {totalItems}
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {t('transferts.displaying').replace('{start}', String(totalItems === 0 ? 0 : startIndex + 1)).replace('{end}', String(Math.min(endIndex, totalItems))).replace('{total}', String(totalItems))}
             </div>
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Par page</label>
+              <label className="text-sm text-gray-600 dark:text-gray-400">{t('transferts.perPage')}</label>
               <select
-                className="px-2 py-1 border border-gray-200 rounded"
+                className="px-2 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 value={pageSize}
                 onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1) }}
               >
@@ -338,19 +340,19 @@ export default function TransfertsPage() {
                 <option value={50}>50</option>
               </select>
               <button
-                className={`px-3 py-1 border border-gray-200 rounded ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                className={`px-3 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
-                Précédent
+                {t('transferts.previous')}
               </button>
-              <span className="text-sm text-gray-600">Page {currentPage} / {totalPages}</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">{t('transferts.page').replace('{current}', String(currentPage)).replace('{total}', String(totalPages))}</span>
               <button
-                className={`px-3 py-1 border border-gray-200 rounded ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                className={`px-3 py-1 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
-                Suivant
+                {t('transferts.next')}
               </button>
             </div>
           </div>
@@ -359,34 +361,34 @@ export default function TransfertsPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-xl p-6 shadow-xl">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-xl p-6 shadow-xl">
             <div className="mb-4">
-              <h3 className="text-xl font-semibold text-gray-900">Nouveau transfert</h3>
-              <p className="text-sm text-gray-500">Remplissez le formulaire ci-dessous</p>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{t('transferts.newTransfer')}</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('transferts.fillForm')}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm text-gray-600 mb-1">Type</label>
-                <select value={type} onChange={(e) => { setType(e.target.value); setSource(''); setCible('') }} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                  <option value="compte_to_compte">Compte ➜ Compte</option>
-                  <option value="compte_to_objectif">Compte ➜ Objectif</option>
-                  <option value="objectif_to_compte">Objectif ➜ Compte</option>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">{t('transferts.type')}</label>
+                <select value={type} onChange={(e) => { setType(e.target.value); setSource(''); setCible('') }} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                  <option value="compte_to_compte">{t('transferts.accountToAccount')}</option>
+                  <option value="compte_to_objectif">{t('transferts.accountToGoal')}</option>
+                  <option value="objectif_to_compte">{t('transferts.goalToAccount')}</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Source</label>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">{t('transferts.source')}</label>
                 {type === 'objectif_to_compte' ? (
-                  <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!objectifsOptions.length}>
-                    <option value="">Sélectionner</option>
+                  <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" disabled={!objectifsOptions.length}>
+                    <option value="">{t('transferts.select')}</option>
                     {objectifsOptions.map(o => (
                       <option key={o.id_objectif || o.id} value={o.id_objectif || o.id}>{o.nom}</option>
                     ))}
                   </select>
                 ) : (
-                  <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!comptesOptionsSource.length}>
-                    <option value="">Sélectionner</option>
+                  <select value={source} onChange={(e) => setSource(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" disabled={!comptesOptionsSource.length}>
+                    <option value="">{t('transferts.select')}</option>
                     {comptesOptionsSource.map(c => {
                       const sym = getAccountSymbol(c)
                       return (
@@ -396,18 +398,18 @@ export default function TransfertsPage() {
                   </select>
                 )}
                 {source && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded border border-gray-100 text-sm text-gray-800">
+                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-100 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200">
                     {type === 'objectif_to_compte' ? (
                       (() => {
                         const o = objectifsOptions.find(x => String(x.id_objectif||x.id) === String(source))
                         return (
                           <div className="flex items-baseline justify-between">
-                            <div className="font-medium text-gray-900">{o?.nom || 'Objectif'}</div>
+                            <div className="font-medium text-gray-900 dark:text-white">{o?.nom || t('transferts.target')}</div>
                             <div className="text-right">
-                              <div className="text-[13px] text-gray-500">Montant actuel</div>
-                              <div className="text-lg font-semibold text-emerald-700">{(parseFloat(o?.montant_actuel)||0).toFixed(2)}€</div>
+                              <div className="text-[13px] text-gray-500 dark:text-gray-400">{t('transferts.currentAmount')}</div>
+                              <div className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">{(parseFloat(o?.montant_actuel)||0).toFixed(2)}€</div>
                               {typeof o?.montant_total !== 'undefined' && (
-                                <div className="text-[12px] text-gray-500">/ {(parseFloat(o?.montant_total)||0).toFixed(2)}€</div>
+                                <div className="text-[12px] text-gray-500 dark:text-gray-400">/ {(parseFloat(o?.montant_total)||0).toFixed(2)}€</div>
                               )}
                             </div>
                           </div>
@@ -418,10 +420,10 @@ export default function TransfertsPage() {
                         const c = comptesOptions.find(x => String(x.id_compte||x.id) === String(source))
                         return (
                           <div className="flex items-baseline justify-between">
-                            <div className="font-medium text-gray-900">{c?.nom || 'Compte'}</div>
+                            <div className="font-medium text-gray-900 dark:text-white">{c?.nom || t('transferts.source')}</div>
                             <div className="text-right">
-                              <div className="text-[13px] text-gray-500">Solde</div>
-                              <div className="text-xl font-semibold text-emerald-700">{(parseFloat(c?.solde)||0).toFixed(2)}{getAccountSymbol(c)}</div>
+                              <div className="text-[13px] text-gray-500 dark:text-gray-400">{t('transferts.balance')}</div>
+                              <div className="text-xl font-semibold text-emerald-700 dark:text-emerald-400">{(parseFloat(c?.solde)||0).toFixed(2)}{getAccountSymbol(c)}</div>
                             </div>
                           </div>
                         )
@@ -432,17 +434,17 @@ export default function TransfertsPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-600 mb-1">Cible</label>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">{t('transferts.target')}</label>
                 {type === 'compte_to_objectif' ? (
-                  <select value={cible} onChange={(e) => setCible(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!objectifsOptions.length}>
-                    <option value="">Sélectionner</option>
+                  <select value={cible} onChange={(e) => setCible(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" disabled={!objectifsOptions.length}>
+                    <option value="">{t('transferts.select')}</option>
                     {objectifsOptions.map(o => (
                       <option key={o.id_objectif || o.id} value={o.id_objectif || o.id}>{o.nom}</option>
                     ))}
                   </select>
                 ) : (
-                  <select value={cible} onChange={(e) => setCible(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500" disabled={!comptesOptionsCible.length}>
-                    <option value="">Sélectionner</option>
+                  <select value={cible} onChange={(e) => setCible(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white" disabled={!comptesOptionsCible.length}>
+                    <option value="">{t('transferts.select')}</option>
                     {comptesOptionsCible.map(c => {
                       const sym = getAccountSymbol(c)
                       return (
@@ -452,18 +454,18 @@ export default function TransfertsPage() {
                   </select>
                 )}
                 {cible && (
-                  <div className="mt-2 p-3 bg-gray-50 rounded border border-gray-100 text-sm text-gray-800">
+                  <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-100 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-200">
                     {type === 'compte_to_objectif' ? (
                       (() => {
                         const o = objectifsOptions.find(x => String(x.id_objectif||x.id) === String(cible))
                         return (
                           <div className="flex items-baseline justify-between">
-                            <div className="font-medium text-gray-900">{o?.nom || 'Objectif'}</div>
+                            <div className="font-medium text-gray-900 dark:text-white">{o?.nom || t('transferts.target')}</div>
                             <div className="text-right">
-                              <div className="text-[13px] text-gray-500">Montant actuel</div>
-                              <div className="text-lg font-semibold text-emerald-700">{(parseFloat(o?.montant_actuel)||0).toFixed(2)}€</div>
+                              <div className="text-[13px] text-gray-500 dark:text-gray-400">{t('transferts.currentAmount')}</div>
+                              <div className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">{(parseFloat(o?.montant_actuel)||0).toFixed(2)}€</div>
                               {typeof o?.montant_total !== 'undefined' && (
-                                <div className="text-[12px] text-gray-500">/ {(parseFloat(o?.montant_total)||0).toFixed(2)}€</div>
+                                <div className="text-[12px] text-gray-500 dark:text-gray-400">/ {(parseFloat(o?.montant_total)||0).toFixed(2)}€</div>
                               )}
                             </div>
                           </div>
@@ -474,10 +476,10 @@ export default function TransfertsPage() {
                         const c = comptesOptions.find(x => String(x.id_compte||x.id) === String(cible))
                         return (
                           <div className="flex items-baseline justify-between">
-                            <div className="font-medium text-gray-900">{c?.nom || 'Compte'}</div>
+                            <div className="font-medium text-gray-900 dark:text-white">{c?.nom || t('transferts.target')}</div>
                             <div className="text-right">
-                              <div className="text-[13px] text-gray-500">Solde</div>
-                              <div className="text-xl font-semibold text-emerald-700">{(parseFloat(c?.solde)||0).toFixed(2)}{getAccountSymbol(c)}</div>
+                              <div className="text-[13px] text-gray-500 dark:text-gray-400">{t('transferts.balance')}</div>
+                              <div className="text-xl font-semibold text-emerald-700 dark:text-emerald-400">{(parseFloat(c?.solde)||0).toFixed(2)}{getAccountSymbol(c)}</div>
                             </div>
                           </div>
                         )
@@ -488,17 +490,17 @@ export default function TransfertsPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm text-gray-600 mb-1">Montant</label>
-                <input type="number" step="0.01" value={montant} onChange={(e) => setMontant(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"/>
+                <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">{t('transferts.amount')}</label>
+                <input type="number" step="0.01" value={montant} onChange={(e) => setMontant(e.target.value)} className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"/>
               </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-6">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
               >
-                Annuler
+                {t('transferts.cancel')}
               </button>
               <button
                 disabled={loading || !source || !cible || !montant}
@@ -511,7 +513,7 @@ export default function TransfertsPage() {
                 onMouseEnter={(e) => { if (source && cible && montant) e.target.style.backgroundColor = colors.secondaryDark }}
                 onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
               >
-                {loading ? 'Transfert...' : 'Confirmer'}
+                {loading ? t('transferts.transferring') : t('transferts.confirm')}
               </button>
             </div>
           </div>

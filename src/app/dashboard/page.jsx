@@ -91,7 +91,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <div className="h-auto bg-gray-50 p-6 max-h-[700px] overflow-y-auto">
+    <div className="h-auto bg-gray-50 dark:bg-gray-900 p-6 max-h-[700px] overflow-y-auto custom-scrollbar scroll-smooth">
       <div className="max-w-7xl mx-auto space-y-6">
 
         {/* En-tête */}

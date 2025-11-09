@@ -1,5 +1,6 @@
 "use client"
 import { LanguageProvider } from '@/context/LanguageContext'
+import { DarkModeProvider } from '@/context/DarkModeContext'
 import { useParams } from 'next/navigation'
 import { useEffect } from 'react'
 
@@ -16,7 +17,9 @@ export default function LocaleLayout({ children }) {
 
   return (
     <LanguageProvider>
-      {children}
+      <DarkModeProvider>
+        {children}
+      </DarkModeProvider>
     </LanguageProvider>
   )
 }

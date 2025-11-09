@@ -84,7 +84,7 @@ function AdminCategoriesRevenusContent({ locale }) {
           />
           <div className="text-sm text-gray-600">{items.filter(x=>x.nom?.toLowerCase().includes(query.trim().toLowerCase())).length} résultat(s)</div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto custom-scrollbar scroll-smooth">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>

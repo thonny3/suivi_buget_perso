@@ -30,10 +30,12 @@ import abonnementsService from '@/services/abonnementsService'
 import { useAuth } from '@/app/context/AuthContext'
 import accountsService from '@/services/accountsService'
 import { useToast } from '@/hooks/useToast'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function AbonnementsPage() {
   const { user } = useAuth()
   const { showSuccess, showError } = useToast()
+  const { t } = useLanguage()
   const [abonnements, setAbonnements] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -67,15 +69,15 @@ export default function AbonnementsPage() {
   const [errors, setErrors] = useState({})
 
   const iconOptions = [
-    { name: 'RefreshCw', component: RefreshCw, label: 'Général' },
-    { name: 'Tv', component: Tv, label: 'Streaming' },
-    { name: 'Music', component: Music, label: 'Musique' },
-    { name: 'Smartphone', component: Smartphone, label: 'Mobile' },
-    { name: 'Cloud', component: Cloud, label: 'Cloud' },
-    { name: 'Gamepad2', component: Gamepad2, label: 'Gaming' },
-    { name: 'Car', component: Car, label: 'Automobile' },
-    { name: 'Heart', component: Heart, label: 'Santé' },
-    { name: 'Zap', component: Zap, label: 'Énergie' }
+    { name: 'RefreshCw', component: RefreshCw, label: t('abonnements.icons.general') },
+    { name: 'Tv', component: Tv, label: t('abonnements.icons.streaming') },
+    { name: 'Music', component: Music, label: t('abonnements.icons.music') },
+    { name: 'Smartphone', component: Smartphone, label: t('abonnements.icons.mobile') },
+    { name: 'Cloud', component: Cloud, label: t('abonnements.icons.cloud') },
+    { name: 'Gamepad2', component: Gamepad2, label: t('abonnements.icons.gaming') },
+    { name: 'Car', component: Car, label: t('abonnements.icons.automobile') },
+    { name: 'Heart', component: Heart, label: t('abonnements.icons.health') },
+    { name: 'Zap', component: Zap, label: t('abonnements.icons.energy') }
   ]
 
   const colorOptions = [
@@ -83,7 +85,12 @@ export default function AbonnementsPage() {
     '#8B5CF6', '#EC4899', '#6B7280', '#14B8A6'
   ]
 
-  const frequenceOptions = ['Mensuel', 'Trimestriel', 'Semestriel', 'Annuel']
+  const frequenceOptions = [
+    t('abonnements.frequencies.monthly'),
+    t('abonnements.frequencies.quarterly'),
+    t('abonnements.frequencies.semiannual'),
+    t('abonnements.frequencies.annual')
+  ]
 
   // Calculs automatiques
   const updateAbonnementsStatus = () => {
@@ -93,11 +100,11 @@ export default function AbonnementsPage() {
       const diffTime = echeance - today
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
       
-      let statut = 'Actuel'
+      let statut = t('abonnements.status.current')
       if (diffDays < 0) {
-        statut = 'Expiré'
+        statut = t('abonnements.status.expired')
       } else if (diffDays <= 7) {
-        statut = 'Expire bientôt'
+        statut = t('abonnements.status.expiringSoon')
       }
       
       return {
@@ -142,7 +149,7 @@ export default function AbonnementsPage() {
           if (res.success) setComptes(Array.isArray(res.data) ? res.data : [])
         } catch (_e) {}
       } catch (e) {
-        const errorMessage = e?.message || 'Erreur lors du chargement'
+        const errorMessage = e?.message || t('abonnements.errors.loadError')
         setError(errorMessage)
         showError(errorMessage)
       } finally {
@@ -157,31 +164,35 @@ export default function AbonnementsPage() {
     const echeance = new Date(ab.prochaine_echeance)
     const diffTime = echeance - today
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    let statut = 'Actuel'
-    if (diffDays < 0) statut = 'Expiré'
-    else if (diffDays <= 7) statut = 'Expire bientôt'
+    let statut = t('abonnements.status.current')
+    if (diffDays < 0) statut = t('abonnements.status.expired')
+    else if (diffDays <= 7) statut = t('abonnements.status.expiringSoon')
     return { jours_restants: diffDays, statut }
   }
 
   // Calculs statistiques
   const totalAbonnements = abonnements.length
-  const abonnementsActifs = abonnements.filter(ab => ab.statut === 'Actuel').length
-  const abonnementsExpires = abonnements.filter(ab => ab.statut === 'Expiré').length
-  const abonnementsProches = abonnements.filter(ab => ab.statut === 'Expire bientôt').length
+  const abonnementsActifs = abonnements.filter(ab => ab.statut === t('abonnements.status.current') || ab.statut === 'Actuel').length
+  const abonnementsExpires = abonnements.filter(ab => ab.statut === t('abonnements.status.expired') || ab.statut === 'Expiré').length
+  const abonnementsProches = abonnements.filter(ab => ab.statut === t('abonnements.status.expiringSoon') || ab.statut === 'Expire bientôt').length
   const coutMensuelTotal = abonnements.reduce((sum, ab) => {
-    if (ab.frequence === 'Mensuel') return sum + ab.montant
-    if (ab.frequence === 'Trimestriel') return sum + (ab.montant / 3)
-    if (ab.frequence === 'Semestriel') return sum + (ab.montant / 6)
-    if (ab.frequence === 'Annuel') return sum + (ab.montant / 12)
+    const monthly = t('abonnements.frequencies.monthly')
+    const quarterly = t('abonnements.frequencies.quarterly')
+    const semiannual = t('abonnements.frequencies.semiannual')
+    const annual = t('abonnements.frequencies.annual')
+    if (ab.frequence === 'Mensuel' || ab.frequence === monthly) return sum + ab.montant
+    if (ab.frequence === 'Trimestriel' || ab.frequence === quarterly) return sum + (ab.montant / 3)
+    if (ab.frequence === 'Semestriel' || ab.frequence === semiannual) return sum + (ab.montant / 6)
+    if (ab.frequence === 'Annuel' || ab.frequence === annual) return sum + (ab.montant / 12)
     return sum
   }, 0)
   const coutAnnuelTotal = coutMensuelTotal * 12
 
   // Données pour les graphiques
   const repartitionData = [
-    { name: 'Actifs', value: abonnementsActifs, color: '#10B981' },
-    { name: 'Expire bientôt', value: abonnementsProches, color: '#F59E0B' },
-    { name: 'Expirés', value: abonnementsExpires, color: '#EF4444' }
+    { name: t('abonnements.statistics.active'), value: abonnementsActifs, color: '#10B981' },
+    { name: t('abonnements.statistics.expiringSoon'), value: abonnementsProches, color: '#F59E0B' },
+    { name: t('abonnements.statistics.expired'), value: abonnementsExpires, color: '#EF4444' }
   ]
 
   const coutParFrequence = frequenceOptions.map(freq => ({
@@ -211,28 +222,28 @@ export default function AbonnementsPage() {
     const newErrors = {}
     
     if (!formData.nom || formData.nom.trim() === '') {
-      newErrors.nom = 'Le nom est requis'
+      newErrors.nom = t('abonnements.errors.nameRequired')
     }
     
     if (!formData.montant || formData.montant.trim() === '') {
-      newErrors.montant = 'Le montant est requis'
+      newErrors.montant = t('abonnements.errors.amountRequired')
     } else {
       const montant = parseFloat(formData.montant)
       if (isNaN(montant) || montant <= 0) {
-        newErrors.montant = 'Le montant doit être un nombre positif'
+        newErrors.montant = t('abonnements.errors.amountInvalid')
       }
     }
     
     if (!formData.prochaine_echeance || formData.prochaine_echeance.trim() === '') {
-      newErrors.prochaine_echeance = 'La date d\'échéance est requise'
+      newErrors.prochaine_echeance = t('abonnements.errors.dueDateRequired')
     }
     
     if (!formData.frequence || formData.frequence.trim() === '') {
-      newErrors.frequence = 'La fréquence est requise'
+      newErrors.frequence = t('abonnements.errors.frequencyRequired')
     }
     
     if (!formData.id_compte || formData.id_compte.trim() === '') {
-      newErrors.id_compte = 'Le compte à débiter est requis'
+      newErrors.id_compte = t('abonnements.errors.accountRequired')
     }
     
     setErrors(newErrors)
@@ -257,7 +268,7 @@ export default function AbonnementsPage() {
           id_compte: formData.id_compte || null,
           auto_renouvellement: !!formData.auto_renouvellement
         })
-        showSuccess('Abonnement mis à jour avec succès')
+        showSuccess(t('abonnements.success.updated'))
       } else {
         await abonnementsService.create({
           id_user: user.id_user,
@@ -271,7 +282,7 @@ export default function AbonnementsPage() {
           id_compte: formData.id_compte || null,
           auto_renouvellement: !!formData.auto_renouvellement
         })
-        showSuccess('Abonnement créé avec succès')
+        showSuccess(t('abonnements.success.created'))
       }
       const data = await abonnementsService.listByUser(user.id_user, { includeInactive: false })
       const normalized = Array.isArray(data) ? data.map(row => ({
@@ -291,7 +302,7 @@ export default function AbonnementsPage() {
       setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
       resetForm()
     } catch (e) {
-      const errorMessage = e?.message || 'Erreur lors de l\'enregistrement'
+      const errorMessage = e?.message || t('abonnements.errors.saveError')
       showError(errorMessage)
     }
   }
@@ -300,7 +311,7 @@ export default function AbonnementsPage() {
     setFormData({
       nom: '',
       montant: '',
-      frequence: 'Mensuel',
+      frequence: t('abonnements.frequencies.monthly'),
       prochaine_echeance: '',
       rappel: true,
       icone: 'RefreshCw',
@@ -333,10 +344,10 @@ export default function AbonnementsPage() {
   const handleDelete = async (id) => {
     try {
       await abonnementsService.remove(id)
-      showSuccess('Abonnement supprimé avec succès')
+      showSuccess(t('abonnements.success.deleted'))
       setAbonnements(abonnements.filter(ab => ab.id_abonnement !== id))
     } catch (e) {
-      const errorMessage = e?.message || 'Erreur lors de la suppression'
+      const errorMessage = e?.message || t('abonnements.errors.deleteError')
       showError(errorMessage)
     }
   }
@@ -350,16 +361,17 @@ export default function AbonnementsPage() {
   }
 
   const getStatutStyle = (statut) => {
-    switch (statut) {
-      case 'Actuel':
-        return { color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle }
-      case 'Expire bientôt':
-        return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle }
-      case 'Expiré':
-        return { color: 'text-red-600', bg: 'bg-red-100', icon: Clock }
-      default:
-        return { color: 'text-gray-600', bg: 'bg-gray-100', icon: RefreshCw }
+    const current = t('abonnements.status.current')
+    const expiringSoon = t('abonnements.status.expiringSoon')
+    const expired = t('abonnements.status.expired')
+    if (statut === 'Actuel' || statut === current) {
+      return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900', icon: CheckCircle }
+    } else if (statut === 'Expire bientôt' || statut === expiringSoon) {
+      return { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900', icon: AlertTriangle }
+    } else if (statut === 'Expiré' || statut === expired) {
+      return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900', icon: Clock }
     }
+    return { color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800', icon: RefreshCw }
   }
 
   const getIconComponent = (iconName) => {
@@ -432,8 +444,8 @@ export default function AbonnementsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Abonnements</h1>
-            <p className="text-gray-600 mt-2">Gérez vos abonnements et évitez les oublis</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('abonnements.title')}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">{t('abonnements.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -443,68 +455,68 @@ export default function AbonnementsPage() {
             onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             <Plus className="w-5 h-5" />
-            Nouvel Abonnement
+            {t('abonnements.newSubscription')}
           </button>
         </div>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="text-2xl font-bold text-gray-900">{totalAbonnements}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.statistics.total')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalAbonnements}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <RefreshCw className="w-6 h-6 text-blue-600" />
+              <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-lg">
+                <RefreshCw className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Actifs</p>
-                <p className="text-2xl font-bold text-green-600">{abonnementsActifs}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.statistics.active')}</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{abonnementsActifs}</p>
               </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+              <div className="bg-green-100 dark:bg-green-900 p-3 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Expire bientôt</p>
-                <p className="text-2xl font-bold text-orange-600">{abonnementsProches}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.statistics.expiringSoon')}</p>
+                <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{abonnementsProches}</p>
               </div>
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-orange-600" />
+              <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Coût Mensuel</p>
-                <p className="text-2xl font-bold text-purple-600">{coutMensuelTotal.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.statistics.monthlyCost')}</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{coutMensuelTotal.toFixed(2)}</p>
               </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <DollarSign className="w-6 h-6 text-purple-600" />
+              <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Coût Annuel</p>
-                <p className="text-2xl font-bold text-pink-600">{coutAnnuelTotal.toFixed(0)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.statistics.annualCost')}</p>
+                <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{coutAnnuelTotal.toFixed(0)}</p>
               </div>
-              <div className="bg-pink-100 p-3 rounded-lg">
-                <Calendar className="w-6 h-6 text-pink-600" />
+              <div className="bg-pink-100 dark:bg-pink-900 p-3 rounded-lg">
+                <Calendar className="w-6 h-6 text-pink-600 dark:text-pink-400" />
               </div>
             </div>
           </div>
@@ -514,15 +526,15 @@ export default function AbonnementsPage() {
       {/* Graphiques supprimés */}
 
       {/* Filtres et Recherche */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Rechercher un abonnement..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder={t('abonnements.searchPlaceholder')}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -530,30 +542,30 @@ export default function AbonnementsPage() {
           </div>
 
           <select
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={filterFrequence}
             onChange={(e) => setFilterFrequence(e.target.value)}
           >
-            <option value="">Toutes fréquences</option>
+            <option value="">{t('abonnements.allFrequencies')}</option>
             {frequenceOptions.map(freq => (
               <option key={freq} value={freq}>{freq}</option>
             ))}
           </select>
 
           <select
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={filterStatut}
             onChange={(e) => setFilterStatut(e.target.value)}
           >
-            <option value="">Tous les statuts</option>
-            <option value="Actuel">Actif</option>
-            <option value="Expire bientôt">Expire bientôt</option>
-            <option value="Expiré">Expiré</option>
+            <option value="">{t('abonnements.allStatuses')}</option>
+            <option value={t('abonnements.status.current')}>{t('abonnements.statistics.active')}</option>
+            <option value={t('abonnements.status.expiringSoon')}>{t('abonnements.statistics.expiringSoon')}</option>
+            <option value={t('abonnements.status.expired')}>{t('abonnements.statistics.expired')}</option>
           </select>
 
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
+          <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export
+            {t('abonnements.export')}
           </button>
         </div>
       </div>
@@ -566,7 +578,7 @@ export default function AbonnementsPage() {
           const IconComponent = getIconComponent(abonnement.icone)
           
           return (
-            <div key={abonnement.id_abonnement} className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow ${abonnement.actif ? 'bg-white border-gray-100' : 'bg-red-50 border-red-200'}`}>
+            <div key={abonnement.id_abonnement} className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow ${abonnement.actif ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700' : 'bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-700'}`}>
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -579,23 +591,23 @@ export default function AbonnementsPage() {
                       style={{ color: abonnement.couleur }}
                     />
                   </div>
-                  <h3 className="font-semibold text-lg text-gray-900">{abonnement.nom}</h3>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{abonnement.nom}</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => toggleRappel(abonnement.id_abonnement)}
                     className={`p-2 rounded-lg transition-colors ${
                       abonnement.rappel 
-                        ? 'text-yellow-600 bg-yellow-50 hover:bg-yellow-100' 
-                        : 'text-gray-400 bg-gray-50 hover:bg-gray-100'
+                        ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900 hover:bg-yellow-100 dark:hover:bg-yellow-800' 
+                        : 'text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600'
                     }`}
-                    title={abonnement.rappel ? 'Désactiver rappel' : 'Activer rappel'}
+                    title={abonnement.rappel ? t('abonnements.disableReminder') : t('abonnements.enableReminder')}
                   >
                     {abonnement.rappel ? <Bell className="w-4 h-4" /> : <BellOff className="w-4 h-4" />}
                   </button>
                   <button
                     onClick={() => handleEdit(abonnement)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
@@ -606,19 +618,19 @@ export default function AbonnementsPage() {
                         await abonnementsService.setActive(abonnement.id_abonnement, nextActif)
                         setAbonnements(prev => prev.map(x => x.id_abonnement === abonnement.id_abonnement ? { ...x, actif: nextActif } : x))
                       } catch (e) {
-                        alert(e?.message || 'Erreur lors du changement de statut')
+        alert(e?.message || t('abonnements.errors.statusChangeError'))
                       }
                     }}
-                    className={`p-2 rounded-lg transition-colors ${abonnement.actif ? 'text-emerald-600 hover:bg-emerald-50' : 'text-gray-500 hover:bg-gray-100'}`}
-                    title={abonnement.actif ? 'Désactiver' : 'Activer'}
+                    className={`p-2 rounded-lg transition-colors ${abonnement.actif ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                    title={abonnement.actif ? t('abonnements.disable') : t('abonnements.enable')}
                   >
                     {abonnement.actif ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
                   </button>
 
                   <button
                     onClick={() => { setDeleteTarget(abonnement); setIsDeleteModalOpen(true) }}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Supprimer"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
+                    title={t('abonnements.delete')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -628,63 +640,63 @@ export default function AbonnementsPage() {
               {/* Informations */}
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Montant</span>
-                  <span className="font-semibold text-lg">{formatAmountForAbonnement(abonnement)}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.fields.amount')}</span>
+                  <span className="font-semibold text-lg text-gray-900 dark:text-white">{formatAmountForAbonnement(abonnement)}</span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Fréquence</span>
-                  <span className="text-sm font-medium px-2 py-1 bg-gray-100 rounded-full">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.fields.frequency')}</span>
+                  <span className="text-sm font-medium px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-900 dark:text-white">
                     {abonnement.frequence}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Prochaine échéance</span>
-                  <span className="text-sm font-medium">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.fields.nextDueDate')}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
                     {new Date(abonnement.prochaine_echeance).toLocaleDateString('fr-FR')}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Temps restant</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.fields.timeRemaining')}</span>
                   <span className={`text-sm font-medium ${
-                    abonnement.jours_restants < 0 ? 'text-red-600' :
-                    abonnement.jours_restants <= 7 ? 'text-orange-600' : 'text-green-600'
+                    abonnement.jours_restants < 0 ? 'text-red-600 dark:text-red-400' :
+                    abonnement.jours_restants <= 7 ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'
                   }`}>
                     {abonnement.jours_restants < 0 
-                      ? `Expiré il y a ${Math.abs(abonnement.jours_restants)} jours`
+                      ? t('abonnements.fields.expiredDaysAgo').replace('{days}', Math.abs(abonnement.jours_restants))
                       : abonnement.jours_restants === 0 
-                      ? "Aujourd'hui"
-                      : `${abonnement.jours_restants} jours`
+                      ? t('abonnements.fields.today')
+                      : `${abonnement.jours_restants} ${t('abonnements.fields.days')}`
                     }
                   </span>
                 </div>
               </div>
 
               {/* Statut */}
-              <div className={`flex items-center justify-between gap-2 p-3 rounded-lg ${abonnement.actif ? status.bg : 'bg-red-100'}`}>
+              <div className={`flex items-center justify-between gap-2 p-3 rounded-lg ${abonnement.actif ? status.bg : 'bg-red-100 dark:bg-red-900'}`}>
                 <div className="flex items-center gap-2">
-                  <StatusIcon className={`w-4 h-4 ${abonnement.actif ? status.color : 'text-red-700'}`} />
-                  <span className={`text-sm font-medium ${abonnement.actif ? status.color : 'text-red-700'}`}>
+                  <StatusIcon className={`w-4 h-4 ${abonnement.actif ? status.color : 'text-red-700 dark:text-red-300'}`} />
+                  <span className={`text-sm font-medium ${abonnement.actif ? status.color : 'text-red-700 dark:text-red-300'}`}>
                     {abonnement.statut}
                   </span>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded ${abonnement.actif ? 'bg-emerald-100 text-emerald-700' : 'bg-red-200 text-red-800'}`}>
-                  {abonnement.actif ? 'Actif' : 'Inactif'}
+                <span className={`text-xs px-2 py-1 rounded ${abonnement.actif ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' : 'bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200'}`}>
+                  {abonnement.actif ? t('abonnements.active') : t('abonnements.inactive')}
                 </span>
               </div>
 
               {/* Actions rapides */}
               {!abonnement.actif ? (
-                <div className="w-full mt-3 px-4 py-2 rounded-lg bg-red-100 text-red-700 text-sm flex items-center justify-center gap-2">
+                <div className="w-full mt-3 px-4 py-2 rounded-lg bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 text-sm flex items-center justify-center gap-2">
                   <RefreshCw className="w-4 h-4" />
-                  Renouvellement désactivé (abonnement inactif)
+                  {t('abonnements.renewalDisabled')}
                 </div>
               ) : abonnement.auto_renouvellement ? (
-                <div className="w-full mt-3 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-sm flex items-center justify-center gap-2">
+                <div className="w-full mt-3 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300 text-sm flex items-center justify-center gap-2">
                   <RefreshCw className="w-4 h-4" />
-                  Auto-renouvellement activé
+                  {t('abonnements.autoRenewalEnabled')}
                 </div>
               ) : (
                 <button
@@ -701,10 +713,10 @@ export default function AbonnementsPage() {
                           setSelectedCompteId(res.data[0].id_compte || res.data[0].id)
                         }
                       } else {
-                        alert(res.error || 'Impossible de charger les comptes')
+                        alert(res.error || t('abonnements.errors.loadAccountsError'))
                       }
                     } catch (e) {
-                      alert(e?.message || 'Erreur lors du chargement des comptes')
+                      alert(e?.message || t('abonnements.errors.loadAccountsError'))
                     } finally {
                       setLoadingComptes(false)
                     }
@@ -715,7 +727,7 @@ export default function AbonnementsPage() {
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   <RefreshCw className="w-4 h-4" />
-                  {abonnement.statut === 'Expiré' ? 'Renouveler' : 'Renouveler maintenant'}
+                  {(abonnement.statut === 'Expiré' || abonnement.statut === t('abonnements.status.expired')) ? t('abonnements.renew') : t('abonnements.renewNow')}
                 </button>
               )}
 
@@ -726,8 +738,8 @@ export default function AbonnementsPage() {
                 const d = new Date(iso)
                 const formatted = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
                 return (
-                  <div className={`mt-2 inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${abonnement.actif ? 'bg-emerald-50 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                    <CheckCircle className="w-3 h-3" /> Renouvelé le {formatted}
+                  <div className={`mt-2 inline-flex items-center gap-2 px-2 py-1 rounded-md text-xs font-medium ${abonnement.actif ? 'bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-300' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300'}`}>
+                    <CheckCircle className="w-3 h-3" /> {t('abonnements.renewedOn')} {formatted}
                   </div>
                 )
               })()}
@@ -738,37 +750,37 @@ export default function AbonnementsPage() {
 
       {filteredAbonnements.length === 0 && (
         <div className="text-center py-12">
-          <RefreshCw className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Aucun abonnement trouvé</p>
+          <RefreshCw className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">{t('abonnements.noSubscriptions')}</p>
         </div>
       )}
 
       {/* Modal de renouvellement: choix du compte */}
       {isRenewModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-4">Sélectionner le compte à débiter</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto custom-scrollbar scroll-smooth">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">{t('abonnements.selectAccountToDebit')}</h2>
             {renewTarget && (
-              <div className="mb-4 text-sm text-gray-700">
+              <div className="mb-4 text-sm text-gray-700 dark:text-gray-300">
                 {(() => {
                   const selected = Array.isArray(comptes) ? comptes.find(c => (c.id_compte || c.id) === selectedCompteId) : null
                   const symbol = selected?.currencySymbol || resolveCurrencySymbol(selected?.devise || selected?.currency) || '€'
                   const amount = Number(renewTarget.montant || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                   return (
                     <>
-                      Abonnement: <span className="font-medium">{renewTarget.nom}</span> • Montant: <span className="font-medium">{amount} {symbol}</span>
+                      {t('abonnements.subscription')} <span className="font-medium">{renewTarget.nom}</span> • {t('abonnements.amountLabel')} <span className="font-medium">{amount} {symbol}</span>
                     </>
                   )
                 })()}
               </div>
             )}
             {loadingComptes ? (
-              <div className="text-gray-500">Chargement des comptes...</div>
+              <div className="text-gray-500 dark:text-gray-400">{t('abonnements.loadingAccounts')}</div>
             ) : (
               <div className="space-y-3">
                 {Array.isArray(comptes) && comptes.length > 0 ? (
                   comptes.map((c) => (
-                    <label key={c.id_compte || c.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <label key={c.id_compte || c.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800">
                       <div className="flex items-center gap-3">
                         <input
                           type="radio"
@@ -778,22 +790,22 @@ export default function AbonnementsPage() {
                           className="w-4 h-4 text-purple-600"
                         />
                         <div>
-                          <div className="font-medium text-gray-900">{c.nom || c.name || `Compte ${c.id_compte || c.id}`}</div>
-                          <div className="text-xs text-gray-500">Solde: {(parseFloat(c.solde) || 0).toFixed(2)}• {c.type || ''}</div>
+                          <div className="font-medium text-gray-900 dark:text-white">{c.nom || c.name || `Compte ${c.id_compte || c.id}`}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Solde: {(parseFloat(c.solde) || 0).toFixed(2)}• {c.type || ''}</div>
                         </div>
                       </div>
                     </label>
                   ))
                 ) : (
-                  <div className="text-sm text-gray-500">Aucun compte disponible. Créez un compte d'abord.</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">{t('abonnements.noAccountsAvailable')}</div>
                 )}
               </div>
             )}
 
             {/* Nombre de périodes à renouveler */}
             <div className="mt-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Nombre de périodes à renouveler
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {t('abonnements.numberOfPeriods')}
               </label>
               <input
                 type="number"
@@ -801,10 +813,10 @@ export default function AbonnementsPage() {
                 max={24}
                 value={selectedPeriods}
                 onChange={(e) => setSelectedPeriods(Math.max(1, Math.min(24, parseInt(e.target.value || '1', 10))))}
-                className="w-28 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-28 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
-              <div className="text-xs text-gray-500 mt-1">
-                Une période = selon la fréquence (Mensuel = 1 mois, Trimestriel = 1 trimestre, ...)
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {t('abonnements.periodDescription')}
               </div>
             </div>
 
@@ -812,9 +824,9 @@ export default function AbonnementsPage() {
               <button
                 type="button"
                 onClick={() => { setIsRenewModalOpen(false); setRenewTarget(null) }}
-                className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
               >
-                Annuler
+                {t('abonnements.cancel')}
               </button>
               <button
                 type="button"
@@ -841,19 +853,19 @@ export default function AbonnementsPage() {
                       id_user: row.id_user,
                       nom: row.nom,
                       montant: Number(row.montant) || 0,
-                      frequence: row['fréquence'] || row.frequence || 'Mensuel',
+                      frequence: row['fréquence'] || row.frequence || t('abonnements.frequencies.monthly'),
                       prochaine_echeance: row.prochaine_echeance,
                       rappel: !!row.rappel,
                       icone: row.icon || 'RefreshCw',
                       couleur: row.couleur || '#3B82F6'
                     })) : []
                     setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
-                    showSuccess(`Abonnement renouvelé avec succès${selectedPeriods > 1 ? ` (${selectedPeriods} périodes)` : ''}`)
+                    showSuccess(selectedPeriods > 1 ? t('abonnements.success.renewedPeriods').replace('{periods}', selectedPeriods) : t('abonnements.success.renewed'))
                     setIsRenewModalOpen(false)
                     setRenewTarget(null)
                     setSelectedPeriods(1)
                   } catch (e) {
-                    const errorMessage = e?.message || 'Erreur lors du renouvellement'
+                    const errorMessage = e?.message || t('abonnements.errors.renewalError')
                     showError(errorMessage)
                   }
                 }}
@@ -862,7 +874,7 @@ export default function AbonnementsPage() {
                 onMouseEnter={(e) => { if (selectedCompteId) e.target.style.backgroundColor = colors.secondaryDark }}
                 onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
               >
-                Confirmer le renouvellement
+                {t('abonnements.confirmRenewal')}
               </button>
             </div>
           </div>
@@ -872,23 +884,23 @@ export default function AbonnementsPage() {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-6">
-              {editingAbonnement ? 'Modifier l\'Abonnement' : 'Nouvel Abonnement'}
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto custom-scrollbar scroll-smooth">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+              {editingAbonnement ? t('abonnements.editSubscription') : t('abonnements.newSubscription')}
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom de l'abonnement
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('abonnements.subscriptionName')}
                 </label>
                 <input
                   type="text"
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.nom 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
                   }`}
                   value={formData.nom}
                   onChange={(e) => {
@@ -897,25 +909,25 @@ export default function AbonnementsPage() {
                       setErrors({...errors, nom: ''})
                     }
                   }}
-                  placeholder="Ex: Netflix, Spotify..."
+                  placeholder={t('abonnements.subscriptionNamePlaceholder')}
                 />
                 {errors.nom && (
-                  <p className="text-red-500 text-sm mt-1">{errors.nom}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.nom}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant 
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('abonnements.amount')}
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.montant 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
                   }`}
                   value={formData.montant}
                   onChange={(e) => {
@@ -927,20 +939,20 @@ export default function AbonnementsPage() {
                   placeholder="0.00"
                 />
                 {errors.montant && (
-                  <p className="text-red-500 text-sm mt-1">{errors.montant}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.montant}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Fréquence
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('abonnements.frequency')}
                 </label>
                 <select
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.frequence 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
                   }`}
                   value={formData.frequence}
                   onChange={(e) => {
@@ -955,21 +967,21 @@ export default function AbonnementsPage() {
                   ))}
                 </select>
                 {errors.frequence && (
-                  <p className="text-red-500 text-sm mt-1">{errors.frequence}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.frequence}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Prochaine échéance
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('abonnements.nextDueDate')}
                 </label>
                 <input
                   type="date"
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.prochaine_echeance 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
                   }`}
                   value={formData.prochaine_echeance}
                   onChange={(e) => {
@@ -980,21 +992,21 @@ export default function AbonnementsPage() {
                   }}
                 />
                 {errors.prochaine_echeance && (
-                  <p className="text-red-500 text-sm mt-1">{errors.prochaine_echeance}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.prochaine_echeance}</p>
                 )}
               </div>
 
               {/* Compte lié pour le prélèvement */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Compte à débiter
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('abonnements.debitAccount')}
                 </label>
                 <select
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.id_compte 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
                   }`}
                   value={formData.id_compte}
                   onChange={(e) => {
@@ -1017,7 +1029,7 @@ export default function AbonnementsPage() {
                     }
                   }}
                 >
-                  <option value="">-- Sélectionner un compte --</option>
+                  <option value="">{t('abonnements.selectAccount')}</option>
                   {Array.isArray(comptes) && comptes.map(c => (
                     <option key={c.id_compte || c.id} value={c.id_compte || c.id}>
                       {(c.nom || c.name || `Compte ${c.id_compte || c.id}`)}
@@ -1025,10 +1037,10 @@ export default function AbonnementsPage() {
                   ))}
                 </select>
                 {errors.id_compte && (
-                  <p className="text-red-500 text-sm mt-1">{errors.id_compte}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.id_compte}</p>
                 )}
                 {loadingComptes && (
-                  <div className="text-xs text-gray-500 mt-1">Chargement des comptes...</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('abonnements.loadingAccounts')}</div>
                 )}
               </div>
 
@@ -1036,12 +1048,12 @@ export default function AbonnementsPage() {
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                    className="w-4 h-4 text-purple-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
                     checked={formData.rappel}
                     onChange={(e) => setFormData({...formData, rappel: e.target.checked})}
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                    Activer les rappels
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('abonnements.enableReminders')}
                   </span>
                 </label>
               </div>
@@ -1051,16 +1063,16 @@ export default function AbonnementsPage() {
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 text-purple-600 bg-gray-100 border-gray-300 rounded focus:ring-purple-500"
+                    className="w-4 h-4 text-purple-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
                     checked={!!formData.auto_renouvellement}
                     onChange={(e) => setFormData({ ...formData, auto_renouvellement: e.target.checked })}
                   />
-                  <span className="text-sm font-medium text-gray-700">
-                    Activer l'auto-renouvellement automatique à l'échéance
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t('abonnements.enableAutoRenewal')}
                   </span>
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
-                  Si activé, le système renouvellera automatiquement en débitant le compte choisi lorsque la date d'échéance arrive.
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('abonnements.autoRenewalDescription')}
                 </p>
               </div>
 
@@ -1068,9 +1080,9 @@ export default function AbonnementsPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
                 >
-                  Annuler
+                  {t('abonnements.cancel')}
                 </button>
                 <button
                   type="button"
@@ -1080,7 +1092,7 @@ export default function AbonnementsPage() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
-                  {editingAbonnement ? 'Modifier' : 'Créer'}
+                  {editingAbonnement ? t('abonnements.modify') : t('abonnements.create')}
                 </button>
               </div>
             </div>
@@ -1092,19 +1104,18 @@ export default function AbonnementsPage() {
       {/* Modal de confirmation de suppression */}
       {isDeleteModalOpen && deleteTarget && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900">Confirmer la suppression</h3>
-            <p className="text-sm text-gray-600 mt-2">
-              Voulez-vous vraiment supprimer l'abonnement
-              {' '}<span className="font-medium">{deleteTarget.nom}</span> ? Cette action est irréversible.
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('abonnements.confirmDelete')}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+              {t('abonnements.deleteMessage').replace('{name}', deleteTarget.nom ? ` "${deleteTarget.nom}"` : '')}
             </p>
             <div className="flex gap-3 pt-6">
               <button
                 type="button"
                 onClick={() => { setIsDeleteModalOpen(false); setDeleteTarget(null) }}
-                className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
               >
-                Annuler
+                {t('abonnements.cancel')}
               </button>
               <button
                 type="button"
@@ -1119,7 +1130,7 @@ export default function AbonnementsPage() {
                 onMouseEnter={(e) => e.target.style.backgroundColor = '#dc2626'}
                 onMouseLeave={(e) => e.target.style.backgroundColor = '#ef4444'}
               >
-                Supprimer
+                {t('abonnements.delete')}
               </button>
             </div>
           </div>

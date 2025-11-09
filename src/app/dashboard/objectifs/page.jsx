@@ -32,9 +32,11 @@ import accountsService from '@/services/accountsService'
 import sharedAccountsService from '@/services/sharedAccountsService'
 import apiService from '@/services/apiService'
 import useToast from '@/hooks/useToast'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function ObjectifsPage() {
   const { showSuccess, showError } = useToast()
+  const { t } = useLanguage()
   const [objectifs, setObjectifs] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
@@ -69,7 +71,7 @@ export default function ObjectifsPage() {
         setObjectifs(Array.isArray(data) ? data : [])
       } catch (e) {
         console.error('Erreur chargement objectifs', e)
-        const msg = e?.message || 'Erreur lors du chargement des objectifs'
+        const msg = e?.message || t('objectifs.errors.loadError')
         setError(msg)
         showError(msg)
       } finally {
@@ -113,14 +115,14 @@ export default function ObjectifsPage() {
   })
 
   const iconOptions = [
-    { name: 'Target', component: Target, label: 'Objectif général' },
-    { name: 'Car', component: Car, label: 'Voiture' },
-    { name: 'Home', component: Home, label: 'Maison' },
-    { name: 'Plane', component: Plane, label: 'Voyage' },
-    { name: 'GraduationCap', component: GraduationCap, label: 'Formation' },
-    { name: 'Heart', component: Heart, label: 'Santé' },
-    { name: 'Smartphone', component: Smartphone, label: 'Technologie' },
-    { name: 'Trophy', component: Trophy, label: 'Récompense' }
+    { name: 'Target', component: Target, label: t('objectifs.icons.general') },
+    { name: 'Car', component: Car, label: t('objectifs.icons.car') },
+    { name: 'Home', component: Home, label: t('objectifs.icons.home') },
+    { name: 'Plane', component: Plane, label: t('objectifs.icons.travel') },
+    { name: 'GraduationCap', component: GraduationCap, label: t('objectifs.icons.education') },
+    { name: 'Heart', component: Heart, label: t('objectifs.icons.health') },
+    { name: 'Smartphone', component: Smartphone, label: t('objectifs.icons.technology') },
+    { name: 'Trophy', component: Trophy, label: t('objectifs.icons.reward') }
   ]
 
   const colorOptions = [
@@ -130,9 +132,9 @@ export default function ObjectifsPage() {
 
   // Calculs statistiques
   const totalObjectifs = objectifs.length
-  const objectifsAtteints = objectifs.filter(obj => obj.statut === 'Atteint').length
-  const objectifsEnCours = objectifs.filter(obj => obj.statut === 'En cours').length
-  const objectifsRetard = objectifs.filter(obj => obj.statut === 'Retard').length
+  const objectifsAtteints = objectifs.filter(obj => obj.statut === t('objectifs.status.achieved') || obj.statut === 'Atteint').length
+  const objectifsEnCours = objectifs.filter(obj => obj.statut === t('objectifs.status.inProgress') || obj.statut === 'En cours').length
+  const objectifsRetard = objectifs.filter(obj => obj.statut === t('objectifs.status.delayed') || obj.statut === 'Retard').length
   const montantTotalObjectifs = objectifs.reduce((sum, obj) => sum + (parseFloat(obj.montant_objectif) || 0), 0)
   const montantTotalActuel = objectifs.reduce((sum, obj) => sum + (parseFloat(obj.montant_actuel) || 0), 0)
   const progressionGlobale = montantTotalObjectifs > 0 ? Math.round((montantTotalActuel / montantTotalObjectifs) * 100) : 0
@@ -146,9 +148,9 @@ export default function ObjectifsPage() {
   }))
 
   const statutsData = [
-    { name: 'Atteints', value: objectifsAtteints, color: '#10B981' },
-    { name: 'En cours', value: objectifsEnCours, color: '#3B82F6' },
-    { name: 'En retard', value: objectifsRetard, color: '#EF4444' }
+    { name: t('objectifs.achieved'), value: objectifsAtteints, color: '#10B981' },
+    { name: t('objectifs.inProgress'), value: objectifsEnCours, color: '#3B82F6' },
+    { name: t('objectifs.delayed'), value: objectifsRetard, color: '#EF4444' }
   ]
 
   // Filtrage des objectifs
@@ -163,17 +165,17 @@ export default function ObjectifsPage() {
     const dateLimit = new Date(objectif.date_limite)
     
     if (objectif.pourcentage >= 100) {
-      return 'Atteint'
+      return t('objectifs.status.achieved')
     } else if (today > dateLimit) {
-      return 'Retard'
+      return t('objectifs.status.delayed')
     } else {
-      return 'En cours'
+      return t('objectifs.status.inProgress')
     }
   }
 
   const handleSubmit = async () => {
     if (!formData.nom || !formData.montant_objectif || !formData.date_limite) {
-      alert('Veuillez remplir tous les champs')
+      alert(t('objectifs.errors.fillAllFields'))
       return
     }
 
@@ -195,7 +197,7 @@ export default function ObjectifsPage() {
           montant_objectif: parseFloat(formData.montant_objectif),
           date_limite: normalizedDate,
           montant_actuel: 0,
-          statut: 'En cours',
+          statut: t('objectifs.status.inProgress'),
           pourcentage: 0,
           icone: formData.icone,
           couleur: formData.couleur,
@@ -206,21 +208,21 @@ export default function ObjectifsPage() {
       setObjectifs(Array.isArray(refreshed) ? refreshed : [])
     } catch (e) {
       console.error('Erreur enregistrement objectif', e)
-      showError(e?.message || 'Erreur lors de la sauvegarde de l\'objectif')
+      showError(e?.message || t('objectifs.errors.saveError'))
       return
     }
     
     resetForm()
-    showSuccess(editingObjectif ? 'Objectif modifié' : 'Objectif créé')
+    showSuccess(editingObjectif ? t('objectifs.success.updated') : t('objectifs.success.created'))
   }
 
   const handleAddMoney = async () => {
     if (!addMoneyAmount || !selectedObjectifForMoney) {
-      alert('Veuillez saisir un montant')
+      alert(t('objectifs.errors.enterAmount'))
       return
     }
     if (!selectedAccountId) {
-      alert('Veuillez sélectionner un compte')
+      alert(t('objectifs.errors.selectAccount'))
       return
     }
 
@@ -234,16 +236,16 @@ export default function ObjectifsPage() {
       const refreshed = await objectifsService.list()
       setObjectifs(Array.isArray(refreshed) ? refreshed : [])
       const updated = Array.isArray(refreshed) ? refreshed.find(o => o.id_objectif === selectedObjectifForMoney.id_objectif) : null
-      if (updated && updated.statut === 'Atteint') {
+      if (updated && (updated.statut === 'Atteint' || updated.statut === t('objectifs.status.achieved'))) {
         setRewardObjectif(updated)
         setIsRewardOpen(true)
-        showSuccess('Bravo ! Objectif atteint 🎉')
+        showSuccess(t('objectifs.success.goalAchieved'))
       } else {
-        showSuccess('Contribution ajoutée')
+        showSuccess(t('objectifs.success.contributionAdded'))
       }
     } catch (e) {
       console.error('Erreur ajout d\'argent', e)
-      showError(e?.message || 'Erreur lors de la mise à jour du montant')
+      showError(e?.message || t('objectifs.errors.updateAmountError'))
       return
     }
 
@@ -278,14 +280,14 @@ export default function ObjectifsPage() {
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet objectif ?')) return
+    if (!confirm(t('objectifs.confirmDelete'))) return
     try {
       await objectifsService.remove(id)
       const refreshed = await objectifsService.list()
       setObjectifs(Array.isArray(refreshed) ? refreshed : [])
     } catch (e) {
       console.error('Erreur suppression objectif', e)
-      showError(e?.message || 'Erreur lors de la suppression')
+      showError(e?.message || t('objectifs.errors.deleteError'))
     }
   }
 
@@ -300,7 +302,7 @@ export default function ObjectifsPage() {
       setContributions(Array.isArray(data) ? data : [])
     } catch (e) {
       console.error('Erreur chargement contributions', e)
-      const msg = e?.message || 'Erreur lors du chargement des contributions'
+      const msg = e?.message || t('objectifs.errors.loadContributionsError')
       setContribError(msg)
       showError(msg)
     } finally {
@@ -309,23 +311,24 @@ export default function ObjectifsPage() {
   }
 
   const getStatusIcon = (statut) => {
-    switch (statut) {
-      case 'Atteint':
-        return { icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100' }
-      case 'En cours':
-        return { icon: Clock, color: 'text-blue-600', bg: 'bg-blue-100' }
-      case 'Retard':
-        return { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100' }
-      default:
-        return { icon: Target, color: 'text-gray-600', bg: 'bg-gray-100' }
+    const achieved = t('objectifs.status.achieved')
+    const inProgress = t('objectifs.status.inProgress')
+    const delayed = t('objectifs.status.delayed')
+    if (statut === 'Atteint' || statut === achieved) {
+      return { icon: CheckCircle2, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900' }
+    } else if (statut === 'En cours' || statut === inProgress) {
+      return { icon: Clock, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900' }
+    } else if (statut === 'Retard' || statut === delayed) {
+      return { icon: AlertTriangle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900' }
     }
+    return { icon: Target, color: 'text-gray-600 dark:text-gray-400', bg: 'bg-gray-100 dark:bg-gray-800' }
   }
 
   const getProgressColor = (pourcentage) => {
-    if (pourcentage >= 100) return 'bg-green-500'
-    if (pourcentage >= 75) return 'bg-blue-500'
-    if (pourcentage >= 50) return 'bg-yellow-500'
-    return 'bg-gray-400'
+    if (pourcentage >= 100) return 'bg-green-500 dark:bg-green-600'
+    if (pourcentage >= 75) return 'bg-blue-500 dark:bg-blue-600'
+    if (pourcentage >= 50) return 'bg-yellow-500 dark:bg-yellow-600'
+    return 'bg-gray-400 dark:bg-gray-600'
   }
 
   const getDaysRemaining = (dateLimit) => {
@@ -344,7 +347,7 @@ export default function ObjectifsPage() {
   if (isLoading) {
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <p className="text-gray-600">Chargement des objectifs...</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('objectifs.loading')}</p>
       </div>
     )
   }
@@ -352,7 +355,7 @@ export default function ObjectifsPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {error && (
-        <div className="mb-4 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+        <div className="mb-4 p-3 rounded bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-200 border border-red-200 dark:border-red-700">
           {error}
         </div>
       )}
@@ -360,8 +363,8 @@ export default function ObjectifsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Objectifs</h1>
-            <p className="text-gray-600 mt-2">Définissez et suivez vos objectifs financiers</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('objectifs.title')}</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">{t('objectifs.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -371,56 +374,56 @@ export default function ObjectifsPage() {
             onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             <Plus className="w-5 h-5" />
-            Nouvel Objectif
+            {t('objectifs.newGoal')}
           </button>
         </div>
 
         {/* Statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Objectifs</p>
-                <p className="text-2xl font-bold text-gray-900">{totalObjectifs}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('objectifs.statistics.totalGoals')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalObjectifs}</p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Target className="w-6 h-6 text-blue-600" />
+              <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-lg">
+                <Target className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Atteints</p>
-                <p className="text-2xl font-bold text-green-600">{objectifsAtteints}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('objectifs.statistics.achieved')}</p>
+                <p className="text-2xl font-bold text-green-600 dark:text-green-400">{objectifsAtteints}</p>
               </div>
-              <div className="bg-green-100 p-3 rounded-lg">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
+              <div className="bg-green-100 dark:bg-green-900 p-3 rounded-lg">
+                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Progression</p>
-                <p className="text-2xl font-bold text-purple-600">{progressionGlobale}%</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('objectifs.statistics.progression')}</p>
+                <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{progressionGlobale}%</p>
               </div>
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <TrendingUp className="w-6 h-6 text-purple-600" />
+              <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Montant Total</p>
-                <p className="text-2xl font-bold text-gray-900">{Number(montantTotalObjectifs).toLocaleString()}{userSymbol}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{t('objectifs.statistics.totalAmount')}</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{Number(montantTotalObjectifs).toLocaleString()}{userSymbol}</p>
               </div>
-              <div className="bg-yellow-100 p-3 rounded-lg">
-                <DollarSign className="w-6 h-6 text-yellow-600" />
+              <div className="bg-yellow-100 dark:bg-yellow-900 p-3 rounded-lg">
+                <DollarSign className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
             </div>
           </div>
@@ -429,23 +432,23 @@ export default function ObjectifsPage() {
 
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Progression par Objectif</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('objectifs.charts.progressionByGoal')}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={progressionData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="nom" />
-              <YAxis />
-              <Tooltip formatter={(value) => [`${Number(value).toLocaleString()}${userSymbol}`, '']} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+              <XAxis dataKey="nom" stroke="#6b7280" className="dark:stroke-gray-400" />
+              <YAxis stroke="#6b7280" className="dark:stroke-gray-400" />
+              <Tooltip formatter={(value) => [`${Number(value).toLocaleString()}${userSymbol}`, '']} contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
               <Legend />
-              <Bar dataKey="objectif" fill="#E5E7EB" name="Objectif" />
-              <Bar dataKey="actuel" fill="#10B981" name="Actuel" />
+              <Bar dataKey="objectif" fill="#E5E7EB" name={t('objectifs.goalLabelShort')} />
+              <Bar dataKey="actuel" fill="#10B981" name={t('objectifs.current')} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Répartition des Statuts</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('objectifs.charts.statusDistribution')}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -463,22 +466,22 @@ export default function ObjectifsPage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [value, 'Objectifs']} />
+              <Tooltip formatter={(value) => [value, t('objectifs.goal')]} contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Filtres et Recherche */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Rechercher un objectif..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder={t('objectifs.searchPlaceholder')}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -486,19 +489,19 @@ export default function ObjectifsPage() {
           </div>
 
           <select
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
           >
-            <option value="">Tous les statuts</option>
-            <option value="En cours">En cours</option>
-            <option value="Atteint">Atteints</option>
-            <option value="Retard">En retard</option>
+            <option value="">{t('objectifs.allStatuses')}</option>
+            <option value={t('objectifs.status.inProgress')}>{t('objectifs.inProgress')}</option>
+            <option value={t('objectifs.status.achieved')}>{t('objectifs.achieved')}</option>
+            <option value={t('objectifs.status.delayed')}>{t('objectifs.delayed')}</option>
           </select>
 
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
+          <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export
+            {t('objectifs.export')}
           </button>
         </div>
       </div>
@@ -512,7 +515,7 @@ export default function ObjectifsPage() {
           const daysRemaining = getDaysRemaining(objectif.date_limite)
           
           return (
-            <div key={objectif.id_objectif} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div key={objectif.id_objectif} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -525,25 +528,25 @@ export default function ObjectifsPage() {
                       style={{ color: objectif.couleur }}
                     />
                   </div>
-                  <h3 className="font-semibold text-lg text-gray-900">{objectif.nom}</h3>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{objectif.nom}</h3>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => openContributions(objectif)}
-                    className="p-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                    title="Voir les contributions"
+                    className="p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    title={t('objectifs.viewContributions')}
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleEdit(objectif)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(objectif.id_objectif)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -553,10 +556,10 @@ export default function ObjectifsPage() {
               {/* Progression */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">Progression</span>
-                  <span className="text-sm font-medium">{objectif.pourcentage}%</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('objectifs.progression')}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{objectif.pourcentage}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(objectif.pourcentage)}`}
                     style={{ width: `${Math.min(objectif.pourcentage, 100)}%` }}
@@ -567,30 +570,30 @@ export default function ObjectifsPage() {
               {/* Montants */}
               <div className="space-y-2 mb-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Actuel</span>
-                  <span className="font-medium">{Number(objectif.montant_actuel).toLocaleString()}{userSymbol}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('objectifs.current')}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{Number(objectif.montant_actuel).toLocaleString()}{userSymbol}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Objectif</span>
-                  <span className="font-medium">{Number(objectif.montant_objectif).toLocaleString()}{userSymbol}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('objectifs.goalLabelShort')}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{Number(objectif.montant_objectif).toLocaleString()}{userSymbol}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Restant</span>
-                  <span className="font-medium text-orange-600">
+                  <span className="text-gray-600 dark:text-gray-400">{t('objectifs.remaining')}</span>
+                  <span className="font-medium text-orange-600 dark:text-orange-400">
                     {Number((parseFloat(objectif.montant_objectif)||0) - (parseFloat(objectif.montant_actuel)||0)).toLocaleString()}{userSymbol}
                   </span>
                 </div>
               </div>
 
               {/* Date limite */}
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4">
                 <Calendar className="w-4 h-4" />
-                <span>Échéance: {new Date(objectif.date_limite).toLocaleDateString('fr-FR')}</span>
+                <span>{t('objectifs.deadlineLabel')} {new Date(objectif.date_limite).toLocaleDateString('fr-FR')}</span>
                 {daysRemaining > 0 && (
-                  <span className="text-blue-600">({daysRemaining} jours)</span>
+                  <span className="text-blue-600 dark:text-blue-400">({daysRemaining} {t('objectifs.days')})</span>
                 )}
-                {daysRemaining <= 0 && objectif.statut !== 'Atteint' && (
-                  <span className="text-red-600">(Expiré)</span>
+                {daysRemaining <= 0 && (objectif.statut !== 'Atteint' && objectif.statut !== t('objectifs.status.achieved')) && (
+                  <span className="text-red-600 dark:text-red-400">{t('objectifs.expired')}</span>
                 )}
               </div>
 
@@ -603,7 +606,7 @@ export default function ObjectifsPage() {
               </div>
 
               {/* Action d'ajout d'argent */}
-              {objectif.statut !== 'Atteint' && (
+              {(objectif.statut !== 'Atteint' && objectif.statut !== t('objectifs.status.achieved')) && (
                 <button
                   onClick={() => {
                     setSelectedObjectifForMoney(objectif)
@@ -650,7 +653,7 @@ export default function ObjectifsPage() {
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
                   <Plus className="w-4 h-4" />
-                  Ajouter de l'argent
+                  {t('objectifs.addMoney')}
                 </button>
               )}
             </div>
@@ -660,64 +663,64 @@ export default function ObjectifsPage() {
 
       {filteredObjectifs.length === 0 && (
         <div className="text-center py-12">
-          <Target className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Aucun objectif trouvé</p>
+          <Target className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">{t('objectifs.noGoals')}</p>
         </div>
       )}
 
       {/* Modal Création/Modification */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-xl font-semibold mb-6">
-              {editingObjectif ? 'Modifier l\'Objectif' : 'Nouvel Objectif'}
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto custom-scrollbar scroll-smooth">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+              {editingObjectif ? t('objectifs.editGoal') : t('objectifs.newGoal')}
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom de l'objectif
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('objectifs.goalName')}
                 </label>
                 <input
                   type="text"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   value={formData.nom}
                   onChange={(e) => setFormData({...formData, nom: e.target.value})}
-                  placeholder="Ex: Achat voiture, Voyage..."
+                  placeholder={t('objectifs.goalNamePlaceholder')}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant objectif 
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('objectifs.goalAmount')}
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   value={formData.montant_objectif}
                   onChange={(e) => setFormData({...formData, montant_objectif: e.target.value})}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Date limite
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('objectifs.deadline')}
                 </label>
                 <input
                   type="date"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   value={formData.date_limite}
                   onChange={(e) => setFormData({...formData, date_limite: e.target.value})}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Icône
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('objectifs.icon')}
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {iconOptions.map((option) => {
@@ -729,8 +732,8 @@ export default function ObjectifsPage() {
                         onClick={() => setFormData({...formData, icone: option.name})}
                         className={`p-3 rounded-lg border-2 transition-all ${
                           formData.icone === option.name 
-                            ? 'border-green-500 bg-green-50' 
-                            : 'border-gray-200 hover:border-gray-300'
+                            ? 'border-green-500 bg-green-50 dark:bg-green-900' 
+                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                         }`}
                       >
                         <IconComp className="w-5 h-5 mx-auto" />
@@ -742,8 +745,8 @@ export default function ObjectifsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Couleur
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('objectifs.color')}
                 </label>
                 <div className="flex gap-2">
                   {colorOptions.map((color) => (
@@ -753,8 +756,8 @@ export default function ObjectifsPage() {
                       onClick={() => setFormData({...formData, couleur: color})}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${
                         formData.couleur === color 
-                          ? 'border-gray-400 scale-110' 
-                          : 'border-gray-200'
+                          ? 'border-gray-400 dark:border-gray-500 scale-110' 
+                          : 'border-gray-200 dark:border-gray-600'
                       }`}
                       style={{ backgroundColor: color }}
                     ></button>
@@ -766,9 +769,9 @@ export default function ObjectifsPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
                 >
-                  Annuler
+                  {t('objectifs.cancel')}
                 </button>
                 <button
                   type="button"
@@ -778,7 +781,7 @@ export default function ObjectifsPage() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
-                  {editingObjectif ? 'Modifier' : 'Créer'}
+                  {editingObjectif ? t('objectifs.modify') : t('objectifs.create')}
                 </button>
               </div>
             </div>
@@ -789,23 +792,23 @@ export default function ObjectifsPage() {
       {/* Modal Ajout d'argent */}
       {isAddingMoney && selectedObjectifForMoney && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6">
-            <h2 className="text-xl font-semibold mb-4">
-              Ajouter de l'argent
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full p-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
+              {t('objectifs.addMoneyTitle')}
             </h2>
-            <p className="text-gray-600 mb-4">
-              Objectif: <span className="font-medium">{selectedObjectifForMoney.nom}</span>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {t('objectifs.goalLabel')} <span className="font-medium">{selectedObjectifForMoney.nom}</span>
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant à ajouter 
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('objectifs.amountToAdd')}
                 </label>
                 <input
                   type="number"
                   step="0.01"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   value={addMoneyAmount}
                   onChange={(e) => setAddMoneyAmount(e.target.value)}
                   placeholder="0.00"
@@ -813,15 +816,15 @@ export default function ObjectifsPage() {
               </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Compte de débit
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    {t('objectifs.debitAccount')}
                   </label>
                   <select
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     value={selectedAccountId}
                     onChange={(e) => setSelectedAccountId(e.target.value)}
                   >
-                    <option value="">Sélectionner un compte</option>
+                    <option value="">{t('objectifs.selectAccount')}</option>
                     {accounts.map((acc) => (
                       <option key={acc.id_compte} value={acc.id_compte}>
                         {acc.nom} — {(parseFloat(acc.solde) || 0).toLocaleString()}{userSymbol}
@@ -830,36 +833,36 @@ export default function ObjectifsPage() {
                   </select>
                 </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                 <div className="flex justify-between text-sm mb-2">
-                  <span>Montant actuel:</span>
-                  <span className="font-medium">{Number(selectedObjectifForMoney.montant_actuel).toLocaleString()}{userSymbol}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('objectifs.currentAmount')}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{Number(selectedObjectifForMoney.montant_actuel).toLocaleString()}{userSymbol}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span>Montant objectif:</span>
-                  <span className="font-medium">{Number(selectedObjectifForMoney.montant_objectif).toLocaleString()}{userSymbol}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{t('objectifs.goalAmountLabel')}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{Number(selectedObjectifForMoney.montant_objectif).toLocaleString()}{userSymbol}</span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span>Restant (avant):</span>
-                  <span className="font-medium text-orange-600">
+                  <span className="text-gray-700 dark:text-gray-300">{t('objectifs.remainingBefore')}</span>
+                  <span className="font-medium text-orange-600 dark:text-orange-400">
                     {Number((parseFloat(selectedObjectifForMoney.montant_objectif)||0) - (parseFloat(selectedObjectifForMoney.montant_actuel)||0)).toLocaleString()}{userSymbol}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span>Après ajout:</span>
-                  <span className="font-medium text-green-600">
+                  <span className="text-gray-700 dark:text-gray-300">{t('objectifs.afterAdd')}</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
                     {Number((parseFloat(selectedObjectifForMoney.montant_actuel) || 0) + (parseFloat(addMoneyAmount) || 0)).toLocaleString()}{userSymbol}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm mb-2">
-                  <span>Restant (après ajout):</span>
-                  <span className="font-medium text-emerald-700">
+                  <span className="text-gray-700 dark:text-gray-300">{t('objectifs.remainingAfter')}</span>
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">
                     {Number((parseFloat(selectedObjectifForMoney.montant_objectif)||0) - ((parseFloat(selectedObjectifForMoney.montant_actuel)||0) + (parseFloat(addMoneyAmount)||0))).toLocaleString()}{userSymbol}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Progression:</span>
-                  <span className="font-medium">
+                  <span className="text-gray-700 dark:text-gray-300">{t('objectifs.progress')}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">
                     {Math.round(((selectedObjectifForMoney.montant_actuel + (parseFloat(addMoneyAmount) || 0)) / selectedObjectifForMoney.montant_objectif) * 100)}%
                   </span>
                 </div>
@@ -873,9 +876,9 @@ export default function ObjectifsPage() {
                     setSelectedObjectifForMoney(null)
                     setAddMoneyAmount('')
                   }}
-                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
                 >
-                  Annuler
+                  {t('objectifs.cancel')}
                 </button>
                 <button
                   type="button"
@@ -885,7 +888,7 @@ export default function ObjectifsPage() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
-                  Ajouter
+                  {t('objectifs.add')}
                 </button>
               </div>
             </div>
@@ -896,71 +899,71 @@ export default function ObjectifsPage() {
       {/* Modal Contributions */}
       {isContribOpen && selectedForContrib && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto custom-scrollbar scroll-smooth">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">
-                Contributions — {selectedForContrib.nom}
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {t('objectifs.contributions')} — {selectedForContrib.nom}
               </h2>
               <button
                 type="button"
                 onClick={() => { setIsContribOpen(false); setSelectedForContrib(null); setContributions([]); setContribError('') }}
-                className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 text-sm"
+                className="px-3 py-1 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm transition-colors"
               >
-                Fermer
+                {t('objectifs.close')}
               </button>
             </div>
 
             {contribError && (
-              <div className="mb-3 p-3 rounded bg-red-50 text-red-700 border border-red-200">
+              <div className="mb-3 p-3 rounded bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-200 border border-red-200 dark:border-red-700">
                 {contribError}
               </div>
             )}
             {contribLoading ? (
-              <p className="text-gray-600">Chargement des contributions...</p>
+              <p className="text-gray-600 dark:text-gray-400">{t('objectifs.loadingContributions')}</p>
             ) : (
               <div className="space-y-3">
                 {/* Summary */}
                 {contributions.length > 0 && (
                   <div className="mb-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50">
-                      <div className="text-xs text-gray-500 mb-1">Total contribué</div>
-                      <div className="text-lg font-semibold text-emerald-700">
+                    <div className="p-4 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('objectifs.totalContributed')}</div>
+                      <div className="text-lg font-semibold text-emerald-700 dark:text-emerald-400">
                         {Number(contributions.reduce((sum, c) => sum + (parseFloat(c.montant) || 0), 0)).toLocaleString()} {userSymbol}
                       </div>
                     </div>
-                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50">
-                      <div className="text-xs text-gray-500 mb-1">Nombre de contributions</div>
-                      <div className="text-lg font-semibold text-gray-900">{contributions.length}</div>
+                    <div className="p-4 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('objectifs.numberOfContributions')}</div>
+                      <div className="text-lg font-semibold text-gray-900 dark:text-white">{contributions.length}</div>
                     </div>
-                    <div className="p-4 rounded-lg border border-gray-100 bg-gray-50">
-                      <div className="text-xs text-gray-500 mb-1">Objectif</div>
-                      <div className="text-sm font-medium text-gray-900 truncate">{selectedForContrib.nom}</div>
+                    <div className="p-4 rounded-lg border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{t('objectifs.goal')}</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">{selectedForContrib.nom}</div>
                     </div>
                   </div>
                 )}
 
                 {contributions.length === 0 ? (
-                  <p className="text-gray-500">Aucune contribution.</p>
+                  <p className="text-gray-500 dark:text-gray-400">{t('objectifs.noContributions')}</p>
                 ) : (
                   contributions.map((c) => (
                     <div key={c.id_contribution || `${c.id_objectif}-${c.date_contribution}-${c.montant}`}
-                      className="border border-gray-200 rounded-lg p-3 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-sm font-semibold">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-sm font-semibold">
                           +
                         </div>
                         <div>
-                          <p className="text-sm text-gray-700">
+                          <p className="text-sm text-gray-700 dark:text-gray-300">
                             {new Date(c.date_contribution).toLocaleDateString('fr-FR')}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            Compte: {c.compte_nom || '—'}
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {t('objectifs.account')} {c.compte_nom || '—'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-base font-semibold text-emerald-700">{Number(c.montant).toLocaleString()}{userSymbol}</div>
-                        <div className="text-[11px] text-gray-500">Objectif: {c.objectif_nom || selectedForContrib.nom}</div>
+                        <div className="text-base font-semibold text-emerald-700 dark:text-emerald-400">{Number(c.montant).toLocaleString()}{userSymbol}</div>
+                        <div className="text-[11px] text-gray-500 dark:text-gray-400">{t('objectifs.goalLabel')} {c.objectif_nom || selectedForContrib.nom}</div>
                       </div>
                     </div>
                   ))
@@ -1015,10 +1018,10 @@ export default function ObjectifsPage() {
                   <Trophy className="w-10 h-10 text-yellow-600 animate-bounce" />
                 </div>
                 <h3 className="text-3xl font-extrabold mb-2 bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg,#16a34a,#22c55e,#10b981)' }}>
-                  Bravo, objectif atteint !
+                  {t('objectifs.congratulations')}
                 </h3>
-                <p className="text-gray-700 mb-1 font-medium">{rewardObjectif.nom}</p>
-                <p className="text-green-600 font-semibold mb-6 text-lg">{Number(rewardObjectif.montant_objectif).toLocaleString()}{userSymbol} atteints</p>
+                <p className="text-gray-700 dark:text-gray-300 mb-1 font-medium">{rewardObjectif.nom}</p>
+                <p className="text-green-600 dark:text-green-400 font-semibold mb-6 text-lg">{Number(rewardObjectif.montant_objectif).toLocaleString()}{userSymbol} {t('objectifs.achievedAmount')}</p>
                 <div className="flex items-center justify-center gap-3">
                   <button
                     type="button"
@@ -1028,7 +1031,7 @@ export default function ObjectifsPage() {
                     onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
                     onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                   >
-                    Merci 🎁
+                    {t('objectifs.thanks')}
                   </button>
                 </div>
               </div>

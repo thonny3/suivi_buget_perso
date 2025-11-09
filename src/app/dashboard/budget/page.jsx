@@ -24,9 +24,11 @@ import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, 
 import budgetsService from '@/services/budgetsService'
 import depensesService from '@/services/depensesService'
 import { useToast } from '@/hooks/useToast'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function BudgetPage() {
   const { showSuccess, showError } = useToast()
+  const { t } = useLanguage()
   const [budgets, setBudgets] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -55,7 +57,7 @@ export default function BudgetPage() {
       const res = await budgetsService.getBudgets()
       setBudgets(Array.isArray(res) ? res : [])
     } catch (e) {
-      const errorMessage = e?.message || 'Erreur lors du chargement des budgets'
+      const errorMessage = e?.message || t('budget.errors.loadError')
       setError(errorMessage)
       showError(errorMessage)
     } finally {
@@ -73,7 +75,7 @@ export default function BudgetPage() {
       setCategories(normalized)
     } catch (e) {
       setCategories([])
-      showError('Erreur lors du chargement des catégories')
+      showError(t('budget.errors.loadCategoriesError'))
     }
   }
 
@@ -172,7 +174,20 @@ export default function BudgetPage() {
   const PIE_COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#06B6D4', '#F43F5E', '#84CC16', '#A855F7', '#14B8A6']
 
   // Données pour l'évolution mensuelle (comme dans revenus)
-  const monthLabels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+  const monthLabels = [
+    t('revenus.january').substring(0, 3),
+    t('revenus.february').substring(0, 3),
+    t('revenus.march').substring(0, 3),
+    t('revenus.april').substring(0, 3),
+    t('revenus.may').substring(0, 3),
+    t('revenus.june').substring(0, 3),
+    t('revenus.july').substring(0, 3),
+    t('revenus.august').substring(0, 3),
+    t('revenus.september').substring(0, 3),
+    t('revenus.october').substring(0, 3),
+    t('revenus.november').substring(0, 3),
+    t('revenus.december').substring(0, 3)
+  ]
   const monthlyTotals = Array.from({ length: 12 }, () => 0)
   budgets.forEach((budget) => {
     try {
@@ -201,20 +216,20 @@ export default function BudgetPage() {
     const newErrors = {}
     
     if (!formData.mois || formData.mois.trim() === '') {
-      newErrors.mois = 'La période/mois est requise'
+      newErrors.mois = t('budget.errors.periodRequired')
     }
     
     if (!formData.montant_max || formData.montant_max.trim() === '') {
-      newErrors.montant_max = 'Le montant maximum est requis'
+      newErrors.montant_max = t('budget.errors.amountRequired')
     } else {
       const montant = parseFloat(formData.montant_max)
       if (isNaN(montant) || montant <= 0) {
-        newErrors.montant_max = 'Le montant doit être un nombre positif'
+        newErrors.montant_max = t('budget.errors.amountInvalid')
       }
     }
     
     if (!formData.id_categories_depenses || formData.id_categories_depenses === '') {
-      newErrors.id_categories_depenses = 'Veuillez sélectionner une catégorie'
+      newErrors.id_categories_depenses = t('budget.errors.categoryRequired')
     }
     
     setErrors(newErrors)
@@ -238,16 +253,16 @@ export default function BudgetPage() {
 
       if (editingBudget) {
         await budgetsService.updateBudget(editingBudget.id_budget, payload)
-        showSuccess('Budget mis à jour avec succès')
+        showSuccess(t('budget.success.updateSuccess'))
       } else {
         await budgetsService.createBudget(payload)
-        showSuccess('Budget créé avec succès')
+        showSuccess(t('budget.success.createSuccess'))
       }
 
       await loadBudgets()
       resetForm()
     } catch (e) {
-      const errorMessage = e?.message || 'Erreur lors de l\'enregistrement du budget'
+      const errorMessage = e?.message || t('budget.errors.saveError')
       showError(errorMessage)
     }
   }
@@ -284,10 +299,10 @@ export default function BudgetPage() {
     try {
       if (!selectedBudget) return
       await budgetsService.deleteBudget(selectedBudget.id_budget)
-      showSuccess('Budget supprimé avec succès')
+      showSuccess(t('budget.success.deleteSuccess'))
       await loadBudgets()
     } catch (e) {
-      const errorMessage = e?.message || 'Erreur lors de la suppression du budget'
+      const errorMessage = e?.message || t('budget.errors.deleteError')
       showError(errorMessage)
     } finally {
       setIsDeleteOpen(false)
@@ -296,17 +311,17 @@ export default function BudgetPage() {
   }
 
   const getBudgetStatus = (pourcentage) => {
-    if (pourcentage >= 100) return { color: 'text-red-600', bg: 'bg-red-100', icon: AlertTriangle, label: 'Dépassé' }
-    if (pourcentage >= 80) return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertTriangle, label: 'Attention' }
-    if (pourcentage >= 60) return { color: 'text-yellow-600', bg: 'bg-yellow-100', icon: TrendingUp, label: 'Modéré' }
-    return { color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle, label: 'Sain' }
+    if (pourcentage >= 100) return { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900', icon: AlertTriangle, label: t('budget.status.exceeded') }
+    if (pourcentage >= 80) return { color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-100 dark:bg-orange-900', icon: AlertTriangle, label: t('budget.status.warning') }
+    if (pourcentage >= 60) return { color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900', icon: TrendingUp, label: t('budget.status.moderate') }
+    return { color: 'text-green-600 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900', icon: CheckCircle, label: t('budget.status.healthy') }
   }
 
   const getProgressBarColor = (pourcentage) => {
-    if (pourcentage >= 100) return 'bg-red-500'
-    if (pourcentage >= 80) return 'bg-orange-500'
-    if (pourcentage >= 60) return 'bg-yellow-500'
-    return 'bg-green-500'
+    if (pourcentage >= 100) return 'bg-red-500 dark:bg-red-600'
+    if (pourcentage >= 80) return 'bg-orange-500 dark:bg-orange-600'
+    if (pourcentage >= 60) return 'bg-yellow-500 dark:bg-yellow-600'
+    return 'bg-green-500 dark:bg-green-600'
   }
 
   return (
@@ -315,8 +330,8 @@ export default function BudgetPage() {
       <div className="mb-6 md:mb-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion du Budget</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-2">Suivez et contrôlez vos dépenses par catégorie</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">{t('budget.title')}</h1>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-2">{t('budget.subtitle')}</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
@@ -326,35 +341,35 @@ export default function BudgetPage() {
             onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
             <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">Nouveau Budget</span>
-            <span className="sm:hidden">Nouveau</span>
+            <span className="hidden sm:inline">{t('budget.newBudget')}</span>
+            <span className="sm:hidden">{t('budget.new')}</span>
           </button>
         </div>
 
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">{error}</div>
+          <div className="mb-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg">{error}</div>
         )}
       </div>
 
       {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8">
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Budget vs Dépenses par Catégorie</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('budget.budgetVsExpenses')}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={budgetData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="categorie" />
-              <YAxis />
-              <Tooltip formatter={(value) => [formatAmountDefault(value), '']} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+              <XAxis dataKey="categorie" stroke="#6b7280" className="dark:stroke-gray-400" />
+              <YAxis stroke="#6b7280" className="dark:stroke-gray-400" />
+              <Tooltip formatter={(value) => [formatAmountDefault(value), '']} contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
               <Legend />
-              <Bar dataKey="budget" fill="#3B82F6" name="Budget" />
-              <Bar dataKey="depense" fill="#EF4444" name="Dépensé" />
+              <Bar dataKey="budget" fill="#3B82F6" name={t('budget.budgetLabel')} />
+              <Bar dataKey="depense" fill="#EF4444" name={t('budget.spent')} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4">Répartition des Dépenses</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('budget.expenseDistribution')}</h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -372,36 +387,36 @@ export default function BudgetPage() {
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [formatAmountDefault(value), 'Dépensé']} />
+              <Tooltip formatter={(value) => [formatAmountDefault(value), t('budget.spent')]} contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
             </PieChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       {/* Évolution Budget */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
-        <h3 className="text-lg font-semibold mb-4">Évolution Mensuelle</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('budget.monthlyEvolution')}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={evolutionData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip formatter={(value) => [formatAmountDefault(value), 'Budget']} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+            <XAxis dataKey="month" stroke="#6b7280" className="dark:stroke-gray-400" />
+            <YAxis stroke="#6b7280" className="dark:stroke-gray-400" />
+            <Tooltip formatter={(value) => [formatAmountDefault(value), t('budget.budgetLabel')]} contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
             <Line type="monotone" dataKey="montant" stroke="#3B82F6" strokeWidth={3} />
           </LineChart>
         </ResponsiveContainer>
       </div>
 
       {/* Filtres */}
-      <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Rechercher par catégorie..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t('budget.searchPlaceholder')}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -410,14 +425,14 @@ export default function BudgetPage() {
 
           <input
             type="month"
-            className="px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
           />
 
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2">
+          <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2">
             <Download className="w-4 h-4" />
-            Export
+            {t('budget.export')}
           </button>
         </div>
       </div>
@@ -429,19 +444,19 @@ export default function BudgetPage() {
           const StatusIcon = status.icon
           
           return (
-            <div key={budget.id_budget} className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div key={budget.id_budget} className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-lg text-gray-900">{budget.categorie}</h3>
+                <h3 className="font-semibold text-lg text-gray-900 dark:text-white">{budget.categorie}</h3>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleEdit(budget)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(budget.id_budget)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -450,27 +465,27 @@ export default function BudgetPage() {
 
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Budget</span>
-                  <span className="font-medium">{Number(budget.montant_max || 0).toLocaleString('fr-FR')}€</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('budget.budgetLabel')}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{formatAmountDefault(budget.montant_max || 0)}</span>
                 </div>
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Dépensé</span>
-                  <span className="font-medium text-red-600">{Number(budget.montant_depense || 0).toLocaleString('fr-FR')}€</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('budget.spent')}</span>
+                  <span className="font-medium text-red-600 dark:text-red-400">{formatAmountDefault(budget.montant_depense || 0)}</span>
                 </div>
 
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Restant</span>
-                  <span className="font-medium text-green-600">{Number(budget.montant_restant || 0).toLocaleString('fr-FR')}€</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('budget.remaining')}</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">{formatAmountDefault(budget.montant_restant || 0)}</span>
                 </div>
 
                 {/* Barre de progression */}
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Utilisation</span>
-                    <span className="text-sm font-medium">{budget.pourcentage_utilise}%</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">{t('budget.usage')}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{budget.pourcentage_utilise}%</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full transition-all duration-300 ${getProgressBarColor(budget.pourcentage_utilise)}`}
                       style={{ width: `${Math.min(budget.pourcentage_utilise, 100)}%` }}
@@ -484,8 +499,8 @@ export default function BudgetPage() {
                   <span className={`text-sm font-medium ${status.color}`}>{status.label}</span>
                 </div>
 
-                <div className="text-xs text-gray-500 mt-2">
-                  Période: {budget.mois}
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                  {t('budget.period')}: {budget.mois}
                 </div>
               </div>
             </div>
@@ -495,31 +510,31 @@ export default function BudgetPage() {
 
       {filteredBudgets.length === 0 && (
         <div className="text-center py-12">
-          <Calculator className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Aucun budget trouvé</p>
+          <Calculator className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400">{t('budget.noBudgets')}</p>
         </div>
       )}
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-md w-full p-4 sm:p-6 my-4">
-            <h2 className="text-xl font-semibold mb-6">
-              {editingBudget ? 'Modifier le Budget' : 'Nouveau Budget'}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto custom-scrollbar scroll-smooth">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-4 sm:p-6 my-4">
+            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">
+              {editingBudget ? t('budget.editBudget') : t('budget.newBudget')}
             </h2>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Période/Mois
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('budget.periodMonth')}
                 </label>
                 <input
                   type="month"
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.mois 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-blue-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-blue-500'
                   }`}
                   value={formData.mois}
                   onChange={(e) => {
@@ -531,22 +546,22 @@ export default function BudgetPage() {
                   placeholder="YYYY-MM"
                 />
                 {errors.mois && (
-                  <p className="text-red-500 text-sm mt-1">{errors.mois}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.mois}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Montant Maximum 
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('budget.maxAmount')}
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.montant_max 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-blue-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-blue-500'
                   }`}
                   value={formData.montant_max}
                   onChange={(e) => {
@@ -557,20 +572,20 @@ export default function BudgetPage() {
                   }}
                 />
                 {errors.montant_max && (
-                  <p className="text-red-500 text-sm mt-1">{errors.montant_max}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.montant_max}</p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Catégorie de Dépense
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('budget.expenseCategory')}
                 </label>
                 <select
                   required
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.id_categories_depenses 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 focus:ring-blue-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-blue-500'
                   }`}
                   value={formData.id_categories_depenses}
                   onChange={(e) => {
@@ -580,13 +595,13 @@ export default function BudgetPage() {
                     }
                   }}
                 >
-                  <option value="">Sélectionner une catégorie</option>
+                  <option value="">{t('budget.selectCategory')}</option>
                   {categories.map(cat => (
                     <option key={cat.id} value={cat.id}>{cat.nom}</option>
                   ))}
                 </select>
                 {errors.id_categories_depenses && (
-                  <p className="text-red-500 text-sm mt-1">{errors.id_categories_depenses}</p>
+                  <p className="text-red-500 dark:text-red-400 text-sm mt-1">{errors.id_categories_depenses}</p>
                 )}
               </div>
 
@@ -594,9 +609,9 @@ export default function BudgetPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
                 >
-                  Annuler
+                  {t('budget.cancel')}
                 </button>
                 <button
                   type="button"
@@ -606,7 +621,7 @@ export default function BudgetPage() {
                   onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
                   onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
                 >
-                  {editingBudget ? 'Modifier' : 'Créer'}
+                  {editingBudget ? t('budget.modify') : t('budget.create')}
                 </button>
               </div>
             </div>
@@ -616,26 +631,24 @@ export default function BudgetPage() {
 
       {isDeleteOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6">
             <div className="text-center">
               <div className="flex justify-center mb-4">
-                <div className="bg-red-100 rounded-full p-3">
-                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                <div className="bg-red-100 dark:bg-red-900 rounded-full p-3">
+                  <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Supprimer ce budget ?</h3>
-              <p className="text-gray-600 mb-6">
-                Êtes-vous sûr de vouloir supprimer
-                {selectedBudget?.categorie ? ` "${selectedBudget.categorie}"` : ''} ?<br />
-                Cette action est irréversible.
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{t('budget.confirmDelete')}</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                {t('budget.deleteMessage').replace('{category}', selectedBudget?.categorie ? ` "${selectedBudget.categorie}"` : '')}
               </p>
               <div className="flex justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => { setIsDeleteOpen(false); setSelectedBudget(null) }}
-                  className="px-4 py-2 text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 bg-white dark:bg-gray-800 transition-colors"
                 >
-                  Annuler
+                  {t('budget.cancel')}
                 </button>
                 <button
                   type="button"
@@ -643,7 +656,7 @@ export default function BudgetPage() {
                   className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2"
                 >
                   <Trash2 className="w-4 h-4" />
-                  Supprimer
+                  {t('budget.delete')}
                 </button>
               </div>
             </div>

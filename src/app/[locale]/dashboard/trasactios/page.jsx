@@ -4,12 +4,13 @@ import { Search, Calendar, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucid
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts'
 import apiService from '@/services/apiService'
 import { API_CONFIG } from '@/config/api'
+import { useLanguage } from '@/context/LanguageContext'
 
 // Utilise Recharts (déjà présent dans le projet) pour un graphique plus lisible
 function CurrencyYAxisTick({ x, y, payload }) {
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={-6} y={0} textAnchor="end" dominantBaseline="central" fill="#6b7280" fontSize="12">
+      <text x={-6} y={0} textAnchor="end" dominantBaseline="central" fill="#6b7280" className="dark:fill-gray-400" fontSize="12">
         {Number(payload.value).toLocaleString('fr-FR')}
       </text>
     </g>
@@ -17,6 +18,7 @@ function CurrencyYAxisTick({ x, y, payload }) {
 }
 
 export default function AllTransactionsPage() {
+  const { t } = useLanguage()
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -59,7 +61,7 @@ export default function AllTransactionsPage() {
       const res = await apiService.request('/transactions', { method: 'GET' })
       setTransactions(Array.isArray(res) ? res : [])
     } catch (e) {
-      setError(e?.message || 'Erreur lors du chargement des transactions')
+      setError(e?.message || t('transactions.errors.loadError'))
     } finally {
       setLoading(false)
     }
@@ -232,56 +234,56 @@ export default function AllTransactionsPage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Toutes les transactions</h1>
-          <p className="text-gray-600 mt-1">Consultez l'historique de vos mouvements</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('transactions.title')}</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">{t('transactions.subtitle')}</p>
         </div>
         <button
           onClick={fetchTransactions}
-          className="px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center gap-2"
+          className="px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 flex items-center gap-2 transition-colors"
         >
           <RefreshCw className="w-4 h-4" />
-          Actualiser
+          {t('transactions.refresh')}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+        <div className="mb-4 bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
 
-      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm mb-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher (source, compte, catégorie, etc.)"
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              placeholder={t('transactions.searchPlaceholder')}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
           </div>
           <div className="flex gap-2">
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full md:w-auto flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full md:w-auto flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les types</option>
-              <option value="income">Revenus</option>
-              <option value="expense">Dépenses</option>
-              <option value="contribution">Contributions</option>
-              <option value="transfer">Transferts</option>
+              <option value="all">{t('transactions.allTypes')}</option>
+              <option value="income">{t('transactions.income')}</option>
+              <option value="expense">{t('transactions.expense')}</option>
+              <option value="contribution">{t('transactions.contribution')}</option>
+              <option value="transfer">{t('transactions.transfer')}</option>
             </select>
           </div>
           <div className="flex gap-2">
             <select
               value={userFilter}
               onChange={(e) => setUserFilter(e.target.value)}
-              className="w-full md:w-auto flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full md:w-auto flex-1 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              <option value="all">Tous les utilisateurs</option>
+              <option value="all">{t('transactions.allUsers')}</option>
               {userOptions.map(u => (
                 <option key={u.id} value={u.id}>{u.label}</option>
               ))}
@@ -289,23 +291,23 @@ export default function AllTransactionsPage() {
           </div>
           <div className="flex gap-2">
             <div className="relative flex-1">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="date"
                 value={dateFrom}
                 onChange={(e) => setDateFrom(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Du"
+                className="w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder={t('transactions.from')}
               />
             </div>
             <div className="relative flex-1">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="date"
                 value={dateTo}
                 onChange={(e) => setDateTo(e.target.value)}
-                className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Au"
+                className="w-full pl-10 pr-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder={t('transactions.to')}
               />
             </div>
           </div>
@@ -314,73 +316,73 @@ export default function AllTransactionsPage() {
 
       {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-          <div className="text-sm text-gray-500">Revenus</div>
-          <div className="text-2xl font-semibold text-green-600">{formatPlainAmountWithDevise(totals.income)}</div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('transactions.incomeLabel')}</div>
+          <div className="text-2xl font-semibold text-green-600 dark:text-green-400">{formatPlainAmountWithDevise(totals.income)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-          <div className="text-sm text-gray-500">Dépenses</div>
-          <div className="text-2xl font-semibold text-red-600">{formatPlainAmountWithDevise(totals.expense)}</div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('transactions.expenseLabel')}</div>
+          <div className="text-2xl font-semibold text-red-600 dark:text-red-400">{formatPlainAmountWithDevise(totals.expense)}</div>
         </div>
-        <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
-          <div className="text-sm text-gray-500">Contributions</div>
-          <div className="text-2xl font-semibold text-indigo-600">{formatPlainAmountWithDevise(totals.contribution)}</div>
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('transactions.contributionLabel')}</div>
+          <div className="text-2xl font-semibold text-indigo-600 dark:text-indigo-400">{formatPlainAmountWithDevise(totals.contribution)}</div>
         </div>
       </div>
 
       {/* Graphique Recharts (6 derniers mois présents) */}
-      <div className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm mb-4">
-        <div className="mb-2 font-medium text-gray-800">Évolution mensuelle (Revenus vs Dépenses vs Contributions)</div>
+      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm mb-4">
+        <div className="mb-2 font-medium text-gray-800 dark:text-gray-200">{t('transactions.monthlyEvolution')}</div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlySeries} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 12 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
+              <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 12 }} className="dark:fill-gray-400" />
               <YAxis tick={<CurrencyYAxisTick />} />
               <Tooltip formatter={(value) => {
                 const base = Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 })
                 const code = (currency || '').toUpperCase()
                 const suffix = code === 'MGA' ? 'Ar' : (code || '')
                 return suffix ? `${base} ${suffix}` : base
-              }} />
+              }} contentStyle={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)', borderRadius: '8px' }} />
               <Legend />
-              <Bar dataKey="income" name="Revenus" fill="#10B981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="expense" name="Dépenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="contribution" name="Contributions" fill="#6366F1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="income" name={t('transactions.incomeLabel')} fill="#10B981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" name={t('transactions.expenseLabel')} fill="#EF4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="contribution" name={t('transactions.contributionLabel')} fill="#6366F1" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar scroll-smooth">
           <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className="bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
               <tr>
-                <th className="text-left p-4 font-medium text-gray-700">Date</th>
-                <th className="text-left p-4 font-medium text-gray-700">Type</th>
-                <th className="text-left p-4 font-medium text-gray-700">Source/Description</th>
-                <th className="text-left p-4 font-medium text-gray-700">Compte</th>
-                <th className="text-left p-4 font-medium text-gray-700">Utilisateur</th>
-                <th className="text-right p-4 font-medium text-gray-700">Montant</th>
+                <th className="text-left p-4 font-medium text-gray-700 dark:text-gray-300">{t('transactions.date')}</th>
+                <th className="text-left p-4 font-medium text-gray-700 dark:text-gray-300">{t('transactions.type')}</th>
+                <th className="text-left p-4 font-medium text-gray-700 dark:text-gray-300">{t('transactions.source')}</th>
+                <th className="text-left p-4 font-medium text-gray-700 dark:text-gray-300">{t('transactions.account')}</th>
+                <th className="text-left p-4 font-medium text-gray-700 dark:text-gray-300">{t('transactions.user')}</th>
+                <th className="text-right p-4 font-medium text-gray-700 dark:text-gray-300">{t('transactions.amount')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td className="p-6 text-center text-gray-500" colSpan={6}>Chargement...</td>
+                  <td className="p-6 text-center text-gray-500 dark:text-gray-400" colSpan={6}>{t('transactions.loading')}</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td className="p-8 text-center text-gray-500" colSpan={6}>Aucune transaction trouvée</td>
+                  <td className="p-8 text-center text-gray-500 dark:text-gray-400" colSpan={6}>{t('transactions.noTransactions')}</td>
                 </tr>
               ) : (
                 pageItems.map((t, idx) => (
-                  <tr key={t.id_transaction ?? t.id ?? `${pageStart + idx}`} className={(pageStart + idx) % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <tr key={t.id_transaction ?? t.id ?? `${pageStart + idx}`} className={(pageStart + idx) % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
                     <td className="p-4">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-400" />
-                        {formatDateFr(t.date || t.date_transaction || t.date_revenu || t.date_depense)}
+                        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-700 dark:text-gray-300">{formatDateFr(t.date || t.date_transaction || t.date_revenu || t.date_depense)}</span>
                       </div>
                     </td>
                     <td className="p-4">
@@ -390,20 +392,20 @@ export default function AllTransactionsPage() {
                         const isIncome = kind === 'income'
                         const isContribution = kind === 'contribution'
                         const icon = isExpense
-                          ? <ArrowDownRight className="w-4 h-4 text-red-600" />
+                          ? <ArrowDownRight className="w-4 h-4 text-red-600 dark:text-red-400" />
                           : (isContribution
-                              ? <ArrowUpRight className="w-4 h-4 text-indigo-600" />
-                              : <ArrowUpRight className="w-4 h-4 text-green-600" />)
+                              ? <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                              : <ArrowUpRight className="w-4 h-4 text-green-600 dark:text-green-400" />)
                         return (
-                          <div className="flex items-center gap-2 text-gray-800">
+                          <div className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
                             {icon}
-                            <span className={`font-medium ${isExpense ? 'text-red-600' : (isContribution ? 'text-indigo-600' : (isIncome ? 'text-green-600' : 'text-gray-700'))}`}>{getType(t)}</span>
+                            <span className={`font-medium ${isExpense ? 'text-red-600 dark:text-red-400' : (isContribution ? 'text-indigo-600 dark:text-indigo-400' : (isIncome ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'))}`}>{getType(t)}</span>
                           </div>
                         )
                       })()}
                     </td>
-                    <td className="p-4 text-gray-800">{t.source || t.description || ''}</td>
-                    <td className="p-4 text-gray-600">{t.compte || t.compte_nom || t.account_name || ''}</td>
+                    <td className="p-4 text-gray-800 dark:text-gray-200">{t.source || t.description || ''}</td>
+                    <td className="p-4 text-gray-600 dark:text-gray-400">{t.compte || t.compte_nom || t.account_name || ''}</td>
                     <td className="p-4">
                       {(() => {
                         const u = { prenom: t.user_prenom, nom: t.user_nom, email: t.user_email, image: t.user_image }
@@ -420,13 +422,13 @@ export default function AllTransactionsPage() {
                         return (
                           <div className="flex items-center gap-2">
                             {url ? (
-                              <img src={url} alt={displayName} className="w-6 h-6 rounded-full object-cover border" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                              <img src={url} alt={displayName} className="w-6 h-6 rounded-full object-cover border border-gray-300 dark:border-gray-600" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                             ) : (
-                              <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center border">
-                                <span className="text-emerald-700 text-xs font-medium">{initial}</span>
+                              <div className="w-6 h-6 bg-emerald-100 dark:bg-emerald-900 rounded-full flex items-center justify-center border border-gray-300 dark:border-gray-600">
+                                <span className="text-emerald-700 dark:text-emerald-300 text-xs font-medium">{initial}</span>
                               </div>
                             )}
-                            <span className="text-sm text-gray-700">{displayName || `ID: ${t.id_user || ''}`}</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{displayName || `ID: ${t.id_user || ''}`}</span>
                           </div>
                         )
                       })()}
@@ -438,7 +440,7 @@ export default function AllTransactionsPage() {
                         const isIncome = kind === 'income'
                         const isContribution = kind === 'contribution'
                         return (
-                          <span className={`font-semibold ${isExpense ? 'text-red-600' : (isContribution ? 'text-indigo-600' : (isIncome ? 'text-green-600' : 'text-gray-700'))}`}>
+                          <span className={`font-semibold ${isExpense ? 'text-red-600 dark:text-red-400' : (isContribution ? 'text-indigo-600 dark:text-indigo-400' : (isIncome ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'))}`}>
                             {formatPlainAmountWithDevise(t.montant ?? t.amount)}
                           </span>
                         )
@@ -454,18 +456,18 @@ export default function AllTransactionsPage() {
 
       {/* Pagination */}
       <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="text-sm text-gray-600">
-          {totalItems === 0 ? '0 résultat' : (
-            <>Affichage {pageStart + 1}-{Math.min(pageEnd, totalItems)} sur {totalItems}</>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {totalItems === 0 ? `0 ${t('transactions.result')}` : (
+            <>{t('transactions.displaying').replace('{start}', String(pageStart + 1)).replace('{end}', String(Math.min(pageEnd, totalItems))).replace('{total}', String(totalItems))}</>
           )}
         </div>
         <div className="inline-flex items-center gap-2">
           <button
-            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 disabled:opacity-50"
+            className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
             onClick={() => goToPage(currentPage - 1)}
             disabled={currentPage <= 1}
           >
-            Précédent
+            {t('transactions.previous')}
           </button>
           {Array.from({ length: totalPages }).slice(0, 5).map((_, i) => {
             // Affiche jusqu'à 5 boutons (1..min(5,totalPages)) pour rester simple
@@ -474,21 +476,21 @@ export default function AllTransactionsPage() {
               <button
                 key={p}
                 onClick={() => goToPage(p)}
-                className={`px-3 py-2 rounded-lg border ${currentPage === p ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 text-gray-700'}`}
+                className={`px-3 py-2 rounded-lg border transition-colors ${currentPage === p ? 'bg-emerald-500 text-white border-emerald-500' : 'border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
               >
                 {p}
               </button>
             )
           })}
           {totalPages > 5 && (
-            <span className="px-2 text-gray-500">…</span>
+            <span className="px-2 text-gray-500 dark:text-gray-400">…</span>
           )}
           <button
-            className="px-3 py-2 rounded-lg border border-gray-200 text-gray-700 disabled:opacity-50"
-            onClick={() => goToPage(currentPage - 1 + 2 - 1)}
+            className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+            onClick={() => goToPage(currentPage + 1)}
             disabled={currentPage >= totalPages}
           >
-            Suivant
+            {t('transactions.next')}
           </button>
         </div>
       </div>

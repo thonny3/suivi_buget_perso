@@ -25,10 +25,12 @@ import dashboardService from '@/services/dashboardService'
 import adminStatsService from '@/services/adminStatsService'
 import { useAuth } from '@/app/context/AuthContext'
 import AssistantChat from '@/components/AssistantChat'
+import { useLanguage } from '@/context/LanguageContext'
 
 export default function Dashboard({ params }) {
   const { locale } = params
   const { getCurrentUser } = useAuth()
+  const { t } = useLanguage()
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -62,11 +64,13 @@ export default function Dashboard({ params }) {
 
   const currentMonthLabel = useMemo(() => {
     try {
-      return new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+      const localeMap = { fr: 'fr-FR', en: 'en-US', mg: 'mg-MG' }
+      const dateLocale = localeMap[locale] || 'fr-FR'
+      return new Date().toLocaleDateString(dateLocale, { month: 'long', year: 'numeric' })
     } catch {
       return ''
     }
-  }, [])
+  }, [locale])
 
   const currencySymbol = useMemo(() => {
     const code = (currencyCode || '').toString().trim().toUpperCase()
@@ -106,7 +110,7 @@ export default function Dashboard({ params }) {
         }
       } catch (e) {
         if (!mounted) return
-        setError(e?.message || 'Erreur de chargement du tableau de bord')
+        setError(e?.message || t('dashboard.error'))
       } finally {
         if (mounted) setLoading(false)
       }
@@ -162,7 +166,7 @@ export default function Dashboard({ params }) {
 
   const statsCards = useMemo(() => ([
     {
-      title: 'Solde Total',
+      title: t('dashboard.stats.totalBalance'),
       value: `${Number(summary.totalBalance || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
       change: '',
       changeType: 'positive',
@@ -170,7 +174,7 @@ export default function Dashboard({ params }) {
       color: 'from-blue-500 to-blue-600'
     },
     {
-      title: 'Revenus du mois',
+      title: t('dashboard.stats.monthlyIncome'),
       value: `${Number(summary.monthlyIncome || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
       change: '',
       changeType: 'positive',
@@ -178,7 +182,7 @@ export default function Dashboard({ params }) {
       color: 'from-green-500 to-green-600'
     },
     {
-      title: 'Dépenses du mois',
+      title: t('dashboard.stats.monthlyExpenses'),
       value: `${Number(summary.monthlyExpenses || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
       change: '',
       changeType: 'negative',
@@ -186,76 +190,76 @@ export default function Dashboard({ params }) {
       color: 'from-red-500 to-red-600'
     },
     {
-      title: 'Objectifs atteints',
+      title: t('dashboard.stats.goalsAchieved'),
       value: `${Number(summary.goalsAchieved || 0)}`,
       change: '',
       changeType: 'positive',
       icon: Target,
       color: 'from-purple-500 to-purple-600'
     }
-  ]), [summary.totalBalance, summary.monthlyIncome, summary.monthlyExpenses, summary.goalsAchieved, currencySymbol])
+  ]), [summary.totalBalance, summary.monthlyIncome, summary.monthlyExpenses, summary.goalsAchieved, currencySymbol, t])
 
   const adminStatsCards = useMemo(() => ([
     {
-      title: 'Total Utilisateurs',
+      title: t('dashboard.admin.totalUsers'),
       value: `${adminStats.totalUsers}`,
-      subtitle: `${adminStats.activeUsers} actifs`,
+      subtitle: `${adminStats.activeUsers} ${t('dashboard.admin.activeUsers')}`,
       icon: Users,
       color: 'from-blue-500 to-blue-600'
     },
     {
-      title: 'Catégories Dépenses',
+      title: t('dashboard.admin.expenseCategories'),
       value: `${adminStats.totalCategoriesDepenses}`,
-      subtitle: 'Catégories disponibles',
+      subtitle: t('dashboard.admin.categoriesAvailable'),
       icon: Layers,
       color: 'from-red-500 to-red-600'
     },
     {
-      title: 'Catégories Revenus',
+      title: t('dashboard.admin.revenueCategories'),
       value: `${adminStats.totalCategoriesRevenus}`,
-      subtitle: 'Catégories disponibles',
+      subtitle: t('dashboard.admin.categoriesAvailable'),
       icon: Tag,
       color: 'from-green-500 to-green-600'
     },
     {
-      title: 'Total Catégories',
+      title: t('dashboard.admin.totalCategories'),
       value: `${adminStats.totalCategories}`,
-      subtitle: 'Toutes catégories',
+      subtitle: t('dashboard.admin.allCategories'),
       icon: Activity,
       color: 'from-purple-500 to-purple-600'
     }
-  ]), [adminStats.totalUsers, adminStats.activeUsers, adminStats.totalCategoriesDepenses, adminStats.totalCategoriesRevenus, adminStats.totalCategories])
+  ]), [adminStats.totalUsers, adminStats.activeUsers, adminStats.totalCategoriesDepenses, adminStats.totalCategoriesRevenus, adminStats.totalCategories, t])
 
   const adminPlatformCards = useMemo(() => ([
     {
-      title: 'Total Revenus',
+      title: t('dashboard.admin.totalRevenues'),
       value: `${Number(adminStats.totalRevenus || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
-      subtitle: 'Tous utilisateurs',
+      subtitle: t('dashboard.admin.allUsers'),
       icon: TrendingUp,
       color: 'from-green-500 to-green-600'
     },
     {
-      title: 'Total Dépenses',
+      title: t('dashboard.admin.totalExpenses'),
       value: `${Number(adminStats.totalDepenses || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
-      subtitle: 'Tous utilisateurs',
+      subtitle: t('dashboard.admin.allUsers'),
       icon: TrendingDown,
       color: 'from-red-500 to-red-600'
     },
     {
-      title: 'Total Comptes',
+      title: t('dashboard.admin.totalAccounts'),
       value: `${adminStats.totalComptes}`,
-      subtitle: 'Comptes créés',
+      subtitle: t('dashboard.admin.accountsCreated'),
       icon: CreditCard,
       color: 'from-blue-500 to-blue-600'
     },
     {
-      title: 'Total Objectifs',
+      title: t('dashboard.admin.totalGoals'),
       value: `${adminStats.totalObjectifs}`,
-      subtitle: 'Objectifs définis',
+      subtitle: t('dashboard.admin.goalsDefined'),
       icon: Target,
       color: 'from-purple-500 to-purple-600'
     }
-  ]), [adminStats.totalRevenus, adminStats.totalDepenses, adminStats.totalComptes, adminStats.totalObjectifs, currencySymbol])
+  ]), [adminStats.totalRevenus, adminStats.totalDepenses, adminStats.totalComptes, adminStats.totalObjectifs, currencySymbol, t])
 
   const expenseCategoryLegend = useMemo(() => {
     const items = Array.isArray(summary.expenseCategories) ? summary.expenseCategories : []
@@ -288,8 +292,8 @@ export default function Dashboard({ params }) {
   return (
     <div className="p-4 sm:p-6">
       <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-          Tableau de bord
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          {t('dashboard.title')}
           {userRole === 'admin' && (
             <span className="ml-2 sm:ml-3 inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
               <Shield className="w-3 h-3 mr-1" />
@@ -297,10 +301,10 @@ export default function Dashboard({ params }) {
             </span>
           )}
         </h1>
-        <p className="text-sm sm:text-base text-gray-600">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">
           {userRole === 'admin' 
-            ? 'Vue d\'ensemble de la plateforme et gestion des utilisateurs' 
-            : 'Bienvenue dans votre espace de gestion financière'
+            ? t('dashboard.adminSubtitle')
+            : t('dashboard.subtitle')
           }
         </p>
       </div>
@@ -309,20 +313,20 @@ export default function Dashboard({ params }) {
       {userRole !== 'admin' && (
         <>
       {loading && (
-        <div className="mb-4 text-gray-600">Chargement des données...</div>
+        <div className="mb-4 text-gray-600 dark:text-gray-400">{t('dashboard.loading')}</div>
       )}
       {error && (
-        <div className="mb-4 text-red-600">{error}</div>
+        <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {statsCards.map((card, index) => {
           const Icon = card.icon
           return (
-            <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
+            <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">{card.title}</p>
-                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words break-all leading-tight">{card.value}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2 break-words break-all leading-tight">{card.value}</p>
                   <div className="flex items-center flex-wrap gap-1">
                     {card.changeType === 'positive' ? (
                       <ArrowUpRight className="w-4 h-4 text-green-500 mr-1 flex-shrink-0" />
@@ -334,7 +338,7 @@ export default function Dashboard({ params }) {
                     }`}>
                       {card.change}
                     </span>
-                    <span className="text-gray-500 text-sm">vs mois dernier</span>
+                    <span className="text-gray-500 dark:text-gray-400 text-sm">{t('dashboard.stats.vsLastMonth')}</span>
                   </div>
                 </div>
                 <div className="rounded-xl p-3 flex-shrink-0" style={{ backgroundColor: colors.secondary }}>
@@ -352,26 +356,26 @@ export default function Dashboard({ params }) {
       {userRole === 'admin' && (
         <>
           {loading && (
-            <div className="mb-4 text-gray-600">Chargement des données administrateur...</div>
+            <div className="mb-4 text-gray-600 dark:text-gray-400">{t('dashboard.adminLoading')}</div>
           )}
           {error && (
-            <div className="mb-4 text-red-600">{error}</div>
+            <div className="mb-4 text-red-600 dark:text-red-400">{error}</div>
           )}
           <div className="mb-8">
             <div className="flex items-center mb-4">
               <Shield className="w-5 h-5 text-red-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Statistiques Administrateur</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.statsTitle')}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {adminStatsCards.map((card, index) => {
                 const Icon = card.icon
                 return (
-                  <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600 mb-1">{card.title}</p>
-                        <p className="text-2xl font-bold text-gray-900 mb-1">{card.value}</p>
-                        <p className="text-xs text-gray-500">{card.subtitle}</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{card.value}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{card.subtitle}</p>
                       </div>
                       <div className={`rounded-xl p-3 bg-gradient-to-r ${card.color}`}>
                         <Icon className="w-6 h-6 text-white" />
@@ -387,18 +391,18 @@ export default function Dashboard({ params }) {
           <div className="mb-8">
             <div className="flex items-center mb-4">
               <Activity className="w-5 h-5 text-emerald-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Statistiques de la Plateforme</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.platformStatsTitle')}</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {adminPlatformCards.map((card, index) => {
                 const Icon = card.icon
                 return (
-                  <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600 mb-1">{card.title}</p>
-                        <p className="text-2xl font-bold text-gray-900 mb-1">{card.value}</p>
-                        <p className="text-xs text-gray-500">{card.subtitle}</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{card.value}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{card.subtitle}</p>
                       </div>
                       <div className={`rounded-xl p-3 bg-gradient-to-r ${card.color}`}>
                         <Icon className="w-6 h-6 text-white" />
@@ -412,11 +416,11 @@ export default function Dashboard({ params }) {
 
           {/* Graphique des utilisateurs par rôle */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Utilisateurs par rôle</h3>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.usersByRole')}</h3>
+                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                  <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
               <div className="h-64">
@@ -424,7 +428,7 @@ export default function Dashboard({ params }) {
                   <PieChart>
                     <Pie
                       data={Object.entries(adminStats.usersByRole).map(([role, count]) => ({
-                        name: role === 'admin' ? 'Administrateurs' : 'Utilisateurs',
+                        name: role === 'admin' ? t('dashboard.admin.administrators') : t('dashboard.admin.users'),
                         value: count,
                         color: role === 'admin' ? '#EF4444' : '#3B82F6'
                       }))}
@@ -447,11 +451,11 @@ export default function Dashboard({ params }) {
             </div>
 
             {/* Utilisateurs récents */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Utilisateurs récents</h3>
-                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                  <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.recentUsers')}</h3>
+                <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                  <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                 </button>
               </div>
               <div className="space-y-3">
@@ -468,21 +472,21 @@ export default function Dashboard({ params }) {
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
                           {user.nom || user.prenom ? `${user.nom || ''} ${user.prenom || ''}`.trim() : user.email}
                         </p>
-                        <p className="text-xs text-gray-500">{user.email}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                       </div>
                     </div>
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       user.actif ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}>
-                      {user.actif ? 'Actif' : 'Inactif'}
+                      {user.actif ? t('dashboard.admin.active') : t('dashboard.admin.inactive')}
                     </span>
                   </div>
                 ))}
                 {adminStats.recentUsers.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">Aucun utilisateur récent</div>
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">{t('dashboard.admin.noRecentUsers')}</div>
                 )}
               </div>
             </div>
@@ -491,23 +495,23 @@ export default function Dashboard({ params }) {
           {/* Statistiques supplémentaires pour admin */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Résumé des utilisateurs */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Résumé Utilisateurs</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.usersSummary')}</h3>
                 <Users className="w-5 h-5 text-blue-600" />
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total</span>
-                  <span className="font-semibold text-gray-900">{adminStats.totalUsers}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.total')}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{adminStats.totalUsers}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Actifs</span>
-                  <span className="font-semibold text-green-600">{adminStats.activeUsers}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.activeUsers')}</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{adminStats.activeUsers}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Inactifs</span>
-                  <span className="font-semibold text-red-600">{adminStats.inactiveUsers}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.inactiveUsers')}</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400">{adminStats.inactiveUsers}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                   <div 
@@ -515,30 +519,30 @@ export default function Dashboard({ params }) {
                     style={{ width: `${adminStats.totalUsers > 0 ? (adminStats.activeUsers / adminStats.totalUsers) * 100 : 0}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 text-center">
-                  {adminStats.totalUsers > 0 ? Math.round((adminStats.activeUsers / adminStats.totalUsers) * 100) : 0}% d'utilisateurs actifs
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  {adminStats.totalUsers > 0 ? Math.round((adminStats.activeUsers / adminStats.totalUsers) * 100) : 0}% {t('dashboard.admin.activeUsersPercent')}
                 </p>
               </div>
             </div>
 
             {/* Résumé des catégories */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Résumé Catégories</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.categoriesSummary')}</h3>
                 <Layers className="w-5 h-5 text-purple-600" />
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Total</span>
-                  <span className="font-semibold text-gray-900">{adminStats.totalCategories}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.total')}</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">{adminStats.totalCategories}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Dépenses</span>
-                  <span className="font-semibold text-red-600">{adminStats.totalCategoriesDepenses}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.expenses')}</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400">{adminStats.totalCategoriesDepenses}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Revenus</span>
-                  <span className="font-semibold text-green-600">{adminStats.totalCategoriesRevenus}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.revenues')}</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{adminStats.totalCategoriesRevenus}</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                   <div 
@@ -546,36 +550,36 @@ export default function Dashboard({ params }) {
                     style={{ width: `${adminStats.totalCategories > 0 ? (adminStats.totalCategoriesDepenses / adminStats.totalCategories) * 100 : 0}%` }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 text-center">
-                  {adminStats.totalCategories > 0 ? Math.round((adminStats.totalCategoriesDepenses / adminStats.totalCategories) * 100) : 0}% catégories dépenses
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  {adminStats.totalCategories > 0 ? Math.round((adminStats.totalCategoriesDepenses / adminStats.totalCategories) * 100) : 0}% {t('dashboard.admin.expenseCategoriesPercent')}
                 </p>
               </div>
             </div>
 
             {/* Solde global de la plateforme */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Solde Global</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.globalBalance')}</h3>
                 <DollarSign className="w-5 h-5 text-emerald-600" />
               </div>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Revenus totaux</span>
-                  <span className="font-semibold text-green-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.totalRevenuesLabel')}</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">
                     {Number(adminStats.totalRevenus || 0).toLocaleString('fr-FR')} {currencySymbol}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Dépenses totales</span>
-                  <span className="font-semibold text-red-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('dashboard.admin.totalExpensesLabel')}</span>
+                  <span className="font-semibold text-red-600 dark:text-red-400">
                     {Number(adminStats.totalDepenses || 0).toLocaleString('fr-FR')} {currencySymbol}
                   </span>
                 </div>
-                <div className="border-t pt-3">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-900">Solde net</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{t('dashboard.admin.netBalance')}</span>
                     <span className={`font-bold text-lg ${
-                      adminStats.platformBalance >= 0 ? 'text-green-600' : 'text-red-600'
+                      adminStats.platformBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                     }`}>
                       {Number(adminStats.platformBalance || 0).toLocaleString('fr-FR')} {currencySymbol}
                     </span>
@@ -591,8 +595,8 @@ export default function Dashboard({ params }) {
                     }}
                   ></div>
                 </div>
-                <p className="text-xs text-gray-500 text-center">
-                  {adminStats.platformBalance >= 0 ? 'Excédent' : 'Déficit'} de la plateforme
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  {adminStats.platformBalance >= 0 ? t('dashboard.admin.platformSurplus') : t('dashboard.admin.platformDeficit')}
                 </p>
               </div>
             </div>
@@ -600,37 +604,37 @@ export default function Dashboard({ params }) {
 
           {/* Actions rapides */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Actions Rapides</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.admin.quickActions')}</h3>
                 <Activity className="w-5 h-5 text-emerald-600" />
               </div>
               <div className="space-y-3">
                 <button 
                   onClick={navigateToUsers}
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
                     <Users className="w-4 h-4 text-blue-600" />
-                    <span className="text-sm font-medium">Gérer les utilisateurs</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dashboard.admin.manageUsers')}</span>
                   </div>
                 </button>
                 <button 
                   onClick={navigateToExpenseCategories}
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
                     <Layers className="w-4 h-4 text-red-600" />
-                    <span className="text-sm font-medium">Catégories dépenses</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dashboard.admin.expenseCategoriesLabel')}</span>
                   </div>
                 </button>
                 <button 
                   onClick={navigateToRevenueCategories}
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   <div className="flex items-center space-x-3">
                     <Tag className="w-4 h-4 text-green-600" />
-                    <span className="text-sm font-medium">Catégories revenus</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('dashboard.admin.revenueCategoriesLabel')}</span>
                   </div>
                 </button>
               </div>
@@ -643,11 +647,11 @@ export default function Dashboard({ params }) {
       {userRole !== 'admin' && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Graphique des revenus et dépenses */}
-        <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Revenus vs Dépenses</h3>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <MoreHorizontal className="w-5 h-5 text-gray-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.charts.revenueVsExpenses')}</h3>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
           <ResponsiveContainer width="100%" height={300}>
@@ -661,7 +665,7 @@ export default function Dashboard({ params }) {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                   })
-                  return [`${formattedValue} ${currencySymbol}`, name === 'revenue' ? 'Revenus' : 'Dépenses']
+                  return [`${formattedValue} ${currencySymbol}`, name === 'revenue' ? t('dashboard.charts.revenues') : t('dashboard.charts.expenses')]
                 }}
               />
               <Line 
@@ -669,25 +673,25 @@ export default function Dashboard({ params }) {
                 dataKey="revenue" 
                 stroke="#10B981" 
                 strokeWidth={3}
-                name="Revenus"
+                name={t('dashboard.charts.revenues')}
               />
               <Line 
                 type="monotone" 
                 dataKey="expenses" 
                 stroke="#EF4444" 
                 strokeWidth={3}
-                name="Dépenses"
+                name={t('dashboard.charts.expenses')}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         {/* Graphique des catégories de dépenses */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Dépenses par catégorie — {currentMonthLabel}</h3>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <MoreHorizontal className="w-5 h-5 text-gray-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.charts.expensesByCategory')} — {currentMonthLabel}</h3>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
           <div className="h-64">
@@ -718,9 +722,9 @@ export default function Dashboard({ params }) {
               <div key={idx} className="flex items-center justify-between text-sm">
                 <div className="flex items-center space-x-2">
                   <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: item.color }}></span>
-                  <span className="text-gray-700">{item.name}</span>
+                  <span className="text-gray-700 dark:text-gray-300">{item.name}</span>
                 </div>
-                <span className="text-gray-500">{item.percent}%</span>
+                <span className="text-gray-500 dark:text-gray-400">{item.percent}%</span>
               </div>
             ))}
           </div>
@@ -732,11 +736,11 @@ export default function Dashboard({ params }) {
       {/* Budget mensuel - Masqué pour les admins */}
       {userRole !== 'admin' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Budget mensuel</h3>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <MoreHorizontal className="w-5 h-5 text-gray-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.budget.monthlyBudget')}</h3>
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <MoreHorizontal className="w-5 h-5 text-gray-500 dark:text-gray-400" />
             </button>
           </div>
           <div className="space-y-4">
@@ -747,8 +751,8 @@ export default function Dashboard({ params }) {
               return (
                 <div key={index} className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                    <span className="text-sm text-gray-500">{spent.toLocaleString('fr-FR')}{` ${currencySymbol}`} / {budget}{` ${currencySymbol}`}</span>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{item.name}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{spent.toLocaleString('fr-FR')}{` ${currencySymbol}`} / {budget}{` ${currencySymbol}`}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
@@ -765,8 +769,8 @@ export default function Dashboard({ params }) {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Transactions récentes</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dashboard.budget.recentTransactions')}</h3>
           <div className="space-y-3">
             {(summary.recentTransactions || []).map((transaction, index) => (
               <div key={index} className="flex items-center justify-between py-2">
@@ -781,8 +785,8 @@ export default function Dashboard({ params }) {
                     )}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{transaction.name}</p>
-                    <p className="text-xs text-gray-500">{new Date(transaction.date).toLocaleDateString('fr-FR')}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">{transaction.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(transaction.date).toLocaleDateString('fr-FR')}</p>
                   </div>
                 </div>
                 <span className={`text-sm font-medium ${
@@ -802,8 +806,8 @@ export default function Dashboard({ params }) {
       <div className="rounded-2xl p-6 text-white" style={{ backgroundColor: colors.secondary }}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-xl font-semibold">Objectif d'épargne 2024</h3>
-            <p className="text-green-100 mt-1">Vous êtes sur la bonne voie !</p>
+            <h3 className="text-xl font-semibold">{t('dashboard.goals.savingsGoal2024')}</h3>
+            <p className="text-green-100 mt-1">{t('dashboard.goals.onTrack')}</p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-bold">8,500 €</p>
@@ -817,7 +821,7 @@ export default function Dashboard({ params }) {
               style={{ width: '70%' }}
             ></div>
           </div>
-          <p className="text-sm text-green-100 mt-2">70% de votre objectif atteint</p>
+          <p className="text-sm text-green-100 mt-2">70% {t('dashboard.goals.goalReached')}</p>
         </div>
       </div>
       )}
