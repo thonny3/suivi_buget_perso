@@ -310,23 +310,24 @@ export default function BudgetPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Gestion du Budget</h1>
-            <p className="text-gray-600 mt-2">Suivez et contrôlez vos dépenses par catégorie</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gestion du Budget</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-2">Suivez et contrôlez vos dépenses par catégorie</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            className="text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
             style={{ backgroundColor: colors.secondary }}
             onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
             onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
-            <Plus className="w-5 h-5" />
-            Nouveau Budget
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Nouveau Budget</span>
+            <span className="sm:hidden">Nouveau</span>
           </button>
         </div>
 
@@ -336,7 +337,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8">
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <h3 className="text-lg font-semibold mb-4">Budget vs Dépenses par Catégorie</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -392,8 +393,8 @@ export default function BudgetPage() {
       </div>
 
       {/* Filtres */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -422,13 +423,13 @@ export default function BudgetPage() {
       </div>
 
       {/* Liste des Budgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {(loading ? [] : filteredBudgets).map((budget) => {
           const status = getBudgetStatus(budget.pourcentage_utilise)
           const StatusIcon = status.icon
           
           return (
-            <div key={budget.id_budget} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+            <div key={budget.id_budget} className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-lg text-gray-900">{budget.categorie}</h3>
                 <div className="flex items-center gap-2">
@@ -501,8 +502,8 @@ export default function BudgetPage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full p-4 sm:p-6 my-4">
             <h2 className="text-xl font-semibold mb-6">
               {editingBudget ? 'Modifier le Budget' : 'Nouveau Budget'}
             </h2>

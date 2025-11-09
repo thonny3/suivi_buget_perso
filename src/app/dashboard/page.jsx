@@ -125,24 +125,24 @@ export default function Dashboard() {
             const Icon = card.icon
             return (
               <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
                     <p className="text-gray-600 text-sm font-medium">{card.title}</p>
-                    <h3 className="text-2xl font-bold text-gray-900 mt-2">{card.value}</h3>
-                    <div className="flex items-center mt-2">
+                    <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mt-2 break-words break-all leading-tight">{card.value}</h3>
+                    <div className="flex items-center flex-wrap gap-1 mt-2">
                       {card.changeType === 'positive' ? (
-                        <ArrowUpRight className="w-4 h-4 text-green-500" />
+                        <ArrowUpRight className="w-4 h-4 text-green-500 flex-shrink-0" />
                       ) : (
-                        <ArrowDownRight className="w-4 h-4 text-red-500" />
+                        <ArrowDownRight className="w-4 h-4 text-red-500 flex-shrink-0" />
                       )}
-                      <span className={`text-sm font-medium ml-1 ${card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+                      <span className={`text-sm font-medium ${card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
                         }`}>
                         {card.change}
                       </span>
-                      <span className="text-gray-500 text-sm ml-2">vs mois dernier</span>
+                      <span className="text-gray-500 text-sm">vs mois dernier</span>
                     </div>
                   </div>
-                  <div className="rounded-xl p-3" style={{ backgroundColor: colors.secondary }}>
+                  <div className="rounded-xl p-3 flex-shrink-0" style={{ backgroundColor: colors.secondary }}>
                     <Icon className="w-6 h-6 text-white" />
                   </div>
                 </div>

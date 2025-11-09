@@ -9,7 +9,10 @@ import {
   X,
   Plus,
   Trash2,
-  Eye
+  Eye,
+  Search,
+  BarChart3,
+  Settings
 } from 'lucide-react'
 
 import alertThresholdsService from '@/services/alertThresholdsService'
@@ -327,19 +330,106 @@ export default function AlertesPage({ params }) {
     return found ? found.label : key
   }
 
+  // Calculs statistiques
+  const totalThresholds = thresholdsRaw.length
+  const activeThresholds = thresholdsRaw.filter(t => Number(t.value) > 0).length
+  const totalValue = thresholdsRaw.reduce((sum, t) => sum + (Number(t.value) || 0), 0)
+  const averageValue = totalThresholds > 0 ? totalValue / totalThresholds : 0
+
   return (
-    <div className="min-h-screen p-6" >
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 sm:p-6" >
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Seuils d'alertes</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Gérez vos seuils de notification</p>
+          </div>
+        </div>
+
         {!userId && (
-          <div className="p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800">
+          <div className="p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm">
             Vous n'êtes pas connecté(e). Connectez-vous pour charger et enregistrer les seuils dynamiquement.
           </div>
         )}
         {loadError && (
-          <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700">
+          <div className="p-4 rounded-lg border border-red-200 bg-red-50 text-red-700 text-sm">
             {loadError}
           </div>
         )}
+
+        {/* Statistiques */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Total des seuils</p>
+                <p className="text-2xl font-bold text-gray-900">{totalThresholds}</p>
+              </div>
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <BellRing className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Seuils actifs</p>
+                <p className="text-2xl font-bold text-gray-900">{activeThresholds}</p>
+              </div>
+              <div className="bg-green-100 p-3 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Valeur totale</p>
+                <p className="text-2xl font-bold text-gray-900">{totalValue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-purple-100 p-3 rounded-lg">
+                <BarChart3 className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Valeur moyenne</p>
+                <p className="text-2xl font-bold text-gray-900">{averageValue.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+              <div className="bg-emerald-100 p-3 rounded-lg">
+                <Settings className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recherche et filtres */}
+        <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par domaine..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+                  value={search}
+                  onChange={(e) => {
+                    setSearch(e.target.value)
+                    setCurrentPage(1)
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         <SectionCard
           title="Seuils d'alertes"
           actions={(
@@ -381,62 +471,129 @@ export default function AlertesPage({ params }) {
           ) : thresholdsRaw.length === 0 ? (
             <div className="text-sm text-gray-600">Aucun seuil trouvé.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-500 border-b">Domaine</th>
-                    <th className="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-500 border-b text-right"> Valeur Notifcation</th>
-                    <th className="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-500 border-b">Message</th>
-                    <th className="px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-500 border-b">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {thresholdsRaw.map((t, idx) => (
-                    <tr key={`${t.domain}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-4 py-3 text-gray-900">{domainLabel(t.domain)}</td>
-                      <td className="px-4 py-3 text-gray-900 text-right font-medium text-center">{Number(t.value)}</td>
-                      <td className="px-4 py-3 text-gray-700 text-sm max-w-md truncate" title={t.info || ''}>{t.info || '-'}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={async () => {
-                            if (!userId) return
-                            try {
-                              setModalMode('edit')
-                              const one = await alertThresholdsService.getOne(userId, t.domain)
-                              setModalDomain(t.domain)
-                              setModalValue(Number(one?.value) || 0)
-                              setModalInfo(one?.info || '')
-                              setIsModalOpen(true)
-                            } catch (_e) {
-                              setModalMode('edit')
-                              setModalDomain(t.domain)
-                              setModalValue(Number(t.value) || 0)
-                              setModalInfo(t.info || '')
-                              setIsModalOpen(true)
-                            }
-                          }}
-                          title="Voir / Modifier"
-                          aria-label="Voir / Modifier"
-                          className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => { setConfirmDomain(t.domain); setIsConfirmOpen(true) }}
-                          title="Supprimer"
-                          aria-label="Supprimer"
-                          className="inline-flex items-center justify-center w-8 h-8 ml-2 rounded-md border border-red-300 text-red-600 hover:bg-red-50"
-                          disabled={!userId}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px]">
+                  <thead className="bg-gray-50 border-b border-gray-100">
+                    <tr>
+                      <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Domaine</th>
+                      <th className="text-right p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Valeur Notification</th>
+                      <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm hidden md:table-cell">Message</th>
+                      <th className="text-center p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredRows.length === 0 ? (
+                      <tr>
+                        <td colSpan="4" className="text-center py-12">
+                          <BellRing className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500">Aucun seuil trouvé</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedRows.map((row, idx) => {
+                        const t = thresholdsRaw.find(tr => tr.domain === row.key)
+                        if (!t) return null
+                        return (
+                          <tr key={`${row.key}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="p-3 sm:p-4">
+                              <div className="font-medium text-gray-900 text-sm">{row.label}</div>
+                            </td>
+                            <td className="p-3 sm:p-4 text-right">
+                              <span className="font-semibold text-gray-900 text-sm sm:text-base">
+                                {Number(row.value).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </td>
+                            <td className="p-3 sm:p-4 text-gray-600 text-sm hidden md:table-cell">
+                              <span className="max-w-md truncate block" title={row.info || ''}>
+                                {row.info || '-'}
+                              </span>
+                            </td>
+                            <td className="p-3 sm:p-4">
+                              <div className="flex items-center justify-center gap-1 sm:gap-2">
+                                <button
+                                  onClick={async () => {
+                                    if (!userId) return
+                                    try {
+                                      setModalMode('edit')
+                                      const one = await alertThresholdsService.getOne(userId, t.domain)
+                                      setModalDomain(t.domain)
+                                      setModalValue(Number(one?.value) || 0)
+                                      setModalInfo(one?.info || '')
+                                      setIsModalOpen(true)
+                                    } catch (_e) {
+                                      setModalMode('edit')
+                                      setModalDomain(t.domain)
+                                      setModalValue(Number(t.value) || 0)
+                                      setModalInfo(t.info || '')
+                                      setIsModalOpen(true)
+                                    }
+                                  }}
+                                  title="Modifier"
+                                  aria-label="Modifier"
+                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => { setConfirmDomain(t.domain); setIsConfirmOpen(true) }}
+                                  title="Supprimer"
+                                  aria-label="Supprimer"
+                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  disabled={!userId}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              {filteredRows.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4 pt-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    Affichage de {startIndex + 1} à {endIndex} sur {filteredRows.length} seuil{filteredRows.length > 1 ? 's' : ''}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Précédent
+                    </button>
+                    <div className="flex gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setCurrentPage(page)}
+                          className={`px-3 py-2 text-sm rounded-lg ${
+                            currentPage === page
+                              ? 'bg-emerald-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Suivant
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </SectionCard>
       

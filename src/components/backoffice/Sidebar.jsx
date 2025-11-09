@@ -22,7 +22,7 @@ import { colors } from '@/styles/colors'
 import { useAuth } from '@/app/context/AuthContext'
 
 const Sidebar = () => {
-  const { isOpen } = useSidebar()
+  const { isOpen, toggleSidebar } = useSidebar()
   const { user } = useAuth()
   const pathname = usePathname()
 
@@ -164,21 +164,29 @@ const Sidebar = () => {
   }
 
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <div className={`bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${isOpen ? 'w-72' : 'w-20'} min-h-screen flex flex-col`}>
+    <>
+      {/* Overlay pour mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
+      <div className="flex">
+        {/* Sidebar */}
+        <div className={`bg-white border-r border-gray-200 shadow-lg transition-all duration-300 ${isOpen ? 'w-64 md:w-72' : 'w-16 md:w-20'} h-screen flex flex-col fixed md:relative z-30`}>
 
         {/* Header avec Logo */}
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-4 border-b border-gray-100 flex-shrink-0">
           <div className="flex items-center justify-between">
             <Link href={withLocale('/dashboard')} className="flex items-center">
               <Logo size="small" />
               {isOpen && (
-                <div className="ml-3">
-                  <h1 className="text-xl font-bold" style={{ color: colors.secondary }}>
+                <div className="ml-2 md:ml-3">
+                  <h1 className="text-lg md:text-xl font-bold" style={{ color: colors.secondary }}>
                     MyJalako
                   </h1>
-                  <p className="text-xs text-gray-500">Dashboard</p>
+                  <p className="text-xs text-gray-500 hidden md:block">Dashboard</p>
                 </div>
               )}
             </Link>
@@ -187,7 +195,7 @@ const Sidebar = () => {
         </div>
 
         {/* Menu Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 overflow-y-auto p-4 min-h-0">
           <div className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon
@@ -218,8 +226,8 @@ const Sidebar = () => {
                       : 'text-gray-500 group-hover:text-gray-700'
                   }`} />
                   {isOpen && (
-                    <div className="ml-3 text-left">
-                      <div className={`font-medium transition-colors ${
+                    <div className="ml-2 md:ml-3 text-left">
+                      <div className={`text-sm md:text-base font-medium transition-colors ${
                         isActive
                           ? 'text-white'
                           : 'text-gray-700 group-hover:text-gray-900'
@@ -238,15 +246,15 @@ const Sidebar = () => {
         </nav>
 
         {/* Footer avec déconnexion */}
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-gray-100 flex-shrink-0">
           <button
             onClick={handleLogout}
             className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 text-red-600 hover:bg-red-50 hover:text-red-700 group`}
           >
             <LogOut className="w-5 h-5 transition-colors group-hover:text-red-700" />
             {isOpen && (
-              <div className="ml-3 text-left">
-                <div className="font-medium transition-colors group-hover:text-red-700">
+              <div className="ml-2 md:ml-3 text-left">
+                <div className="font-medium transition-colors group-hover:text-red-700 text-sm md:text-base">
                   Déconnexion
                 </div>
                 <div className="text-xs text-red-400 transition-colors group-hover:text-red-500">
@@ -257,7 +265,8 @@ const Sidebar = () => {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }
 

@@ -258,8 +258,8 @@ export default function RegisterPage({ params }) {
 
   return (
     <RedirectIfAuthenticated locale={locale}>
-      <div className="min-h-screen flex items-center justify-center px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md animate-fade-in">
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 py-6 sm:py-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 w-full max-w-md animate-fade-in overflow-y-auto max-h-[95vh]">
         <button
           onClick={returnHome}
           className="flex items-center text-emerald-600 hover:text-emerald-700 mb-3 transition-colors"
@@ -326,7 +326,7 @@ export default function RegisterPage({ params }) {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 {t('form.prenom')}

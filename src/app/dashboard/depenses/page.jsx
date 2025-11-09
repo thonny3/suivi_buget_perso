@@ -839,8 +839,8 @@ export default function GestionDepenses() {
   // removed duplicate getDefaultCurrencySymbol
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
             {error}
@@ -848,27 +848,28 @@ export default function GestionDepenses() {
         )}
 
         {/* En-tête */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Dépenses</h1>
-            <p className="text-gray-600 mt-1">Gérez et analysez vos dépenses quotidiennes</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes Dépenses</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Gérez et analysez vos dépenses quotidiennes</p>
           </div>
-          <div className="flex space-x-3 mt-4 md:mt-0">
+          <div className="flex space-x-3">
             <button
               onClick={() => {
                 setSelectedExpense(null);
                 setIsFormOpen(true);
               }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 shadow-lg"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 shadow-lg text-sm sm:text-base"
             >
-              <Plus className="w-5 h-5" />
-              <span>Nouvelle dépense</span>
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Nouvelle dépense</span>
+              <span className="sm:hidden">Nouvelle</span>
             </button>
           </div>
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
             <h3 className="text-sm font-medium text-gray-600">Total des dépenses</h3>
             <p className="text-2xl font-bold mt-2 text-gray-900">{formatAmountDefault(totalExpenses)}</p>
@@ -887,7 +888,7 @@ export default function GestionDepenses() {
      
 
       {/* Analyse rapide */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Top catégories */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
@@ -961,25 +962,25 @@ export default function GestionDepenses() {
       </div>
    {/* Section "Dépenses par catégorie" supprimée */}
         {/* Filtres et recherche */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 flex-1">
+              <div className="relative flex-1 min-w-0">
+                <Search className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Rechercher une dépense..."
-                  className="pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="w-full pl-9 sm:pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
               </div>
-              <div className="flex items-center space-x-2">
-                <Filter className="w-5 h-5 text-gray-400" />
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <Filter className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 <select
                   value={filterCategory}
                   onChange={(e) => setFilterCategory(e.target.value)}
-                  className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="bg-gray-50 border border-gray-300 rounded-lg px-2 sm:px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 >
                   <option value="all">Toutes les catégories</option>
                   {categories.map((cat) => (
@@ -987,12 +988,12 @@ export default function GestionDepenses() {
                   ))}
                 </select>
               </div>
-            <div className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5 text-gray-400" />
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                 <select
                   value={filterDateRange}
                   onChange={(e) => setFilterDateRange(e.target.value)}
-                  className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="bg-gray-50 border border-gray-300 rounded-lg px-2 sm:px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 >
                   <option value="all">Toutes les dates</option>
                   <option value="today">Aujourd'hui</option>
@@ -1000,21 +1001,21 @@ export default function GestionDepenses() {
                   <option value="month">Ce mois</option>
                 </select>
               </div>
-            <div className="flex items-center space-x-2">
-              <span className="text-gray-500 text-sm">Par page</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => { setCurrentPage(1); setItemsPerPage(parseInt(e.target.value)) }}
-                className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-              <div className="flex items-center space-x-2">
-                <button onClick={exportToPDF} className="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">Exporter PDF</button>
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <span className="text-gray-500 text-xs sm:text-sm hidden sm:inline">Par page</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => { setCurrentPage(1); setItemsPerPage(parseInt(e.target.value)) }}
+                  className="bg-gray-50 border border-gray-300 rounded-lg px-2 sm:px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <button onClick={exportToPDF} className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg text-xs sm:text-sm text-gray-700 hover:bg-gray-100 whitespace-nowrap">Exporter PDF</button>
               </div>
             </div>
           </div>
@@ -1022,16 +1023,16 @@ export default function GestionDepenses() {
         {/* Tableau des dépenses */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Description</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Catégorie</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Compte</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Utilisateur</th>
-                  <th className="text-right py-4 px-6 text-gray-600 font-medium">Montant</th>
-                  <th className="text-left py-4 px-6 text-gray-600 font-medium">Date</th>
-                  <th className="text-center py-4 px-6 text-gray-600 font-medium">Actions</th>
+                  <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">Description</th>
+                  <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">Catégorie</th>
+                  <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm hidden md:table-cell">Compte</th>
+                  <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm hidden lg:table-cell">Utilisateur</th>
+                  <th className="text-right py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">Montant</th>
+                  <th className="text-left py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">Date</th>
+                  <th className="text-center py-3 sm:py-4 px-3 sm:px-6 text-gray-600 font-medium text-xs sm:text-sm">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1054,44 +1055,44 @@ export default function GestionDepenses() {
                   const initial = (u.prenom || u.nom || u.email || 'U').toString().trim().charAt(0).toUpperCase()
                   return (
                     <tr key={expense.id_depense} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                      <td className="py-4 px-6">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6">
                         <div>
-                          <p className="font-medium text-gray-900">{expense.description}</p>
+                          <p className="font-medium text-gray-900 text-sm">{expense.description}</p>
                           
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className="text-sm text-gray-700">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6">
+                        <span className="text-xs sm:text-sm text-gray-700">
                           {getCategoryName(expense.id_categorie_depense)}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className="text-sm text-gray-600">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 hidden md:table-cell">
+                        <span className="text-xs sm:text-sm text-gray-600">
                           {getAccountName(expense.id_compte)}
                         </span>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 hidden lg:table-cell">
                         <div className="flex items-center space-x-2">
                           {getUserImageUrl(u) ? (
-                            <img src={getUserImageUrl(u)} alt={displayName} className="w-6 h-6 rounded-full object-cover border" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                            <img src={getUserImageUrl(u)} alt={displayName} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover border" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                           ) : (
-                            <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center border">
+                            <div className="w-5 h-5 sm:w-6 sm:h-6 bg-emerald-100 rounded-full flex items-center justify-center border">
                               <span className="text-emerald-700 text-xs font-medium">{initial}</span>
                             </div>
                           )}
-                          <span className="text-sm text-gray-700">{displayName}</span>
+                          <span className="text-xs sm:text-sm text-gray-700">{displayName}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-right">
-                        <span className="text-lg font-bold text-red-600">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 text-right">
+                        <span className="text-base sm:text-lg font-bold text-red-600">
                           {formatAmountForAccount(expense.montant, expense.id_compte)}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-gray-900">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6 text-gray-900 text-xs sm:text-sm">
                         {new Date(expense.date_depense).toLocaleDateString('fr-FR')}
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center justify-center space-x-2">
+                      <td className="py-3 sm:py-4 px-3 sm:px-6">
+                        <div className="flex items-center justify-center space-x-1 sm:space-x-2">
                           
                           <button
                             onClick={() => handleEdit(expense)}
@@ -1131,23 +1132,23 @@ export default function GestionDepenses() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <p className="text-gray-600 text-sm">
+            <div className="flex flex-col sm:flex-row items-center justify-between px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 border-t border-gray-200 gap-3 sm:gap-0">
+              <p className="text-gray-600 text-xs sm:text-sm text-center sm:text-left">
                 Affichage de {startIndex + 1} à {Math.min(startIndex + itemsPerPage, filteredExpenses.length)} sur {filteredExpenses.length} résultats
               </p>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 sm:space-x-3">
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 sm:px-3 py-1 rounded border border-gray-300 text-xs sm:text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Précédent
                 </button>
-                <span className="text-sm text-gray-500">Page {currentPage} / {totalPages}</span>
+                <span className="text-xs sm:text-sm text-gray-500">Page {currentPage} / {totalPages}</span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded border border-gray-300 text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-2 sm:px-3 py-1 rounded border border-gray-300 text-xs sm:text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Suivant
                 </button>

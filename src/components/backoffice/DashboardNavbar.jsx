@@ -7,7 +7,6 @@ import alertThresholdsService from '@/services/alertThresholdsService'
 import { useLanguage } from '@/context/LanguageContext'
 import { useSidebar } from '@/context/SidebarContext'
 import LanguageSelector from '@/components/LanguageSelector'
-import Logo from '@/components/Logo'
 import {
   Bell,
   Search,
@@ -183,7 +182,7 @@ const DashboardNavbar = () => {
 
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 md:py-4">
 
         {/* Section gauche - Logo, nom app et toggle sidebar */}
         <div className="flex items-center space-x-4">
@@ -200,14 +199,6 @@ const DashboardNavbar = () => {
             </div>
           </button>
 
-          {/* Logo et nom de l'application */}
-          <div className="flex items-center space-x-3">
-            <Logo size="small" />
-            <div>
-              <h1 className="text-xl font-bold" style={{ color: colors.secondary }}>MyJalako</h1>
-              <p className="text-xs text-gray-500">Gestion de budget</p>
-            </div>
-          </div>
         </div>
 
         {/* Section centre - Barre de recherche */}
@@ -225,7 +216,7 @@ const DashboardNavbar = () => {
         </div>
 
         {/* Section droite - Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3">
 
           {/* Bouton recherche mobile */}
           <button className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -363,7 +354,7 @@ const DashboardNavbar = () => {
                   <span className="text-white font-medium text-sm">{userInitial}</span>
                 </div>
               )}
-              <div className="hidden md:block text-left">
+              <div className="hidden lg:block text-left">
                 <p className="text-sm font-medium text-gray-700 group-hover:text-green-700">{userName}</p>
                 <p className="text-xs text-gray-500">Utilisateur</p>
               </div>
@@ -406,7 +397,7 @@ const DashboardNavbar = () => {
       </div>
 
       {/* Barre de recherche mobile */}
-      <div className="md:hidden px-6 pb-4">
+      <div className="md:hidden px-3 sm:px-4 md:px-6 pb-3 md:pb-4">
         <div className="relative">
           <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
           <input

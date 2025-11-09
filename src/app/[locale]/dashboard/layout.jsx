@@ -14,9 +14,9 @@ export default function DashboardLayout({ children, params }) {
       <SidebarProvider>
         <div className="flex h-screen bg-gray-50">
           <Sidebar />
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden w-full min-w-0 md:ml-0">
             <DashboardNavbar />
-            <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50">
+            <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 sm:p-6">
               {children}
             </main>
           </div>

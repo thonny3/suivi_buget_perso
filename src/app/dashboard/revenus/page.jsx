@@ -329,6 +329,8 @@ export default function RevenuePage() {
   const thisMonthRevenues = revenues.filter(rev => 
     new Date(rev.date_revenu).getMonth() === new Date().getMonth()
   ).reduce((sum, rev) => sum + rev.montant, 0)
+  // Nombre de catégories uniques qui ont des revenus
+  const uniqueCategoriesCount = new Set(revenues.map(rev => rev.id_categorie_revenu).filter(id => id != null && id !== '')).size
 
   // Filtrage des revenus
   const filteredRevenues = revenues.filter(revenue => {
@@ -420,28 +422,29 @@ export default function RevenuePage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Revenus</h1>
-            <p className="text-gray-600 mt-2">Gérez et suivez vos sources de revenus</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes Revenus</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-2">Gérez et suivez vos sources de revenus</p>
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+            className="text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
             style={{ backgroundColor: colors.secondary }}
             onMouseEnter={(e) => e.target.style.backgroundColor = colors.secondaryDark}
             onMouseLeave={(e) => e.target.style.backgroundColor = colors.secondary}
           >
-            <Plus className="w-5 h-5" />
-            Nouveau Revenu
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Nouveau Revenu</span>
+            <span className="sm:hidden">Nouveau</span>
           </button>
         </div>
 
         {/* Statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 md:mb-8">
           <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -482,7 +485,7 @@ export default function RevenuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Nombre de Sources</p>
-                <p className="text-2xl font-bold text-gray-900">{revenues.length}</p>
+                <p className="text-2xl font-bold text-gray-900">{uniqueCategoriesCount}</p>
               </div>
               <div className="bg-purple-100 p-3 rounded-lg">
                 <Building className="w-6 h-6 text-purple-600" />
@@ -493,7 +496,7 @@ export default function RevenuePage() {
       </div>
 
       {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 md:mb-8">
         <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
           <h3 className="text-lg font-semibold mb-4">Évolution Mensuelle</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -533,8 +536,8 @@ export default function RevenuePage() {
       </div>
 
       {/* Filtres et Recherche */}
-      <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="bg-white rounded-xl p-4 sm:p-6 border border-gray-100 shadow-sm mb-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -589,31 +592,31 @@ export default function RevenuePage() {
       {/* Tableau des Revenus */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="text-left p-4 font-medium text-gray-700">Source/Description</th>
-                <th className="text-left p-4 font-medium text-gray-700">Catégorie</th>
-                <th className="text-left p-4 font-medium text-gray-700">Compte</th>
-                <th className="text-left p-4 font-medium text-gray-700">Utilisateur</th>
-                <th className="text-left p-4 font-medium text-gray-700">Date</th>
-                <th className="text-right p-4 font-medium text-gray-700">Montant</th>
-                <th className="text-center p-4 font-medium text-gray-700">Actions</th>
+                <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Source/Description</th>
+                <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Catégorie</th>
+                <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm hidden md:table-cell">Compte</th>
+                <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm hidden lg:table-cell">Utilisateur</th>
+                <th className="text-left p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Date</th>
+                <th className="text-right p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Montant</th>
+                <th className="text-center p-3 sm:p-4 font-medium text-gray-700 text-xs sm:text-sm">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredRevenues.map((revenue, index) => (
                 <tr key={revenue.id_revenu} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                  <td className="p-4">
-                    <div className="font-medium text-gray-900">{revenue.source}</div>
+                  <td className="p-3 sm:p-4">
+                    <div className="font-medium text-gray-900 text-sm">{revenue.source}</div>
                   </td>
-                  <td className="p-4">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                  <td className="p-3 sm:p-4">
+                    <span className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs sm:text-sm">
                       {revenue.categorie}
                     </span>
                   </td>
-                  <td className="p-4 text-gray-600">{revenue.compte}</td>
-                  <td className="p-4">
+                  <td className="p-3 sm:p-4 text-gray-600 text-sm hidden md:table-cell">{revenue.compte}</td>
+                  <td className="p-3 sm:p-4 hidden lg:table-cell">
                     {(() => {
                       const backendUser = { prenom: revenue.user_prenom, nom: revenue.user_nom, email: revenue.user_email, image: revenue.user_image }
                       const hasBackendUser = backendUser.prenom || backendUser.nom || backendUser.email || backendUser.image
@@ -642,20 +645,20 @@ export default function RevenuePage() {
                       )
                     })()}
                   </td>
-                  <td className="p-4">
+                  <td className="p-3 sm:p-4">
                     <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      {new Date(revenue.date_revenu).toLocaleDateString('fr-FR')}
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
+                      <span className="text-xs sm:text-sm">{new Date(revenue.date_revenu).toLocaleDateString('fr-FR')}</span>
                     </div>
                   </td>
-                  <td className="p-4 text-right">
+                  <td className="p-3 sm:p-4 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span className="font-semibold text-green-600">{formatAmountForAccount(revenue.montant, revenue.id_compte)}</span>
-                      <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      <span className="font-semibold text-green-600 text-sm sm:text-base">{formatAmountForAccount(revenue.montant, revenue.id_compte)}</span>
+                      <ArrowUpRight className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                     </div>
                   </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="p-3 sm:p-4">
+                    <div className="flex items-center justify-center gap-1 sm:gap-2">
                       <button
                         onClick={() => handleEdit(revenue)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -686,8 +689,8 @@ export default function RevenuePage() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-md w-full p-4 sm:p-6 my-4">
             <h2 className="text-xl font-semibold mb-6">
               {editingRevenue ? 'Modifier le Revenu' : 'Nouveau Revenu'}
             </h2>

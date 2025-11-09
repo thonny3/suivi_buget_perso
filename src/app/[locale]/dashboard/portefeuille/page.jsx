@@ -962,7 +962,7 @@ export default function GestionnaireComptes() {
 
 
         {/* Statistiques des comptes */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
             <div className="flex items-center justify-between">
               <div>
@@ -993,19 +993,6 @@ export default function GestionnaireComptes() {
               </div>
               <div className="p-3 rounded-full" style={{ backgroundColor: colors.light }}>
                 <TrendingUp className="w-6 h-6" style={{ color: colors.secondary }} />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium text-gray-600 mb-1">Solde moyen</h3>
-                <p className="text-3xl font-bold" style={{ color: colors.primaryDark }}>
-                  {formatAmount(stats.averageBalance)}
-                </p>
-              </div>
-              <div className="p-3 rounded-full" style={{ backgroundColor: colors.light }}>
-                <PiggyBank className="w-6 h-6" style={{ color: colors.primaryDark }} />
               </div>
             </div>
           </div>

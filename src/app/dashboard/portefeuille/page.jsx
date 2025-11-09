@@ -506,7 +506,7 @@ export default function GestionnaireComptes() {
         </div>
 
         {/* Statistiques des comptes */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondary }}>
             <h3 className="text-sm font-medium opacity-80">Total des comptes</h3>
             <p className="text-2xl font-bold mt-2">{stats.total}</p>
@@ -518,12 +518,6 @@ export default function GestionnaireComptes() {
           <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.secondaryDark }}>
             <h3 className="text-sm font-medium opacity-80">Comptes partagés</h3>
             <p className="text-2xl font-bold mt-2">2</p>
-          </div>
-          <div className="rounded-2xl p-6 text-white shadow-lg" style={{ backgroundColor: colors.primaryDark }}>
-            <h3 className="text-indigo-100 text-sm font-medium">Solde moyen</h3>
-            <p className="text-2xl font-bold mt-2">
-              {stats.averageBalance.toFixed(2)}€
-            </p>
           </div>
         </div>
 

@@ -235,50 +235,6 @@ export default function InvestissementDashboardPage() {
     } catch (_e) {}
   }
 
-  const loadFiveSamples = () => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const m = String(now.getMonth() + 1).padStart(2, '0')
-    const d = '15'
-    const samples = [
-      {
-        id: Date.now() + 1,
-        nom: 'Appartement A', type: 'immobilier', projet: 'Location', date_achat: `${y}-01-${d}`,
-        montant_investi: 50000, valeur_actuelle: 55000, duree_mois: 24, taux_prevu: 5.5,
-        revenus: [ { montant: 800, date: `${y}-02-01`, type: 'loyer' }, { montant: 800, date: `${y}-03-01`, type: 'loyer' }, { montant: 8000, date: `${y}-12-31`, type: 'revente' } ],
-        depenses: [ { montant: 1200, date: `${y}-03-10`, type: 'charge' }, { montant: 1200, date: `${y}-11-10`, type: 'impot' } ]
-      },
-      {
-        id: Date.now() + 2,
-        nom: 'Local commercial B', type: 'immobilier', projet: 'Bail 3/6/9', date_achat: `${y}-01-${d}`,
-        montant_investi: 120000, valeur_actuelle: 118000, duree_mois: 72, taux_prevu: 7,
-        revenus: [ { montant: 2000, date: `${y}-02-01`, type: 'loyer' }, { montant: 2000, date: `${y}-03-01`, type: 'loyer' }, { montant: 20000, date: `${y}-12-31`, type: 'benefice' } ],
-        depenses: [ { montant: 3000, date: `${y}-06-10`, type: 'charge' }, { montant: 3500, date: `${y}-12-10`, type: 'impot' } ]
-      },
-      {
-        id: Date.now() + 3,
-        nom: 'Parking C', type: 'immobilier', projet: 'Location longue', date_achat: `${y}-01-${d}`,
-        montant_investi: 10000, valeur_actuelle: 11500, duree_mois: 36, taux_prevu: 6,
-        revenus: [ { montant: 200, date: `${y}-02-05`, type: 'loyer' }, { montant: 200, date: `${y}-03-05`, type: 'loyer' }, { montant: 2000, date: `${y}-12-01`, type: 'benefice' } ],
-        depenses: [ { montant: 300, date: `${y}-07-20`, type: 'entretien' } ]
-      },
-      {
-        id: Date.now() + 4,
-        nom: 'Immeuble D', type: 'immobilier', projet: 'Colocation', date_achat: `${y}-01-${d}`,
-        montant_investi: 300000, valeur_actuelle: 310000, duree_mois: 120, taux_prevu: 8,
-        revenus: [ { montant: 5000, date: `${y}-02-01`, type: 'loyer' }, { montant: 5000, date: `${y}-03-01`, type: 'loyer' }, { montant: 50000, date: `${y}-12-31`, type: 'benefice' } ],
-        depenses: [ { montant: 12000, date: `${y}-06-15`, type: 'travaux' }, { montant: 10000, date: `${y}-12-10`, type: 'impot' } ]
-      },
-      {
-        id: Date.now() + 5,
-        nom: 'SCPI E', type: 'fonds', projet: 'Rendement', date_achat: `${y}-01-${d}`,
-        montant_investi: 25000, valeur_actuelle: 24500, duree_mois: 60, taux_prevu: 4,
-        revenus: [ { montant: 300, date: `${y}-03-31`, type: 'benefice' }, { montant: 1600, date: `${y}-12-31`, type: 'benefice' } ],
-        depenses: [ { montant: 400, date: `${y}-04-10`, type: 'frais' } ]
-      }
-    ]
-    setItems(samples)
-  }
 
   const RevenueForm = ({ isOpen, onClose, onSave, investment }) => {
     const [formData, setFormData] = useState({ montant: '', date: new Date().toISOString().slice(0,10), type: 'loyer', note: '', id_compte: '' })
@@ -650,7 +606,6 @@ export default function InvestissementDashboardPage() {
               <span>Ajouter un investissement</span>
             </button>
             <button onClick={() => setIsReportOpen(true)} className="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg transition-colors shadow">Rapport</button>
-            <button onClick={loadFiveSamples} className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors shadow">Charger 5 exemples</button>
           </div>
         </div>
         {error && (

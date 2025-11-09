@@ -712,21 +712,21 @@ export default function DettesPage() {
   }
 
   return (
-    <div className="min-h-screen p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {error && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">{error}</div>}
+    <div className="min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
+        {error && <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm">{error}</div>}
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Mes Dettes</h1>
-            <p className="text-gray-600 mt-1">Suivez vos dettes et remboursements</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes Dettes</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">Suivez vos dettes et remboursements</p>
           </div>
-          <div className="flex flex-col md:flex-row md:items-center gap-3 mt-4 md:mt-0">
-            <button onClick={() => setFiltersOpen((v)=>!v)} className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <button onClick={() => setFiltersOpen((v)=>!v)} className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 text-sm sm:text-base">
               {filtersOpen ? 'Masquer les filtres' : 'Afficher les filtres'}
             </button>
-            <button onClick={() => { setEditing(null); setIsFormOpen(true) }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center space-x-2 shadow-lg">
-              <Plus className="w-5 h-5" /><span>Nouvelle dette</span>
+            <button onClick={() => { setEditing(null); setIsFormOpen(true) }} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2 rounded-lg transition-colors flex items-center justify-center space-x-2 shadow-lg text-sm sm:text-base">
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" /><span>Nouvelle dette</span>
             </button>
           </div>
         </div>
@@ -796,30 +796,30 @@ export default function DettesPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-6">
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">Montant initial total</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-gray-400" />{formatMoney(totalInitial)}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 gap-4 sm:gap-6">
+          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Montant initial total</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2 break-words break-all"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" /><span className="leading-tight">{formatMoney(totalInitial)}</span></p>
           </div>
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">Montant restant total</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2"><DollarSign className="w-5 h-5 text-gray-400" />{formatMoney(totalRestant)}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Montant restant total</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 flex items-center gap-2 break-words break-all"><DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 flex-shrink-0" /><span className="leading-tight">{formatMoney(totalRestant)}</span></p>
           </div>
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">Nombre de dettes</h3>
-            <p className="text-2xl font-bold mt-2 text-gray-900">{countTotal}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Nombre de dettes</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-gray-900 break-words break-all leading-tight">{countTotal}</p>
           </div>
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">En retard</h3>
-            <p className="text-2xl font-bold mt-2 text-red-700">{countEnRetard}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600">En retard</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-red-700 break-words break-all leading-tight">{countEnRetard}</p>
           </div>
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">En cours</h3>
-            <p className="text-2xl font-bold mt-2 text-blue-700">{countEnCours}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600">En cours</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-blue-700 break-words break-all leading-tight">{countEnCours}</p>
           </div>
-          <div className="rounded-2xl p-6 bg-white shadow-lg border border-gray-200">
-            <h3 className="text-sm font-medium text-gray-600">Terminé</h3>
-            <p className="text-2xl font-bold mt-2 text-green-700">{countTermine}</p>
+          <div className="rounded-2xl p-4 sm:p-6 bg-white shadow-lg border border-gray-200">
+            <h3 className="text-xs sm:text-sm font-medium text-gray-600">Terminé</h3>
+            <p className="text-xl sm:text-2xl font-bold mt-2 text-green-700 break-words break-all leading-tight">{countTermine}</p>
           </div>
         </div>
 

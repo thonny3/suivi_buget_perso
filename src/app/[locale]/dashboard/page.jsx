@@ -286,18 +286,18 @@ export default function Dashboard({ params }) {
   }, [locale])
 
   return (
-    <div className="p-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+    <div className="p-4 sm:p-6">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
           Tableau de bord
           {userRole === 'admin' && (
-            <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+            <span className="ml-2 sm:ml-3 inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
               <Shield className="w-3 h-3 mr-1" />
               Admin
             </span>
           )}
         </h1>
-        <p className="text-gray-600">
+        <p className="text-sm sm:text-base text-gray-600">
           {userRole === 'admin' 
             ? 'Vue d\'ensemble de la plateforme et gestion des utilisateurs' 
             : 'Bienvenue dans votre espace de gestion financière'
@@ -318,26 +318,26 @@ export default function Dashboard({ params }) {
         {statsCards.map((card, index) => {
           const Icon = card.icon
           return (
-            <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-1">{card.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 mb-2">{card.value}</p>
-                  <div className="flex items-center">
+            <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium text-gray-600 mb-1">{card.title}</p>
+                  <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words break-all leading-tight">{card.value}</p>
+                  <div className="flex items-center flex-wrap gap-1">
                     {card.changeType === 'positive' ? (
-                      <ArrowUpRight className="w-4 h-4 text-green-500 mr-1" />
+                      <ArrowUpRight className="w-4 h-4 text-green-500 mr-1 flex-shrink-0" />
                     ) : (
-                      <ArrowDownRight className="w-4 h-4 text-red-500 mr-1" />
+                      <ArrowDownRight className="w-4 h-4 text-red-500 mr-1 flex-shrink-0" />
                     )}
                     <span className={`text-sm font-medium ${
                       card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
                     }`}>
                       {card.change}
                     </span>
-                    <span className="text-gray-500 text-sm ml-2">vs mois dernier</span>
+                    <span className="text-gray-500 text-sm">vs mois dernier</span>
                   </div>
                 </div>
-                <div className="rounded-xl p-3" style={{ backgroundColor: colors.secondary }}>
+                <div className="rounded-xl p-3 flex-shrink-0" style={{ backgroundColor: colors.secondary }}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
               </div>
