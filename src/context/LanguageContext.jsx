@@ -1,8 +1,18 @@
 "use client"
 import { createContext, useContext, useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import frTranslations from '../i18n/locales/fr.json'
+import mgTranslations from '../i18n/locales/mg.json'
+import enTranslations from '../i18n/locales/en.json'
 
 const LanguageContext = createContext()
+
+const SUPPORTED_LANGUAGES = ['fr', 'mg', 'en']
+const translationMap = {
+  fr: frTranslations,
+  mg: mgTranslations,
+  en: enTranslations
+}
 
 export const useLanguage = () => {
   const context = useContext(LanguageContext)
@@ -16,7 +26,7 @@ export const LanguageProvider = ({ children }) => {
   const params = useParams()
   const router = useRouter()
   const [currentLanguage, setCurrentLanguage] = useState('fr')
-  const [translations, setTranslations] = useState({})
+  const [translations, setTranslations] = useState(() => translationMap.fr)
 
   const languages = [
     { code: 'fr', name: 'Français', flag: '🇫🇷' },
@@ -27,36 +37,33 @@ export const LanguageProvider = ({ children }) => {
   useEffect(() => {
     // Utiliser la locale de l'URL si disponible
     const locale = params?.locale
-    if (locale && ['fr', 'mg', 'en'].includes(locale)) {
+    if (locale && SUPPORTED_LANGUAGES.includes(locale)) {
       setCurrentLanguage(locale)
     } else {
       // Fallback vers la langue sauvegardée ou français
-      const savedLanguage = localStorage.getItem('language')
-      if (savedLanguage && ['fr', 'mg', 'en'].includes(savedLanguage)) {
-        setCurrentLanguage(savedLanguage)
+      try {
+        const savedLanguage = localStorage.getItem('language')
+        if (savedLanguage && SUPPORTED_LANGUAGES.includes(savedLanguage)) {
+          setCurrentLanguage(savedLanguage)
+        }
+      } catch (_e) {
+        // Ignorer si localStorage n'est pas accessible
       }
     }
   }, [params?.locale])
 
   useEffect(() => {
-    // Charger les traductions pour la langue actuelle
-    const loadTranslations = async () => {
-      try {
-        const translations = await import(`../i18n/locales/${currentLanguage}.json`)
-        setTranslations(translations.default)
-        localStorage.setItem('language', currentLanguage)
-      } catch (error) {
-        console.error(`Erreur lors du chargement des traductions pour ${currentLanguage}:`, error)
-        // Fallback vers le français
-        setCurrentLanguage('fr')
-      }
+    const nextTranslations = translationMap[currentLanguage] || translationMap.fr
+    setTranslations(nextTranslations)
+    try {
+      localStorage.setItem('language', currentLanguage)
+    } catch (_e) {
+      // Ignorer si localStorage n'est pas accessible
     }
-
-    loadTranslations()
   }, [currentLanguage])
 
   const changeLanguage = (languageCode) => {
-    if (['fr', 'mg', 'en'].includes(languageCode)) {
+    if (SUPPORTED_LANGUAGES.includes(languageCode)) {
       setCurrentLanguage(languageCode)
       // Rediriger vers la nouvelle langue en conservant la section (#hash) et les paramètres (?search)
       const { pathname, search, hash } = window.location

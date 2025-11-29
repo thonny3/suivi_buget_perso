@@ -15,7 +15,13 @@ import {
   TrendingUp,
   UserPlus,
   Users,
-  Loader2
+  Loader2,
+  Landmark,
+  Coins,
+  Smartphone,
+  Banknote,
+  BarChart3,
+  Activity
 } from 'lucide-react'
 import { colors } from '@/styles/colors'
 import accountsService from '@/services/accountsService'
@@ -66,6 +72,55 @@ const AccountForm = ({ isOpen, onClose, onSave, item = null }) => {
 
   const [errors, setErrors] = useState({});
 
+  // Fonction pour obtenir l'icône du type de compte
+  const getAccountTypeIcon = (type) => {
+    const iconClass = "w-5 h-5";
+    switch (type?.toLowerCase()) {
+      case 'courant':
+        return <Landmark className={iconClass} />;
+      case 'epargne':
+        return <PiggyBank className={iconClass} />;
+      case 'investissement':
+        return <TrendingUp className={iconClass} />;
+      case 'trading':
+        return <BarChart3 className={iconClass} />;
+      case 'crypto':
+        return <Coins className={iconClass} />;
+      case 'mobile_money':
+      case 'mobile money':
+        return <Smartphone className={iconClass} />;
+      case 'cash':
+      case 'espèces':
+        return <Banknote className={iconClass} />;
+      default:
+        return <Wallet className={iconClass} />;
+    }
+  };
+
+  // Fonction pour obtenir la couleur du type de compte
+  const getTypeColor = (type) => {
+    switch (type?.toLowerCase()) {
+      case 'courant':
+        return 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300';
+      case 'epargne':
+        return 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300';
+      case 'investissement':
+        return 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300';
+      case 'trading':
+        return 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300';
+      case 'crypto':
+        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300';
+      case 'mobile_money':
+      case 'mobile money':
+        return 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300';
+      case 'cash':
+      case 'espèces':
+        return 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+    }
+  };
+
   // Mettre à jour le formulaire quand l'item change
   useEffect(() => {
     if (item) {
@@ -84,6 +139,19 @@ const AccountForm = ({ isOpen, onClose, onSave, item = null }) => {
     setErrors({});
   }, [item]);
 
+  // Réinitialiser les champs quand le modal se ferme après un enregistrement réussi
+  useEffect(() => {
+    if (!isOpen && !item) {
+      // Réinitialiser les champs quand le modal est fermé et qu'il n'y a pas d'item (mode création)
+      setFormData({
+        nom: '',
+        type: 'courant',
+        solde: ''
+      });
+      setErrors({});
+    }
+  }, [isOpen, item]);
+
   const validateForm = () => {
     const newErrors = {};
     if (!formData.nom.trim()) newErrors.nom = t('portefeuille.errors.nameRequired');
@@ -93,14 +161,27 @@ const AccountForm = ({ isOpen, onClose, onSave, item = null }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (validateForm()) {
-      onSave({
+      // Réinitialiser les champs avant la soumission si c'est une création
+      const accountData = {
         ...formData,
         id_compte: item?.id_compte || Date.now(),
         solde: parseFloat(formData.solde),
-      });
-      onClose();
+      };
+      
+      await onSave(accountData);
+      
+      // Réinitialiser les champs après la soumission réussie
+      if (!item) {
+        // Si c'est une création, réinitialiser les champs
+        setFormData({
+          nom: '',
+          type: 'courant',
+          solde: ''
+        });
+        setErrors({});
+      }
     }
   };
 
@@ -138,10 +219,11 @@ const AccountForm = ({ isOpen, onClose, onSave, item = null }) => {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             {t('portefeuille.accountType')}
           </label>
+          <div className="relative">
           <select
             value={formData.type}
             onChange={(e) => handleChange('type', e.target.value)}
-            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-4 py-2 pl-12 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 appearance-none cursor-pointer"
           >
             {accountsService.getAvailableTypes().map((type) => (
               <option key={type.value} value={type.value}>
@@ -149,6 +231,12 @@ const AccountForm = ({ isOpen, onClose, onSave, item = null }) => {
               </option>
             ))}
           </select>
+            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+              <div className={`p-1.5 rounded ${getTypeColor(formData.type)}`}>
+                {getAccountTypeIcon(formData.type)}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -915,24 +1003,49 @@ export default function GestionnaireComptes() {
   };
 
   const getAccountTypeIcon = (type) => {
-    switch (type) {
-      case 'courant': return <CreditCard className="w-5 h-5" />;
-      case 'epargne': return <PiggyBank className="w-5 h-5" />;
-      case 'investissement': return <TrendingUp className="w-5 h-5" />;
-      case 'trading': return <TrendingUp className="w-5 h-5" />;
-      case 'crypto': return <TrendingUp className="w-5 h-5" />;
-      default: return <Wallet className="w-5 h-5" />;
+    const iconClass = "w-6 h-6";
+    switch (type?.toLowerCase()) {
+      case 'courant':
+        return <Landmark className={iconClass} />;
+      case 'epargne':
+        return <PiggyBank className={iconClass} />;
+      case 'investissement':
+        return <TrendingUp className={iconClass} />;
+      case 'trading':
+        return <BarChart3 className={iconClass} />;
+      case 'crypto':
+        return <Coins className={iconClass} />;
+      case 'mobile_money':
+      case 'mobile money':
+        return <Smartphone className={iconClass} />;
+      case 'cash':
+      case 'espèces':
+        return <Banknote className={iconClass} />;
+      default:
+        return <Wallet className={iconClass} />;
     }
   };
 
   const getTypeColor = (type) => {
-    switch (type) {
-      case 'courant': return 'bg-blue-100 text-blue-600';
-      case 'epargne': return 'bg-green-100 text-green-600';
-      case 'investissement': return 'bg-purple-100 text-purple-600';
-      case 'trading': return 'bg-orange-100 text-orange-600';
-      case 'crypto': return 'bg-yellow-100 text-yellow-600';
-      default: return 'bg-gray-100 text-gray-600';
+    switch (type?.toLowerCase()) {
+      case 'courant':
+        return 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300';
+      case 'epargne':
+        return 'bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-300';
+      case 'investissement':
+        return 'bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300';
+      case 'trading':
+        return 'bg-orange-100 dark:bg-orange-900 text-orange-600 dark:text-orange-300';
+      case 'crypto':
+        return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-300';
+      case 'mobile_money':
+      case 'mobile money':
+        return 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300';
+      case 'cash':
+      case 'espèces':
+        return 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-300';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
     }
   };
 
@@ -1048,7 +1161,7 @@ export default function GestionnaireComptes() {
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div className={`p-3 rounded-lg ${getTypeColor(account.type)}`}>
+                        <div className={`p-3 rounded-xl shadow-sm ${getTypeColor(account.type)}`}>
                           {getAccountTypeIcon(account.type)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -1162,7 +1275,7 @@ export default function GestionnaireComptes() {
                     </div>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3">
-                        <div className={`p-3 rounded-lg ${getTypeColor(account.type)}`}>
+                        <div className={`p-3 rounded-xl shadow-sm ${getTypeColor(account.type)}`}>
                           {getAccountTypeIcon(account.type)}
                         </div>
                         <div>
@@ -1249,7 +1362,11 @@ export default function GestionnaireComptes() {
           setIsAccountFormOpen(false);
           setSelectedItem(null);
         }}
-        onSave={handleAccountSave}
+        onSave={async (accountData) => {
+          await handleAccountSave(accountData);
+          // Fermer le modal après la sauvegarde
+          setIsAccountFormOpen(false);
+        }}
         item={selectedItem}
       />
 

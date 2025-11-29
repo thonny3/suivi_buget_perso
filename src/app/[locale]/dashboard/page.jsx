@@ -41,7 +41,23 @@ export default function Dashboard({ params }) {
     goalsAchieved: 0,
     revenueData: [],
     expenseCategories: [],
-    recentTransactions: []
+    recentTransactions: [],
+    debtOverview: {
+      total: 0,
+      active: 0,
+      overdue: 0,
+      completed: 0,
+      initialTotal: 0,
+      remainingTotal: 0
+    },
+    subscriptionOverview: {
+      total: 0,
+      active: 0,
+      inactive: 0,
+      activeMonthlyCost: 0
+    },
+    subscriptionFrequency: [],
+    budgetOverview: []
   })
   const [adminStats, setAdminStats] = useState({
     totalUsers: 0,
@@ -119,29 +135,98 @@ export default function Dashboard({ params }) {
     return () => { mounted = false }
   }, []) // Suppression de getCurrentUser des dépendances pour éviter la boucle infinie
 
-  const lastThreeMonthsData = useMemo(() => {
+  const lastSixMonthsData = useMemo(() => {
     const data = Array.isArray(summary.revenueData) ? summary.revenueData : []
-    // Build a set of the last 3 months in YYYY-MM
     const now = new Date()
     const ym = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const months = [0, 1, 2].map((i) => {
-      const dt = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      return ym(dt)
+
+    const months = Array.from({ length: 6 }, (_, idx) => {
+      const dt = new Date(now.getFullYear(), now.getMonth() - (5 - idx), 1)
+      return { date: dt, key: ym(dt) }
     })
-    const last3 = new Set(months)
-    // Filter, sort ascending by month, and add a pretty label
-    const filtered = data
-      .filter((d) => d && typeof d.month === 'string' && last3.has(d.month))
-      .sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : 0))
-      .map((d) => {
-        const [yearStr, monthStr] = d.month.split('-')
-        const m = Number(monthStr) - 1
-        const y = Number(yearStr)
-        const label = new Date(y, m, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
-        return { ...d, label }
-      })
-    return filtered
+
+    const monthMap = data.reduce((acc, item) => {
+      if (item && typeof item.month === 'string') {
+        acc[item.month] = item
+      }
+      return acc
+    }, {})
+
+    return months.map(({ date, key }) => {
+      const found = monthMap[key] || {}
+      const label = date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+      return {
+        month: key,
+        revenue: Number(found.revenue || 0),
+        expenses: Number(found.expenses || 0),
+        label
+      }
+    })
   }, [summary.revenueData])
+
+  const formatFrequencyLabel = useCallback((value) => {
+    const freq = (value || '').toString().toLowerCase()
+    if (freq.includes('mens')) return t('dashboard.insights.frequencyMonthly')
+    if (freq.includes('trimes')) return t('dashboard.insights.frequencyQuarterly')
+    if (freq.includes('semes') || freq.includes('semester')) return t('dashboard.insights.frequencySemiAnnual')
+    if (freq.includes('ann')) return t('dashboard.insights.frequencyYearly')
+    return t('dashboard.insights.frequencyOther')
+  }, [t])
+
+  const debtPieData = useMemo(() => {
+    const stats = summary.debtOverview || {}
+    return [
+      {
+        name: t('dashboard.insights.debtsInitial'),
+        value: Number(stats.initialTotal || 0),
+        color: '#60a5fa'
+      },
+      {
+        name: t('dashboard.insights.debtsRemaining'),
+        value: Number(stats.remainingTotal || 0),
+        color: '#f97316'
+      }
+    ]
+  }, [summary.debtOverview, t])
+
+  const debtStatusData = useMemo(() => ({
+    active: Number(summary.debtOverview?.active || 0),
+    overdue: Number(summary.debtOverview?.overdue || 0),
+    completed: Number(summary.debtOverview?.completed || 0)
+  }), [summary.debtOverview])
+
+  const subscriptionFrequencyData = useMemo(() => {
+    const raw = Array.isArray(summary.subscriptionFrequency) ? summary.subscriptionFrequency : []
+    return raw.map((item) => ({
+      label: formatFrequencyLabel(item?.name || item?.freq || ''),
+      value: Number(item?.value ?? item?.total ?? 0)
+    }))
+  }, [summary.subscriptionFrequency, formatFrequencyLabel])
+
+  const budgetOverviewData = useMemo(() => {
+    const raw = Array.isArray(summary.budgetOverview) ? summary.budgetOverview : []
+    return raw.map((item) => {
+      const limit = Number(item?.limit ?? item?.montant_max ?? 0)
+      const spent = Number(item?.spent ?? item?.montant_depense ?? 0)
+      const remaining = Math.max(limit - spent, 0)
+      const percent = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0
+      const label = item?.month ? `${item?.category || 'Budget'} (${item.month})` : (item?.category || 'Budget')
+      return {
+        ...item,
+        label,
+        limit,
+        spent,
+        remaining,
+        percent
+      }
+    })
+  }, [summary.budgetOverview])
+
+  const budgetChartData = useMemo(() => budgetOverviewData.map((item) => ({
+    label: item.label,
+    spent: item.spent,
+    remaining: item.remaining
+  })), [budgetOverviewData])
 
   // Charger la devise utilisateur depuis localStorage (même logique que d'autres pages)
   useEffect(() => {
@@ -325,6 +410,7 @@ export default function Dashboard({ params }) {
             <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md transition-shadow">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
+                 
                   <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">{card.title}</p>
                   <p className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-2 break-words break-all leading-tight">{card.value}</p>
                   <div className="flex items-center flex-wrap gap-1">
@@ -655,7 +741,7 @@ export default function Dashboard({ params }) {
             </button>
           </div>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={lastThreeMonthsData}>
+            <LineChart data={lastSixMonthsData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" />
               <YAxis />
@@ -727,6 +813,169 @@ export default function Dashboard({ params }) {
                 <span className="text-gray-500 dark:text-gray-400">{item.percent}%</span>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+      )}
+
+
+      {/* Statistiques dettes / abonnements / budgets */}
+      {userRole !== 'admin' && (
+      <div className="mb-8">
+        <div className="flex items-center mb-4">
+          <Activity className="w-5 h-5 text-blue-600 mr-2" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('dashboard.insights.sectionTitle')}</h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Dettes */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.insights.debtsTitle')}</h3>
+              <span className="text-sm text-gray-500 dark:text-gray-400">{t('dettes.title')}</span>
+            </div>
+            {debtPieData.some((d) => d.value > 0) ? (
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={debtPieData}
+                      dataKey="value"
+                      innerRadius={50}
+                      outerRadius={80}
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {debtPieData.map((entry, index) => (
+                        <Cell key={`debt-pie-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `${Number(value || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
+                        name
+                      ]}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-56 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                {t('dashboard.insights.emptyState')}
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-3 mt-4 text-center">
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.insights.debtsActive')}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{debtStatusData.active}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.insights.debtsOverdue')}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{debtStatusData.overdue}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.insights.debtsCompleted')}</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">{debtStatusData.completed}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Abonnements */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.insights.subscriptionsTitle')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.insights.subscriptionsMonthlyCost')}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-emerald-600">
+                  {Number(summary.subscriptionOverview?.activeMonthlyCost || 0).toLocaleString('fr-FR')} {currencySymbol}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('dashboard.insights.subscriptionsActive')} / {t('dashboard.insights.subscriptionsInactive')}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 p-3">
+                <p className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400">{t('dashboard.insights.subscriptionsActive')}</p>
+                <p className="text-xl font-semibold text-emerald-700 dark:text-emerald-300">{Number(summary.subscriptionOverview?.active || 0)}</p>
+              </div>
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 p-3">
+                <p className="text-xs uppercase tracking-wide text-amber-600 dark:text-amber-400">{t('dashboard.insights.subscriptionsInactive')}</p>
+                <p className="text-xl font-semibold text-amber-700 dark:text-amber-300">{Number(summary.subscriptionOverview?.inactive || 0)}</p>
+              </div>
+            </div>
+            {subscriptionFrequencyData.length > 0 ? (
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={subscriptionFrequencyData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value) => `${Number(value || 0).toLocaleString('fr-FR')} ${currencySymbol}`}
+                      labelFormatter={(label) => label}
+                    />
+                    <Bar dataKey="value" fill="#6366F1" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-56 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                {t('dashboard.insights.emptyState')}
+              </div>
+            )}
+          </div>
+
+          {/* Budgets */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dashboard.insights.budgetTitle')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('dashboard.insights.budgetChartLabel')}</p>
+              </div>
+            </div>
+            {budgetChartData.length > 0 ? (
+              <div className="h-56">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={budgetChartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="label" hide />
+                    <YAxis />
+                    <Tooltip
+                      formatter={(value, name) => [
+                        `${Number(value || 0).toLocaleString('fr-FR')} ${currencySymbol}`,
+                        name === 'spent' ? t('dashboard.insights.budgetSpent') : t('dashboard.insights.budgetRemaining')
+                      ]}
+                    />
+                    <Bar dataKey="spent" stackId="budget" fill="#f97316" name={t('dashboard.insights.budgetSpent')} />
+                    <Bar dataKey="remaining" stackId="budget" fill="#22c55e" name={t('dashboard.insights.budgetRemaining')} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-56 flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">
+                {t('dashboard.insights.emptyState')}
+              </div>
+            )}
+            <div className="mt-4 space-y-3">
+              {budgetOverviewData.slice(0, 3).map((item, idx) => (
+                <div key={idx}>
+                  <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-1">
+                    <span className="font-medium text-gray-900 dark:text-white">{item.label}</span>
+                    <span>{Math.round(item.percent)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-500"
+                      style={{ width: `${item.percent}%` }}
+                    ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <span>{t('dashboard.insights.budgetSpent')}: {Number(item.spent).toLocaleString('fr-FR')} {currencySymbol}</span>
+                    <span>{t('dashboard.insights.budgetRemaining')}: {Number(item.remaining).toLocaleString('fr-FR')} {currencySymbol}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

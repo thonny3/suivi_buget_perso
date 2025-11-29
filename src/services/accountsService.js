@@ -268,7 +268,9 @@ class AccountsService {
       epargne: 'Épargne',
       investissement: 'Investissement',
       trading: 'Trading',
-      crypto: 'Cryptomonnaie'
+      crypto: 'Cryptomonnaie',
+      mobile_money: 'Mobile Money',
+      cash: 'Espèces'
     };
     return labels[type] || type;
   }
@@ -280,12 +282,15 @@ class AccountsService {
   getAvailableTypes() {
     return [
       { value: 'courant', label: 'Compte Courant' },
-      { value: 'epargne', label: 'Épargne' },
+      { value: 'epargne', label: 'Compte Épargne' },
       { value: 'investissement', label: 'Investissement' },
       { value: 'trading', label: 'Trading' },
-      { value: 'crypto', label: 'Cryptomonnaie' }
+      { value: 'crypto', label: 'Cryptomonnaie' },
+      { value: 'mobile_money', label: 'Mobile Money' },
+      { value: 'cash', label: 'Espèces' }
     ];
   }
+  
 }
 
 // Export d'une instance unique du service

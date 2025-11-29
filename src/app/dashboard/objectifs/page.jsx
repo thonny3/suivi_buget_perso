@@ -113,6 +113,7 @@ export default function ObjectifsPage() {
     icone: 'Target',
     couleur: '#3B82F6'
   })
+  const [formErrors, setFormErrors] = useState({})
 
   const iconOptions = [
     { name: 'Target', component: Target, label: t('objectifs.icons.general') },
@@ -129,6 +130,67 @@ export default function ObjectifsPage() {
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
     '#8B5CF6', '#EC4899', '#6B7280', '#14B8A6'
   ]
+
+  const notifyNavbar = (detail) => {
+    if (typeof window === 'undefined' || !detail?.message) return
+    window.dispatchEvent(new CustomEvent('dashboard-notification', {
+      detail: {
+        type: detail.type || t('objectifs.title'),
+        message: detail.message
+      }
+    }))
+  }
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }))
+    setFormErrors(prev => ({ ...prev, [field]: '' }))
+  }
+
+  const getInputClasses = (field) => {
+    const hasError = Boolean(formErrors[field])
+    const base = 'w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white'
+    return hasError
+      ? `${base} border-red-400 dark:border-red-500 focus:ring-red-500`
+      : `${base} border-gray-200 dark:border-gray-600 focus:ring-green-500`
+  }
+
+  const validateForm = () => {
+    const errors = {}
+    const trimmedName = formData.nom.trim()
+    if (!trimmedName) {
+      errors.nom = t('objectifs.errors.nameRequired')
+    } else if (trimmedName.length < 3) {
+      errors.nom = t('objectifs.errors.nameMin')
+    }
+
+    const amountValue = parseFloat(formData.montant_objectif)
+    if (formData.montant_objectif === '' || Number.isNaN(amountValue)) {
+      errors.montant_objectif = t('objectifs.errors.amountRequired')
+    } else if (amountValue <= 0) {
+      errors.montant_objectif = t('objectifs.errors.amountPositive')
+    }
+
+    if (!formData.date_limite) {
+      errors.date_limite = t('objectifs.errors.dateRequired')
+    } else {
+      const selectedDate = new Date(formData.date_limite)
+      const today = new Date()
+      selectedDate.setHours(0, 0, 0, 0)
+      today.setHours(0, 0, 0, 0)
+      if (selectedDate < today && !editingObjectif) {
+        errors.date_limite = t('objectifs.errors.dateFuture')
+      }
+    }
+
+    setFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      const message = t('objectifs.errors.validationSummary')
+      showError(message)
+      notifyNavbar({ message })
+      return false
+    }
+    return true
+  }
 
   // Calculs statistiques
   const totalObjectifs = objectifs.length
@@ -174,17 +236,18 @@ export default function ObjectifsPage() {
   }
 
   const handleSubmit = async () => {
-    if (!formData.nom || !formData.montant_objectif || !formData.date_limite) {
-      alert(t('objectifs.errors.fillAllFields'))
+    if (!validateForm()) {
       return
     }
 
     try {
+      const trimmedName = formData.nom.trim()
+      const amountValue = parseFloat(formData.montant_objectif)
       const normalizedDate = toYYYYMMDD(formData.date_limite)
       if (editingObjectif) {
         await objectifsService.update(editingObjectif.id_objectif, {
-          nom: formData.nom,
-          montant_objectif: parseFloat(formData.montant_objectif),
+          nom: trimmedName,
+          montant_objectif: amountValue,
           date_limite: normalizedDate,
           // backend columns include montant_actuel optionally on update
           montant_actuel: editingObjectif.montant_actuel,
@@ -193,8 +256,8 @@ export default function ObjectifsPage() {
         })
       } else {
         await objectifsService.create({
-          nom: formData.nom,
-          montant_objectif: parseFloat(formData.montant_objectif),
+          nom: trimmedName,
+          montant_objectif: amountValue,
           date_limite: normalizedDate,
           montant_actuel: 0,
           statut: t('objectifs.status.inProgress'),
@@ -263,12 +326,14 @@ export default function ObjectifsPage() {
       icone: 'Target',
       couleur: '#3B82F6'
     })
+    setFormErrors({})
     setEditingObjectif(null)
     setIsModalOpen(false)
   }
 
   const handleEdit = (objectif) => {
     setEditingObjectif(objectif)
+    setFormErrors({})
     setFormData({
       nom: objectif.nom,
       montant_objectif: objectif.montant_objectif.toString(),
@@ -684,11 +749,18 @@ export default function ObjectifsPage() {
                 <input
                   type="text"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className={getInputClasses('nom')}
                   value={formData.nom}
-                  onChange={(e) => setFormData({...formData, nom: e.target.value})}
+                  onChange={(e) => handleInputChange('nom', e.target.value)}
                   placeholder={t('objectifs.goalNamePlaceholder')}
+                  aria-invalid={Boolean(formErrors.nom)}
+                  aria-describedby="goal-name-error"
                 />
+                {formErrors.nom && (
+                  <p id="goal-name-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {formErrors.nom}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -699,10 +771,18 @@ export default function ObjectifsPage() {
                   type="number"
                   step="0.01"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className={getInputClasses('montant_objectif')}
                   value={formData.montant_objectif}
-                  onChange={(e) => setFormData({...formData, montant_objectif: e.target.value})}
+                  onChange={(e) => handleInputChange('montant_objectif', e.target.value)}
+                  aria-invalid={Boolean(formErrors.montant_objectif)}
+                  aria-describedby="goal-amount-error"
+                  min="0"
                 />
+                {formErrors.montant_objectif && (
+                  <p id="goal-amount-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {formErrors.montant_objectif}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -712,10 +792,17 @@ export default function ObjectifsPage() {
                 <input
                   type="date"
                   required
-                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className={getInputClasses('date_limite')}
                   value={formData.date_limite}
-                  onChange={(e) => setFormData({...formData, date_limite: e.target.value})}
+                  onChange={(e) => handleInputChange('date_limite', e.target.value)}
+                  aria-invalid={Boolean(formErrors.date_limite)}
+                  aria-describedby="goal-deadline-error"
                 />
+                {formErrors.date_limite && (
+                  <p id="goal-deadline-error" className="mt-1 text-sm text-red-600 dark:text-red-400">
+                    {formErrors.date_limite}
+                  </p>
+                )}
               </div>
 
               <div>

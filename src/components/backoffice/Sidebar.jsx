@@ -46,8 +46,9 @@ const Sidebar = () => {
       label: 'Dashboard',
       icon: Home,
       description: 'Accueil',
-      href: withLocale('/dashboard')
-    },
+      href: withLocale('/dashboard'),
+      priority: 0
+    }
   ]
 
   const adminMenu = [
@@ -56,21 +57,24 @@ const Sidebar = () => {
       label: 'Catégories revenus',
       icon: TrendingUp,
       description: 'Gestion des catégories revenus',
-      href: withLocale('/dashboard/admin/categories/revenus')
+      href: withLocale('/dashboard/admin/categories/revenus'),
+      priority: 20
     },
     {
       id: 'categories-depenses',
       label: 'Catégories dépenses',
       icon: CreditCard,
       description: 'Gestion des catégories dépenses',
-      href: withLocale('/dashboard/admin/categories/depenses')
+      href: withLocale('/dashboard/admin/categories/depenses'),
+      priority: 30
     },
     {
       id: 'admin-users',
       label: 'Utilisateurs',
       icon: User,
       description: 'Gestion des utilisateurs',
-      href: withLocale('/dashboard/admin/users')
+      href: withLocale('/dashboard/admin/users'),
+      priority: 40
     }
   ]
 
@@ -80,88 +84,106 @@ const Sidebar = () => {
       label: 'Dettes',
       icon: DollarSign,
       description: 'Dettes et remboursements',
-      href: withLocale('/dashboard/dettes')
+      href: withLocale('/dashboard/dettes'),
+      priority: 100
     },
     {
       id: 'portefeuille',
       label: 'Portefeuille',
       icon: Wallet,
       description: 'Mon portefeuille',
-      href: withLocale('/dashboard/portefeuille')
+      href: withLocale('/dashboard/portefeuille'),
+      priority: 10
     },
     {
       id: 'investissements',
       label: 'Investissements',
       icon: TrendingUp,
       description: 'Suivi des investissements',
-      href: withLocale('/dashboard/investissement')
+      href: withLocale('/dashboard/investissement'),
+      priority: 100
     },
     {
       id: 'depenses',
       label: 'Dépenses',
       icon: CreditCard,
       description: 'Mes dépenses',
-      href: withLocale('/dashboard/depenses')
+      href: withLocale('/dashboard/depenses'),
+      priority: 30
     },
     {
       id: 'revenus',
       label: 'Revenus',
       icon: TrendingUp,
       description: 'Mes revenus',
-      href: withLocale('/dashboard/revenus')
+      href: withLocale('/dashboard/revenus'),
+      priority: 20
     },
     {
       id: 'transactions',
       label: 'Transactions',
       icon: ArrowLeftRight,
       description: 'Toutes les transactions',
-      href: withLocale('/dashboard/trasactios')
+      href: withLocale('/dashboard/trasactios'),
+      priority: 40
     },
     {
       id: 'transferts',
       label: 'Transferts',
       icon: ArrowLeftRight,
       description: 'Mouvements entre comptes/objectifs',
-      href: withLocale('/dashboard/transferts')
+      href: withLocale('/dashboard/transferts'),
+      priority: 90
     },
     {
       id: 'budget',
       label: 'Budget',
       icon: PiggyBank,
       description: 'Gestion budget',
-      href: withLocale('/dashboard/budget')
+      href: withLocale('/dashboard/budget'),
+      priority: 50
     },
     {
       id: 'objectifs',
       label: 'Objectifs',
       icon: Target,
       description: 'Mes objectifs',
-      href: withLocale('/dashboard/objectifs')
+      href: withLocale('/dashboard/objectifs'),
+      priority: 60
     },
     {
       id: 'abonnements',
       label: 'Abonnements',
       icon: RefreshCw,
       description: 'Mes abonnements',
-      href: withLocale('/dashboard/abonnements')
+      href: withLocale('/dashboard/abonnements'),
+      priority: 70
     },
     {
       id: 'alertes',
       label: 'Alertes',
       icon: Bell,
       description: 'Notifications',
-      href: withLocale('/dashboard/alertes')
+      href: withLocale('/dashboard/alertes'),
+      priority: 80
     },
     {
       id: 'ia',
       label: 'Insights IA',
       icon: TrendingUp,
       description: 'Analyse et prévisions',
-      href: withLocale('/dashboard/ia')
+      href: withLocale('/dashboard/ia'),
+      priority: 120
     }
   ]
 
-  const menuItems = user?.role === 'admin' ? [...baseMenu, ...adminMenu] : [...baseMenu, ...userMenu]
+  const sortMenuItems = (items) =>
+    [...items].sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0))
+
+  const menuItems =
+    user?.role === 'admin'
+      ? sortMenuItems([...baseMenu, ...adminMenu])
+      : sortMenuItems([...baseMenu, ...userMenu])
 
   const handleLogout = () => {
     setShowLogoutModal(true)

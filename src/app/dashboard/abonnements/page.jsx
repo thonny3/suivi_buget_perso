@@ -32,10 +32,30 @@ import accountsService from '@/services/accountsService'
 import { useToast } from '@/hooks/useToast'
 import { useLanguage } from '@/context/LanguageContext'
 
+const getLocaleFromLanguage = (language) => {
+  if (language === 'en') return 'en-US'
+  if (language === 'mg') return 'mg-MG'
+  return 'fr-FR'
+}
+
+const capitalizeFirstLetter = (str) => {
+  if (!str) return ''
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+const formatSubscriptionMonth = (dateString, language) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) return ''
+  const locale = getLocaleFromLanguage(language)
+  const month = date.toLocaleDateString(locale, { month: 'long' })
+  return capitalizeFirstLetter(month)
+}
+
 export default function AbonnementsPage() {
   const { user } = useAuth()
   const { showSuccess, showError } = useToast()
-  const { t } = useLanguage()
+  const { t, currentLanguage } = useLanguage()
   const [abonnements, setAbonnements] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -54,6 +74,7 @@ export default function AbonnementsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterFrequence, setFilterFrequence] = useState('')
   const [filterStatut, setFilterStatut] = useState('')
+  const [filterActif, setFilterActif] = useState('all')
 
   const [formData, setFormData] = useState({
     nom: '',
@@ -126,7 +147,7 @@ export default function AbonnementsPage() {
           const rawHist = localStorage.getItem('abos-renewed-history')
           if (rawHist) setRenewedHistory(JSON.parse(rawHist))
         } catch (_e) {}
-        const data = await abonnementsService.listByUser(user.id_user, { includeInactive: false })
+        const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
         const normalized = Array.isArray(data) ? data.map(row => ({
           id_abonnement: row.id_abonnement,
           id_user: row.id_user,
@@ -176,6 +197,7 @@ export default function AbonnementsPage() {
   const abonnementsExpires = abonnements.filter(ab => ab.statut === t('abonnements.status.expired') || ab.statut === 'Expiré').length
   const abonnementsProches = abonnements.filter(ab => ab.statut === t('abonnements.status.expiringSoon') || ab.statut === 'Expire bientôt').length
   const coutMensuelTotal = abonnements.reduce((sum, ab) => {
+    if (!ab.actif) return sum
     const monthly = t('abonnements.frequencies.monthly')
     const quarterly = t('abonnements.frequencies.quarterly')
     const semiannual = t('abonnements.frequencies.semiannual')
@@ -215,7 +237,12 @@ export default function AbonnementsPage() {
     const matchesSearch = abonnement.nom.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFrequence = !filterFrequence || abonnement.frequence === filterFrequence
     const matchesStatut = !filterStatut || abonnement.statut === filterStatut
-    return matchesSearch && matchesFrequence && matchesStatut
+    const matchesActif = filterActif === 'all'
+      ? true
+      : filterActif === 'active'
+        ? abonnement.actif
+        : !abonnement.actif
+    return matchesSearch && matchesFrequence && matchesStatut && matchesActif
   })
 
   const validateForm = () => {
@@ -284,7 +311,7 @@ export default function AbonnementsPage() {
         })
         showSuccess(t('abonnements.success.created'))
       }
-      const data = await abonnementsService.listByUser(user.id_user, { includeInactive: false })
+      const data = await abonnementsService.listByUser(user.id_user, { includeInactive: true })
       const normalized = Array.isArray(data) ? data.map(row => ({
         id_abonnement: row.id_abonnement,
         id_user: row.id_user,
@@ -425,7 +452,16 @@ export default function AbonnementsPage() {
     const symbol = getCurrencySymbolForAbonnement(abonnement)
     const decimals = (symbol === 'Ar' || code === 'MGA') ? 0 : 2
     const num = Number(abonnement.montant) || 0
-    return `${num.toFixed(decimals)} ${symbol}`
+    const hasFraction =
+      decimals > 0 &&
+      Math.abs(num - Math.trunc(num)) > Number.EPSILON
+    const locale = getLocaleFromLanguage(currentLanguage)
+    const formattedNumber = new Intl.NumberFormat(locale, {
+      minimumFractionDigits: hasFraction ? decimals : 0,
+      maximumFractionDigits: hasFraction ? decimals : 0,
+      useGrouping: true
+    }).format(num)
+    return `${formattedNumber} ${symbol}`
   }
 
   const resolveCurrencySymbol = (deviseLike) => {
@@ -527,14 +563,14 @@ export default function AbonnementsPage() {
 
       {/* Filtres et Recherche */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 flex-wrap">
           <div className="flex-1">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
               <input
                 type="text"
                 placeholder={t('abonnements.searchPlaceholder')}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -542,7 +578,7 @@ export default function AbonnementsPage() {
           </div>
 
           <select
-            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={filterFrequence}
             onChange={(e) => setFilterFrequence(e.target.value)}
           >
@@ -553,7 +589,7 @@ export default function AbonnementsPage() {
           </select>
 
           <select
-            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={filterStatut}
             onChange={(e) => setFilterStatut(e.target.value)}
           >
@@ -561,6 +597,16 @@ export default function AbonnementsPage() {
             <option value={t('abonnements.status.current')}>{t('abonnements.statistics.active')}</option>
             <option value={t('abonnements.status.expiringSoon')}>{t('abonnements.statistics.expiringSoon')}</option>
             <option value={t('abonnements.status.expired')}>{t('abonnements.statistics.expired')}</option>
+          </select>
+
+          <select
+            className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            value={filterActif}
+            onChange={(e) => setFilterActif(e.target.value)}
+          >
+            <option value="all">{t('abonnements.stateFilter.all')}</option>
+            <option value="active">{t('abonnements.stateFilter.active')}</option>
+            <option value="inactive">{t('abonnements.stateFilter.inactive')}</option>
           </select>
 
           <button className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-2">
@@ -576,6 +622,7 @@ export default function AbonnementsPage() {
           const status = getStatutStyle(abonnement.statut)
           const StatusIcon = status.icon
           const IconComponent = getIconComponent(abonnement.icone)
+          const monthLabel = formatSubscriptionMonth(abonnement.prochaine_echeance, currentLanguage)
           
           return (
             <div key={abonnement.id_abonnement} className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition-shadow ${abonnement.actif ? 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700' : 'bg-red-50 dark:bg-red-900 border-red-200 dark:border-red-700'}`}>
@@ -617,8 +664,9 @@ export default function AbonnementsPage() {
                         const nextActif = !abonnement.actif
                         await abonnementsService.setActive(abonnement.id_abonnement, nextActif)
                         setAbonnements(prev => prev.map(x => x.id_abonnement === abonnement.id_abonnement ? { ...x, actif: nextActif } : x))
+                        showSuccess(nextActif ? t('abonnements.success.statusEnabled') : t('abonnements.success.statusDisabled'))
                       } catch (e) {
-        alert(e?.message || t('abonnements.errors.statusChangeError'))
+                        alert(e?.message || t('abonnements.errors.statusChangeError'))
                       }
                     }}
                     className={`p-2 rounded-lg transition-colors ${abonnement.actif ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
@@ -648,6 +696,13 @@ export default function AbonnementsPage() {
                   <span className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.fields.frequency')}</span>
                   <span className="text-sm font-medium px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-900 dark:text-white">
                     {abonnement.frequence}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{t('abonnements.fields.subscriptionMonth')}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    {monthLabel || '-'}
                   </span>
                 </div>
 
@@ -813,7 +868,7 @@ export default function AbonnementsPage() {
                 max={24}
                 value={selectedPeriods}
                 onChange={(e) => setSelectedPeriods(Math.max(1, Math.min(24, parseInt(e.target.value || '1', 10))))}
-                className="w-28 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-28 px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               />
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 {t('abonnements.periodDescription')}
@@ -857,7 +912,11 @@ export default function AbonnementsPage() {
                       prochaine_echeance: row.prochaine_echeance,
                       rappel: !!row.rappel,
                       icone: row.icon || 'RefreshCw',
-                      couleur: row.couleur || '#3B82F6'
+                      couleur: row.couleur || '#3B82F6',
+                      id_compte: row.id_compte || null,
+                      auto_renouvellement: !!row.auto_renouvellement,
+                      date_dernier_renouvellement: row.date_dernier_renouvellement || null,
+                      actif: (row.actif == null ? 1 : Number(row.actif)) === 1
                     })) : []
                     setAbonnements(normalized.map(ab => ({...ab, ...computeStatus(ab)})))
                     showSuccess(selectedPeriods > 1 ? t('abonnements.success.renewedPeriods').replace('{periods}', selectedPeriods) : t('abonnements.success.renewed'))
@@ -900,7 +959,7 @@ export default function AbonnementsPage() {
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.nom 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-green-500'
                   }`}
                   value={formData.nom}
                   onChange={(e) => {
@@ -927,7 +986,7 @@ export default function AbonnementsPage() {
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.montant 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-green-500'
                   }`}
                   value={formData.montant}
                   onChange={(e) => {
@@ -952,7 +1011,7 @@ export default function AbonnementsPage() {
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.frequence 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-green-500'
                   }`}
                   value={formData.frequence}
                   onChange={(e) => {
@@ -981,7 +1040,7 @@ export default function AbonnementsPage() {
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.prochaine_echeance 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-green-500'
                   }`}
                   value={formData.prochaine_echeance}
                   onChange={(e) => {
@@ -1006,7 +1065,7 @@ export default function AbonnementsPage() {
                   className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                     errors.id_compte 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-200 dark:border-gray-600 focus:ring-purple-500'
+                      : 'border-gray-200 dark:border-gray-600 focus:ring-green-500'
                   }`}
                   value={formData.id_compte}
                   onChange={(e) => {
@@ -1048,7 +1107,7 @@ export default function AbonnementsPage() {
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 text-purple-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
+                    className="w-4 h-4 text-green-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-green-500"
                     checked={formData.rappel}
                     onChange={(e) => setFormData({...formData, rappel: e.target.checked})}
                   />
@@ -1063,7 +1122,7 @@ export default function AbonnementsPage() {
                 <label className="flex items-center gap-3">
                   <input
                     type="checkbox"
-                    className="w-4 h-4 text-purple-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-purple-500"
+                    className="w-4 h-4 text-green-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded focus:ring-green-500"
                     checked={!!formData.auto_renouvellement}
                     onChange={(e) => setFormData({ ...formData, auto_renouvellement: e.target.checked })}
                   />

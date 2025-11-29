@@ -127,6 +127,32 @@ const DashboardNavbar = () => {
     checkComptesThreshold()
   }, [user?.id_user, hasComptesAlert])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleCustomNotification = (event) => {
+      const detail = event?.detail || {}
+      if (!detail?.message) return
+      const alertItem = {
+        id_alerte: detail.id || `local-event-${Date.now()}`,
+        id_user: user?.id_user,
+        type_alerte: detail.type || t('common.notifications'),
+        message: detail.message,
+        date_declenchement: detail.date || new Date().toISOString(),
+        lue: 0
+      }
+      setAlerts((prev) => {
+        const key = alertKey(alertItem)
+        if (prev.some((p) => alertKey(p) === key)) return prev
+        const next = sortAlertsByDate([alertItem, ...prev])
+        setUnreadCount((c) => c + 1)
+        setVisibleCount((v) => Math.max(5, v))
+        return next
+      })
+    }
+    window.addEventListener('dashboard-notification', handleCustomNotification)
+    return () => window.removeEventListener('dashboard-notification', handleCustomNotification)
+  }, [t, user?.id_user])
+
   const handleSearch = (e) => {
     setSearchQuery(e.target.value)
     console.log('Recherche:', e.target.value)

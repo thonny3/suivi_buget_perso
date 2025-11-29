@@ -203,6 +203,47 @@ class SharedAccountsService {
   }
 
   /**
+   * Vérifier le rôle d'un utilisateur sur un compte
+   * @param {number} accountId - ID du compte
+   * @param {number} userId - ID de l'utilisateur
+   * @returns {Promise<Object>} { role: string|null, isOwner: boolean, canWrite: boolean }
+   */
+  async getUserRoleOnAccount(accountId, userId) {
+    try {
+      if (!accountId || !userId) {
+        return { role: null, isOwner: false, canWrite: false };
+      }
+
+      // Récupérer les informations du compte
+      const accountResult = await apiService.getAccountById(accountId);
+      if (!accountResult || !accountResult.id_user) {
+        return { role: null, isOwner: false, canWrite: false };
+      }
+
+      // Vérifier si l'utilisateur est propriétaire
+      if (accountResult.id_user === userId) {
+        return { role: 'proprietaire', isOwner: true, canWrite: true };
+      }
+
+      // Récupérer les utilisateurs partagés pour trouver le rôle
+      const shareResult = await this.getSharedUsersByAccount(accountId);
+      if (shareResult.success && shareResult.data) {
+        const userShare = shareResult.data.find(user => user.id_user === userId);
+        if (userShare) {
+          const role = userShare.role?.toLowerCase().trim();
+          const canWrite = ['contributeur', 'proprietaire'].includes(role);
+          return { role, isOwner: false, canWrite };
+        }
+      }
+
+      return { role: null, isOwner: false, canWrite: false };
+    } catch (error) {
+      console.error('Erreur lors de la vérification du rôle:', error);
+      return { role: null, isOwner: false, canWrite: false };
+    }
+  }
+
+  /**
    * Obtenir le libellé d'un rôle
    * @param {string} role - Rôle de l'utilisateur
    * @returns {string} Libellé formaté

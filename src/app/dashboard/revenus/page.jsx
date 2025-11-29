@@ -34,6 +34,8 @@ export default function RevenuePage() {
   const [categories, setCategories] = useState([])
   const [comptes, setComptes] = useState([])
   const [usersById, setUsersById] = useState({})
+  const [accountPermissions, setAccountPermissions] = useState({}) // { accountId: { canWrite: boolean, role: string } }
+  const [currentUserId, setCurrentUserId] = useState(null)
 
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingRevenue, setEditingRevenue] = useState(null)
@@ -52,6 +54,17 @@ export default function RevenuePage() {
   })
 
   useEffect(() => {
+    // Charger l'ID utilisateur
+    try {
+      const storedUser = localStorage.getItem('user')
+      if (storedUser) {
+        const u = JSON.parse(storedUser)
+        setCurrentUserId(u?.id_user || null)
+      }
+    } catch {}
+  }, [])
+
+  useEffect(() => {
     const loadInitialData = async () => {
       try {
         await Promise.all([fetchCategories(), fetchComptes(), fetchRevenues()])
@@ -63,6 +76,27 @@ export default function RevenuePage() {
     loadInitialData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Charger les permissions pour tous les comptes
+  useEffect(() => {
+    const loadPermissions = async () => {
+      if (!currentUserId || comptes.length === 0) return;
+      
+      const permissions = {};
+      for (const compte of comptes) {
+        try {
+          const perm = await sharedAccountsService.getUserRoleOnAccount(compte.id, currentUserId);
+          permissions[compte.id] = perm;
+        } catch (error) {
+          console.error(`Erreur lors du chargement des permissions pour le compte ${compte.id}:`, error);
+          permissions[compte.id] = { canWrite: true, role: null, isOwner: true }; // Par défaut, permettre l'écriture pour les comptes propres
+        }
+      }
+      setAccountPermissions(permissions);
+    };
+    
+    loadPermissions();
+  }, [currentUserId, comptes]);
 
   const fetchRevenues = async () => {
     try {
@@ -357,6 +391,17 @@ export default function RevenuePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Vérifier les permissions si un compte est sélectionné
+    const selectedAccountId = Number(formData.id_compte);
+    if (selectedAccountId && currentUserId) {
+      const perm = accountPermissions[selectedAccountId];
+      if (perm && !perm.canWrite && !perm.isOwner) {
+        showError('Vous n\'avez pas la permission d\'ajouter des transactions sur ce compte. Seuls les contributeurs et propriétaires peuvent effectuer des transactions.');
+        return;
+      }
+    }
+    
     const payload = {
       montant: parseFloat(formData.montant),
       date_revenu: formData.date_revenu,
@@ -394,7 +439,23 @@ export default function RevenuePage() {
     setIsModalOpen(false)
   }
 
+  // Vérifier si l'utilisateur peut modifier un revenu
+  const canModifyRevenue = (revenue) => {
+    if (!revenue?.id_compte || !currentUserId) return true; // Par défaut, permettre si pas de compte ou pas d'utilisateur
+    
+    // Si le revenu appartient à l'utilisateur, il peut le modifier
+    if (revenue.id_user === currentUserId) return true;
+    
+    // Vérifier les permissions sur le compte
+    const perm = accountPermissions[revenue.id_compte];
+    return perm?.canWrite !== false; // Par défaut true si pas de permission chargée
+  };
+
   const handleEdit = (revenue) => {
+    if (!canModifyRevenue(revenue)) {
+      showError('Vous n\'avez pas la permission de modifier cette transaction. Seuls les contributeurs et propriétaires peuvent modifier les transactions.');
+      return;
+    }
     setEditingRevenue(revenue)
     setFormData({
       montant: revenue.montant.toString(),
@@ -419,6 +480,10 @@ export default function RevenuePage() {
   }
 
   const openDeleteConfirm = (revenue) => {
+    if (!canModifyRevenue(revenue)) {
+      showError('Vous n\'avez pas la permission de supprimer cette transaction. Seuls les contributeurs et propriétaires peuvent supprimer les transactions.');
+      return;
+    }
     setRevenueToDelete(revenue)
     setIsConfirmOpen(true)
   }
@@ -672,18 +737,28 @@ export default function RevenuePage() {
                   </td>
                   <td className="p-3 sm:p-4">
                     <div className="flex items-center justify-center gap-1 sm:gap-2">
-                      <button
-                        onClick={() => handleEdit(revenue)}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => openDeleteConfirm(revenue)}
-                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canModifyRevenue(revenue) ? (
+                        <>
+                          <button
+                            onClick={() => handleEdit(revenue)}
+                            className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors"
+                            title={t('revenus.edit')}
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirm(revenue)}
+                            className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-lg transition-colors"
+                            title={t('revenus.delete')}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded" title="Lecture seule">
+                          <Eye className="w-4 h-4" />
+                        </span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -776,7 +851,25 @@ export default function RevenuePage() {
                   required
                   className="w-full px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   value={formData.id_compte}
-                  onChange={(e) => setFormData({...formData, id_compte: e.target.value})}
+                  onChange={async (e) => {
+                    const accountId = e.target.value;
+                    setFormData({...formData, id_compte: accountId});
+                    
+                    // Vérifier les permissions pour le compte sélectionné
+                    if (accountId && currentUserId) {
+                      try {
+                        const perm = await sharedAccountsService.getUserRoleOnAccount(Number(accountId), currentUserId);
+                        setAccountPermissions(prev => ({ ...prev, [accountId]: perm }));
+                        
+                        // Afficher un avertissement si l'utilisateur est lecteur
+                        if (perm.role === 'lecteur' && !perm.isOwner) {
+                          showError('Vous êtes en mode lecture seule sur ce compte. Vous ne pouvez que visualiser les transactions.');
+                        }
+                      } catch (error) {
+                        console.error('Erreur lors de la vérification des permissions:', error);
+                      }
+                    }
+                  }}
                 >
                   <option value="">{t('revenus.selectAccount')}</option>
                   {comptes.map(compte => (

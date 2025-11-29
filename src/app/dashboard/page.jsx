@@ -19,17 +19,38 @@ import dynamic from 'next/dynamic'
 
 const AIInsights = dynamic(() => import('./AIInsights'), { ssr: false })
 
-export default function Dashboard() {
-  // Données simulées pour les graphiques
-  const revenueData = [
-    { month: 'Jan', revenue: 4000, expenses: 2400 },
-    { month: 'Fév', revenue: 3000, expenses: 1398 },
-    { month: 'Mar', revenue: 2000, expenses: 9800 },
-    { month: 'Avr', revenue: 2780, expenses: 3908 },
-    { month: 'Mai', revenue: 1890, expenses: 4800 },
-    { month: 'Jun', revenue: 2390, expenses: 3800 },
-    { month: 'Jul', revenue: 3490, expenses: 4300 },
+  export default function Dashboard() {
+  const monthFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'short' })
+  const capitalize = (str = '') => str.charAt(0).toUpperCase() + str.slice(1)
+  const buildMonthKey = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  const getLastSixMonths = () => {
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      months.push({
+        key: buildMonthKey(date),
+        label: capitalize(monthFormatter.format(date))
+      })
+    }
+    return months
+  }
+
+  // Exemple de données agrégées (pourra être remplacé par les données API)
+  const rawRevenueData = [
+    { monthKey: buildMonthKey(new Date()), revenue: 5200, expenses: 3800 },
+    { monthKey: buildMonthKey(new Date(new Date().setMonth(new Date().getMonth() - 1))), revenue: 4800, expenses: 3500 },
+    // Les autres mois non listés apparaîtront automatiquement avec 0
   ]
+
+  const revenueData = getLastSixMonths().map(({ key, label }) => {
+    const entry = rawRevenueData.find((d) => d.monthKey === key) || {}
+    return {
+      month: label,
+      revenue: entry.revenue ?? 0,
+      expenses: entry.expenses ?? 0
+    }
+  })
 
   const expenseCategories = [
     { name: 'Alimentation', value: 400, color: '#ef4444' },
@@ -99,6 +120,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               Bonjour, Bienvenue ! 👋
+              njkhnkjhjkjkhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhk
             </h1>
             <p className="text-gray-600 mt-1">
               Voici un aperçu de vos finances aujourd'hui
@@ -159,7 +181,7 @@ export default function Dashboard() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Revenus vs Dépenses</h3>
-                <p className="text-gray-600 text-sm">Évolution sur les 7 derniers mois</p>
+                <p className="text-gray-600 text-sm">Évolution sur les 6 derniers mois</p>
               </div>
               <button className="p-2 hover:bg-gray-100 rounded-lg">
                 <MoreHorizontal className="w-5 h-5 text-gray-500" />

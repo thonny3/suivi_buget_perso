@@ -422,6 +422,7 @@
     "allTypes": "Tous les types",
     "income": "Revenus",
     "expense": "Dépenses",
+    "subscription": "Abonnements",
     "contribution": "Contributions",
     "transfer": "Transferts",
     "allUsers": "Tous les utilisateurs",
@@ -620,6 +621,13 @@
       "deleteError": "Erreur lors de la suppression",
       "loadContributionsError": "Erreur lors du chargement des contributions",
       "updateAmountError": "Erreur lors de la mise à jour du montant",
+      "nameRequired": "Le nom de l'objectif est requis",
+      "nameMin": "Le nom doit contenir au moins 3 caractères",
+      "amountRequired": "Veuillez saisir un montant objectif",
+      "amountPositive": "Le montant doit être supérieur à 0",
+      "dateRequired": "Veuillez choisir une date limite",
+      "dateFuture": "La date limite doit être dans le futur",
+      "validationSummary": "Impossible d'enregistrer l'objectif. Corrigez les erreurs du formulaire.",
       "fillAllFields": "Veuillez remplir tous les champs",
       "enterAmount": "Veuillez saisir un montant",
       "selectAccount": "Veuillez sélectionner un compte"
@@ -732,6 +740,11 @@
     "searchPlaceholder": "Rechercher un abonnement...",
     "allFrequencies": "Toutes fréquences",
     "allStatuses": "Tous les statuts",
+    "stateFilter": {
+      "all": "Tous les états",
+      "active": "Actifs uniquement",
+      "inactive": "Inactifs uniquement"
+    },
     "export": "Export",
     "noSubscriptions": "Aucun abonnement trouvé",
     "subscriptionName": "Nom de l'abonnement",
@@ -802,6 +815,7 @@
     "fields": {
       "amount": "Montant",
       "frequency": "Fréquence",
+      "subscriptionMonth": "Mois d'abonnement",
       "nextDueDate": "Prochaine échéance",
       "timeRemaining": "Temps restant",
       "expiredDaysAgo": "Expiré il y a {days} jours",
@@ -813,7 +827,9 @@
       "updated": "Abonnement mis à jour avec succès",
       "deleted": "Abonnement supprimé avec succès",
       "renewed": "Abonnement renouvelé avec succès",
-      "renewedPeriods": "Abonnement renouvelé avec succès ({periods} périodes)"
+      "renewedPeriods": "Abonnement renouvelé avec succès ({periods} périodes)",
+      "statusEnabled": "Abonnement réactivé",
+      "statusDisabled": "Abonnement désactivé"
     },
     "errors": {
       "loadError": "Erreur lors du chargement",
@@ -916,7 +932,6 @@
       "statsTitle": "Statistiques Administrateur",
       "platformStatsTitle": "Statistiques de la Plateforme",
       "totalUsers": "Total Utilisateurs",
-      "activeUsers": "actifs",
       "expenseCategories": "Catégories Dépenses",
       "revenueCategories": "Catégories Revenus",
       "totalCategories": "Total Catégories",
@@ -961,6 +976,30 @@
       "expensesByCategory": "Dépenses par catégorie",
       "revenues": "Revenus",
       "expenses": "Dépenses"
+    },
+    "insights": {
+      "sectionTitle": "Aperçu dettes, abonnements et budgets",
+      "debtsTitle": "Dettes",
+      "debtsInitial": "Montant initial",
+      "debtsRemaining": "Restant",
+      "debtsActive": "Actives",
+      "debtsOverdue": "En retard",
+      "debtsCompleted": "Terminées",
+      "subscriptionsTitle": "Abonnements",
+      "subscriptionsMonthlyCost": "Coût mensuel actif",
+      "subscriptionsActive": "Actifs",
+      "subscriptionsInactive": "Inactifs",
+      "subscriptionsChartLabel": "Répartition par fréquence",
+      "budgetTitle": "Budgets",
+      "budgetChartLabel": "Utilisation des budgets",
+      "budgetSpent": "Dépensé",
+      "budgetRemaining": "Restant",
+      "emptyState": "Aucune donnée disponible",
+      "frequencyMonthly": "Mensuel",
+      "frequencyQuarterly": "Trimestriel",
+      "frequencySemiAnnual": "Semestriel",
+      "frequencyYearly": "Annuel",
+      "frequencyOther": "Autres"
     },
     "budget": {
       "monthlyBudget": "Budget mensuel",

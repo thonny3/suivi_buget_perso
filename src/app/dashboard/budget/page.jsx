@@ -394,7 +394,7 @@ export default function BudgetPage() {
       </div>
 
       {/* Évolution Budget */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
+     {/* <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">
         <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">{t('budget.monthlyEvolution')}</h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={evolutionData}>
@@ -405,7 +405,7 @@ export default function BudgetPage() {
             <Line type="monotone" dataKey="montant" stroke="#3B82F6" strokeWidth={3} />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </div> */}
 
       {/* Filtres */}
       <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-6">

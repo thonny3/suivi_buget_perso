@@ -79,26 +79,23 @@ export default function AllTransactionsPage() {
       return isNaN(d.getTime()) ? null : d
     }
 
-    return transactions.filter((t) => {
-      // text search
+    return transactions.filter((tx) => {
+      const kind = getTxKind(tx)
+
       if (search) {
-        const hay = JSON.stringify(t).toLowerCase()
+        const hay = JSON.stringify(tx).toLowerCase()
         if (!hay.includes(search.toLowerCase())) return false
       }
 
-      // type filter (use unified classifier)
       if (typeFilter !== 'all') {
-        const kind = getTxKind(t)
         if (kind !== typeFilter) return false
       }
 
-      // user filter
       if (userFilter !== 'all') {
-        if (String(t.id_user ?? '') !== String(userFilter)) return false
+        if (String(tx.id_user ?? '') !== String(userFilter)) return false
       }
 
-      // date range filter
-      const txDate = parseDate(t.date || t.date_transaction || t.date_revenu || t.date_depense)
+      const txDate = parseDate(tx.date || tx.date_transaction || tx.date_revenu || tx.date_depense)
       if (dateFrom) {
         const from = parseDate(dateFrom)
         if (from && txDate && txDate < new Date(from.toDateString())) return false
@@ -164,19 +161,27 @@ export default function AllTransactionsPage() {
     return suffix ? `${base} ${suffix}` : base
   }
 
-  const getType = (t) => {
-    // Essaie d'inférer un type lisible si fourni par l'API
-    return (t?.type || t?.transaction_type || t?.categorie || 'Transaction').toString()
+  const getTypeLabel = (tx) => {
+    const kind = getTxKind(tx)
+    if (kind === 'subscription') return t('transactions.subscription')
+    if (kind === 'expense') return t('transactions.expense')
+    if (kind === 'income') return t('transactions.income')
+    if (kind === 'contribution') return t('transactions.contribution')
+    if (kind === 'transfer') return t('transactions.transfer')
+    return (tx?.type || tx?.transaction_type || tx?.categorie || 'Transaction').toString()
   }
 
   // Détermine le type logique pour le style (income/expense/transfer)
-  function getTxKind(t) {
-    const rawAmount = Number(t.montant ?? t.amount ?? 0)
-    const apiType = (t?.type || t?.transaction_type || t?.categorie || '').toString().toLowerCase()
+  function getTxKind(tx) {
+    const rawAmount = Number(tx.montant ?? tx.amount ?? 0)
+    const apiType = (tx?.type || tx?.transaction_type || tx?.categorie || '').toString().toLowerCase()
+    const description = (tx?.description || tx?.source || '').toString().toLowerCase()
     const isTransfer = apiType.includes('transf') || apiType.includes('virement')
     if (isTransfer) return 'transfer'
     const isContribution = apiType.includes('contrib')
     if (isContribution) return 'contribution'
+    const isSubscription = apiType.includes('abonn') || description.includes('renouvel')
+    if (isSubscription) return 'subscription'
     const isExpenseByType = apiType.includes('depens') || apiType.includes('expense') || apiType.includes('charge')
     if (isExpenseByType) return 'expense'
     const isIncomeByType = apiType.includes('revenu') || apiType.includes('income') || apiType.includes('recette')
@@ -200,7 +205,7 @@ export default function AllTransactionsPage() {
       const item = map.get(k) || { label: label(d), income: 0, expense: 0, contribution: 0 }
       const amt = Number(t.montant ?? t.amount ?? 0)
       const kind = getTxKind(t)
-      if (kind === 'expense') item.expense += Math.abs(amt)
+      if (kind === 'expense' || kind === 'subscription') item.expense += Math.abs(amt)
       else if (kind === 'contribution') item.contribution += Math.abs(amt)
       else if (kind === 'income') item.income += Math.abs(amt)
       map.set(k, item)
@@ -216,7 +221,7 @@ export default function AllTransactionsPage() {
     for (const t of filtered) {
       const amt = Number(t.montant ?? t.amount ?? 0)
       const kind = getTxKind(t)
-      if (kind === 'expense') expense += Math.abs(amt)
+      if (kind === 'expense' || kind === 'subscription') expense += Math.abs(amt)
       else if (kind === 'contribution') contribution += Math.abs(amt)
       else if (kind === 'income') income += Math.abs(amt)
     }
@@ -273,6 +278,7 @@ export default function AllTransactionsPage() {
               <option value="all">{t('transactions.allTypes')}</option>
               <option value="income">{t('transactions.income')}</option>
               <option value="expense">{t('transactions.expense')}</option>
+              <option value="subscription">{t('transactions.subscription')}</option>
               <option value="contribution">{t('transactions.contribution')}</option>
               <option value="transfer">{t('transactions.transfer')}</option>
             </select>
@@ -331,7 +337,7 @@ export default function AllTransactionsPage() {
       </div>
 
       {/* Graphique Recharts (6 derniers mois présents) */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm mb-4">
+     {/* <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm mb-4">
         <div className="mb-2 font-medium text-gray-800 dark:text-gray-200">{t('transactions.monthlyEvolution')}</div>
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -352,7 +358,7 @@ export default function AllTransactionsPage() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </div> */}
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
         <div className="overflow-x-auto custom-scrollbar scroll-smooth">
@@ -377,38 +383,48 @@ export default function AllTransactionsPage() {
                   <td className="p-8 text-center text-gray-500 dark:text-gray-400" colSpan={6}>{t('transactions.noTransactions')}</td>
                 </tr>
               ) : (
-                pageItems.map((t, idx) => (
-                  <tr key={t.id_transaction ?? t.id ?? `${pageStart + idx}`} className={(pageStart + idx) % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-gray-700 dark:text-gray-300">{formatDateFr(t.date || t.date_transaction || t.date_revenu || t.date_depense)}</span>
-                      </div>
-                    </td>
-                    <td className="p-4">
+                pageItems.map((tx, idx) => {
+                  const kind = getTxKind(tx)
+                  const isSubscription = kind === 'subscription'
+                  const isExpense = kind === 'expense'
+                  const isExpenseLike = isExpense || isSubscription
+                  const isIncome = kind === 'income'
+                  const isContribution = kind === 'contribution'
+                  const typeIcon = isSubscription
+                    ? <RefreshCw className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    : (isExpense
+                        ? <ArrowDownRight className="w-4 h-4 text-red-600 dark:text-red-400" />
+                        : (isContribution
+                            ? <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            : <ArrowUpRight className="w-4 h-4 text-green-600 dark:text-green-400" />))
+                  const typeColorClass = isSubscription
+                    ? 'text-purple-600 dark:text-purple-400'
+                    : (isExpenseLike
+                        ? 'text-red-600 dark:text-red-400'
+                        : (isContribution
+                            ? 'text-indigo-600 dark:text-indigo-400'
+                            : (isIncome
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-gray-700 dark:text-gray-300')))
+                  return (
+                    <tr key={tx.id_transaction ?? tx.id ?? `${pageStart + idx}`} className={(pageStart + idx) % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-700'}>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                          <span className="text-gray-700 dark:text-gray-300">{formatDateFr(tx.date || tx.date_transaction || tx.date_revenu || tx.date_depense)}</span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
+                          {typeIcon}
+                          <span className={`font-medium ${typeColorClass}`}>{getTypeLabel(tx)}</span>
+                        </div>
+                      </td>
+                      <td className="p-4 text-gray-800 dark:text-gray-200">{tx.source || tx.description || ''}</td>
+                      <td className="p-4 text-gray-600 dark:text-gray-400">{tx.compte || tx.compte_nom || tx.account_name || ''}</td>
+                      <td className="p-4">
                       {(() => {
-                        const kind = getTxKind(t)
-                        const isExpense = kind === 'expense'
-                        const isIncome = kind === 'income'
-                        const isContribution = kind === 'contribution'
-                        const icon = isExpense
-                          ? <ArrowDownRight className="w-4 h-4 text-red-600 dark:text-red-400" />
-                          : (isContribution
-                              ? <ArrowUpRight className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                              : <ArrowUpRight className="w-4 h-4 text-green-600 dark:text-green-400" />)
-                        return (
-                          <div className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
-                            {icon}
-                            <span className={`font-medium ${isExpense ? 'text-red-600 dark:text-red-400' : (isContribution ? 'text-indigo-600 dark:text-indigo-400' : (isIncome ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'))}`}>{getType(t)}</span>
-                          </div>
-                        )
-                      })()}
-                    </td>
-                    <td className="p-4 text-gray-800 dark:text-gray-200">{t.source || t.description || ''}</td>
-                    <td className="p-4 text-gray-600 dark:text-gray-400">{t.compte || t.compte_nom || t.account_name || ''}</td>
-                    <td className="p-4">
-                      {(() => {
-                        const u = { prenom: t.user_prenom, nom: t.user_nom, email: t.user_email, image: t.user_image }
+                        const u = { prenom: tx.user_prenom, nom: tx.user_nom, email: tx.user_email, image: tx.user_image }
                         const displayName = (u.prenom || u.nom) ? `${u.prenom || ''} ${u.nom || ''}`.trim() : (u.email || '')
                         const initial = (u.prenom || u.nom || u.email || 'U').toString().trim().charAt(0).toUpperCase()
                         const img = u.image
@@ -428,26 +444,19 @@ export default function AllTransactionsPage() {
                                 <span className="text-emerald-700 dark:text-emerald-300 text-xs font-medium">{initial}</span>
                               </div>
                             )}
-                            <span className="text-sm text-gray-700 dark:text-gray-300">{displayName || `ID: ${t.id_user || ''}`}</span>
+                            <span className="text-sm text-gray-700 dark:text-gray-300">{displayName || `ID: ${tx.id_user || ''}`}</span>
                           </div>
                         )
                       })()}
                     </td>
-                    <td className="p-4 text-right">
-                      {(() => {
-                        const kind = getTxKind(t)
-                        const isExpense = kind === 'expense'
-                        const isIncome = kind === 'income'
-                        const isContribution = kind === 'contribution'
-                        return (
-                          <span className={`font-semibold ${isExpense ? 'text-red-600 dark:text-red-400' : (isContribution ? 'text-indigo-600 dark:text-indigo-400' : (isIncome ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'))}`}>
-                            {formatPlainAmountWithDevise(t.montant ?? t.amount)}
-                          </span>
-                        )
-                      })()}
-                    </td>
-                  </tr>
-                ))
+                      <td className="p-4 text-right">
+                        <span className={`font-semibold ${typeColorClass}`}>
+                          {formatPlainAmountWithDevise(tx.montant ?? tx.amount)}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>

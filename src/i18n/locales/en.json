@@ -422,6 +422,7 @@
     "allTypes": "All types",
     "income": "Income",
     "expense": "Expenses",
+    "subscription": "Subscriptions",
     "contribution": "Contributions",
     "transfer": "Transfers",
     "allUsers": "All users",
@@ -620,6 +621,13 @@
       "deleteError": "Error deleting",
       "loadContributionsError": "Error loading contributions",
       "updateAmountError": "Error updating amount",
+      "nameRequired": "Goal name is required",
+      "nameMin": "The name must be at least 3 characters",
+      "amountRequired": "Please enter a goal amount",
+      "amountPositive": "Amount must be greater than 0",
+      "dateRequired": "Please choose a deadline",
+      "dateFuture": "The deadline must be in the future",
+      "validationSummary": "Cannot save the goal. Please fix the highlighted fields.",
       "fillAllFields": "Please fill in all fields",
       "enterAmount": "Please enter an amount",
       "selectAccount": "Please select an account"
@@ -732,6 +740,11 @@
     "searchPlaceholder": "Search for a subscription...",
     "allFrequencies": "All frequencies",
     "allStatuses": "All statuses",
+    "stateFilter": {
+      "all": "All states",
+      "active": "Active only",
+      "inactive": "Inactive only"
+    },
     "export": "Export",
     "noSubscriptions": "No subscription found",
     "subscriptionName": "Subscription name",
@@ -802,6 +815,7 @@
     "fields": {
       "amount": "Amount",
       "frequency": "Frequency",
+      "subscriptionMonth": "Subscription month",
       "nextDueDate": "Next due date",
       "timeRemaining": "Time remaining",
       "expiredDaysAgo": "Expired {days} days ago",
@@ -813,7 +827,9 @@
       "updated": "Subscription updated successfully",
       "deleted": "Subscription deleted successfully",
       "renewed": "Subscription renewed successfully",
-      "renewedPeriods": "Subscription renewed successfully ({periods} periods)"
+      "renewedPeriods": "Subscription renewed successfully ({periods} periods)",
+      "statusEnabled": "Subscription reactivated",
+      "statusDisabled": "Subscription deactivated"
     },
     "errors": {
       "loadError": "Error loading",
@@ -916,7 +932,6 @@
       "statsTitle": "Administrator Statistics",
       "platformStatsTitle": "Platform Statistics",
       "totalUsers": "Total Users",
-      "activeUsers": "active",
       "expenseCategories": "Expense Categories",
       "revenueCategories": "Revenue Categories",
       "totalCategories": "Total Categories",
@@ -961,6 +976,30 @@
       "expensesByCategory": "Expenses by category",
       "revenues": "Revenues",
       "expenses": "Expenses"
+    },
+    "insights": {
+      "sectionTitle": "Debt, subscriptions & budget snapshot",
+      "debtsTitle": "Debts",
+      "debtsInitial": "Initial amount",
+      "debtsRemaining": "Remaining",
+      "debtsActive": "Active",
+      "debtsOverdue": "Overdue",
+      "debtsCompleted": "Completed",
+      "subscriptionsTitle": "Subscriptions",
+      "subscriptionsMonthlyCost": "Active monthly cost",
+      "subscriptionsActive": "Active",
+      "subscriptionsInactive": "Inactive",
+      "subscriptionsChartLabel": "Breakdown by frequency",
+      "budgetTitle": "Budgets",
+      "budgetChartLabel": "Budget usage",
+      "budgetSpent": "Spent",
+      "budgetRemaining": "Remaining",
+      "emptyState": "No data available",
+      "frequencyMonthly": "Monthly",
+      "frequencyQuarterly": "Quarterly",
+      "frequencySemiAnnual": "Semi-annual",
+      "frequencyYearly": "Yearly",
+      "frequencyOther": "Other"
     },
     "budget": {
       "monthlyBudget": "Monthly budget",

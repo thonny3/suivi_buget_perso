@@ -18,18 +18,6 @@ export default function Hero() {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative grid grid-cols-1 lg:grid-cols-2 gap-10 items-center text-gray-900">
           <div className="text-center lg:text-left">
-          {/* Badge de confiance */}
-          <div className="inline-flex items-center space-x-2 bg-white/80 backdrop-blur-lg border border-green-200 rounded-full px-4 py-2 mb-8 shadow">
-            <div className="flex items-center space-x-1">
-              {[...Array(5)].map((_, i) => (
-                <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-              ))}
-            </div>
-            <span className="text-sm font-medium text-gray-700">
-              {t('hero.trustBadge')}
-            </span>
-          </div>
-
           {/* Titre principal */}
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight drop-shadow">
             {t('hero.title')}

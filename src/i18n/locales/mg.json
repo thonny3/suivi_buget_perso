@@ -422,6 +422,7 @@
     "allTypes": "Karazana rehetra",
     "income": "Fidiram-bola",
     "expense": "Fandaniana",
+    "subscription": "Fandefasana",
     "contribution": "Fandraisana anjara",
     "transfer": "Famindrana",
     "allUsers": "Mpampiasa rehetra",
@@ -620,6 +621,13 @@
       "deleteError": "Tsy nahomby ny fanafana",
       "loadContributionsError": "Tsy nahomby ny famakiana ny fandraisana anjara",
       "updateAmountError": "Tsy nahomby ny fanavaozana volany",
+      "nameRequired": "Ilaina ny anaran'ny tanjona",
+      "nameMin": "Tokony ahitana tarehintsoratra 3 farafahakeliny ny anarana",
+      "amountRequired": "Ampidiro ny volan'ny tanjona azafady",
+      "amountPositive": "Tokony ho mihoatra ny aotra ny volany",
+      "dateRequired": "Mifidiana daty farany azafady",
+      "dateFuture": "Tokony ho daty ho avy ny daty farany",
+      "validationSummary": "Tsy afaka mitahiry ny tanjona. Amboary ny saha diso azafady.",
       "fillAllFields": "Fenoy ny saha rehetra azafady",
       "enterAmount": "Ampidiro volany azafady",
       "selectAccount": "Mifidiana kaonty azafady"
@@ -732,6 +740,11 @@
     "searchPlaceholder": "Mitady fandefasana...",
     "allFrequencies": "Ny fahita matetika rehetra",
     "allStatuses": "Ny statut rehetra",
+    "stateFilter": {
+      "all": "Fanjakana rehetra",
+      "active": "Mihetsika ihany",
+      "inactive": "Tsy mihetsika ihany"
+    },
     "export": "Ampidiro",
     "noSubscriptions": "Tsy hita fandefasana",
     "subscriptionName": "Anaran'ny fandefasana",
@@ -802,6 +815,7 @@
     "fields": {
       "amount": "Volany",
       "frequency": "Fahita matetika",
+      "subscriptionMonth": "Volan'ny fandefasana",
       "nextDueDate": "Datiny farany manaraka",
       "timeRemaining": "Fotoana sisa",
       "expiredDaysAgo": "Lany daty {days} andro lasa",
@@ -813,7 +827,9 @@
       "updated": "Nahomby ny fanavaozana fandefasana",
       "deleted": "Nahomby ny fanafana fandefasana",
       "renewed": "Nahomby ny fanavaozana fandefasana",
-      "renewedPeriods": "Nahomby ny fanavaozana fandefasana ({periods} faharetana)"
+      "renewedPeriods": "Nahomby ny fanavaozana fandefasana ({periods} faharetana)",
+      "statusEnabled": "Naverina nihetsika ny fandefasana",
+      "statusDisabled": "Noatsahatra ny fandefasana"
     },
     "errors": {
       "loadError": "Tsy nahomby ny famakiana",
@@ -916,7 +932,6 @@
       "statsTitle": "Statistika Mpitantana",
       "platformStatsTitle": "Statistika Sehatra",
       "totalUsers": "Mpampiasa totaly",
-      "activeUsers": "mavitrika",
       "expenseCategories": "Sokajy Fandaniana",
       "revenueCategories": "Sokajy Fidiram-bola",
       "totalCategories": "Sokajy totaly",
@@ -961,6 +976,30 @@
       "expensesByCategory": "Fandaniana araka ny sokajy",
       "revenues": "Fidiram-bola",
       "expenses": "Fandaniana"
+    },
+    "insights": {
+      "sectionTitle": "Topi-maso trosa, famandrihana ary tetibola",
+      "debtsTitle": "Trosa",
+      "debtsInitial": "Vola tany am-piandohana",
+      "debtsRemaining": "Sisa",
+      "debtsActive": "Mbola mandeha",
+      "debtsOverdue": "Tara",
+      "debtsCompleted": "Vita",
+      "subscriptionsTitle": "Famandrihana",
+      "subscriptionsMonthlyCost": "Saran'ny famandrihana mavitrika isam-bolana",
+      "subscriptionsActive": "Mavitrika",
+      "subscriptionsInactive": "Tsy mavitrika",
+      "subscriptionsChartLabel": "Fizarana araka ny matetika",
+      "budgetTitle": "Tetibola",
+      "budgetChartLabel": "Fampiasana tetibola",
+      "budgetSpent": "Lany",
+      "budgetRemaining": "Sisa",
+      "emptyState": "Tsy misy angona",
+      "frequencyMonthly": "Isam-bolana",
+      "frequencyQuarterly": "Isan-telo volana",
+      "frequencySemiAnnual": "Isan-enim-bolana",
+      "frequencyYearly": "Isan-taona",
+      "frequencyOther": "Hafa"
     },
     "budget": {
       "monthlyBudget": "Volam-piainana isam-bolana",
